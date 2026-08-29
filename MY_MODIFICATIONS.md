@@ -1656,3 +1656,15 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Rather than assuming all items are standard 48px single-line text, `implicitHeight` dynamically computes the actual heights of visible clipboard items (including 96px for unexpanded image cards and up to 300px for expanded cards).
 3. Eliminates image clipping and viewport cutoff when opening single or multiple image clipboard history entries.
 -->
+
+<!-- Section 191 Advanced Album Art Shader Effects (Fluid Gradient & Liquid Smear):
+1. Created `shaders/albumart/gradient.frag` (and compiled `gradient.frag.qsb`):
+   - Harmonic 5-node orbital color emitter mesh gradient dynamically extracted from album art spatial centroids.
+   - 2-octave fluid sinusoidal domain warping with soft inverse-distance falloff.
+2. Created `shaders/albumart/smear.frag` (and compiled `smear.frag.qsb`):
+   - Inigo Quilez recursive 3-level Fractional Brownian Motion (fBM) domain warping with time-evolving swirl.
+   - Anisotropic 9-tap directional smudge filter along the liquid flow line (Photoshop smudge / wet oil paint melt).
+3. Updated `services/AlbumArtEffects.qml` to support dynamic 3-mode selection (`"pixelate"`, `"gradient"`, `"smear"`), JSON storage persistence, and D-Bus IPC methods.
+4. Updated `components/effects/AlbumArtLayer.qml` with a continuous hardware-accelerated time driver for 60fps fluid animation when active.
+5. Updated `modules/nexus/pages/panels/DashboardPanel.qml` with a 3-way Shader Style SplitButton selector and context-aware settings.
+-->

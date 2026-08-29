@@ -24,5 +24,15 @@ ShaderEffect {
         }
     }
 
+    NumberAnimation {
+        target: root
+        property: "time"
+        from: 0
+        to: 3600
+        duration: 3600000
+        loops: Animation.Infinite
+        running: AlbumArtEffects.enabled && (AlbumArtEffects.effectType === "gradient" || AlbumArtEffects.effectType === "smear") && root.visible
+    }
+
     fragmentShader: AlbumArtEffects.getShaderUrl()
 }

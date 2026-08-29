@@ -143,6 +143,21 @@ PageBase {
         }
     ]
 
+    readonly property list<MenuItem> albumArtEffectItems: [
+        MenuItem {
+            property string effectId: "pixelate"
+            text: qsTr("Pixelate")
+        },
+        MenuItem {
+            property string effectId: "gradient"
+            text: qsTr("Fluid Gradient")
+        },
+        MenuItem {
+            property string effectId: "smear"
+            text: qsTr("Liquid Smear")
+        }
+    ]
+
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
@@ -296,14 +311,32 @@ PageBase {
 
         ToggleRow {
             first: true
-            text: qsTr("Pixelate & reveal artwork")
-            subtext: qsTr("Pixelate album art by default and smoothly reveal original artwork on hover")
+            text: qsTr("Enable stylized shader effect")
+            subtext: qsTr("Apply stylized shader effect to album art and smoothly reveal original artwork on hover")
             checked: AlbumArtEffects.enabled
             onToggled: AlbumArtEffects.enabled = checked
         }
 
+        SplitButtonRow {
+            enabled: AlbumArtEffects.enabled
+            label: qsTr("Shader Style")
+            active: {
+                if (AlbumArtEffects.effectType === "gradient")
+                    return qsTr("Fluid Gradient");
+                if (AlbumArtEffects.effectType === "smear")
+                    return qsTr("Liquid Smear");
+                return qsTr("Pixelate");
+            }
+            menuItems: root.albumArtEffectItems
+            onSelected: item => {
+                const eff = item?.effectId ?? "pixelate";
+                AlbumArtEffects.effectType = eff;
+            }
+        }
+
         ToggleRow {
             last: true
+            visible: AlbumArtEffects.effectType === "pixelate"
             enabled: AlbumArtEffects.enabled
             text: qsTr("Adaptive color smoothing")
             subtext: qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos")

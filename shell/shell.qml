@@ -56,6 +56,7 @@ ShellRoot {
     BadAppleOverlay {}
 
     readonly property var _spotifyService: SpotifyService
+    readonly property var _albumArtEffects: AlbumArtEffects
 
     Drawers {}
     // AreaPicker {}
