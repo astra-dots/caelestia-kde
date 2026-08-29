@@ -1674,3 +1674,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Refined `gradient.frag`: Enhanced hue-boosted anchor sampling, cubic power falloff, and angular harmonic shimmer to create distinct multi-color vibrant gradients without muddy blending.
 3. Refined `smear.frag`: Removed micro-grain particles, smoothed turbulence frequency with Quintic Hermite interpolation, and added a 13-tap Gaussian anisotropic smudge filter with cross-blur for ultra-smooth liquid oil paint swirls.
 -->
+
+<!-- Section 193 Liquid Smear Vogel-Spiral Anti-Banding Kernel:
+1. Replaced 1D discrete line stepping in `smear.frag` with a 16-tap Golden-Angle Vogel Spiral sampling distribution.
+2. Added sub-pixel dither rotation to eliminate all discrete wave bands, stepping rings, and interference ripples.
+3. Added soft boundary coordinate mirroring to prevent edge clamping halos.
+-->

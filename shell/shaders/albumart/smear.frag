@@ -26,7 +26,7 @@ float hash(vec2 p) {
 float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
-    // Quintic polynomial for C2-continuous smooth interpolation (eliminates grid artifacts)
+    // Quintic polynomial for C2-continuous smooth interpolation
     f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
 
     float a = hash(i);
@@ -48,6 +48,12 @@ float fbm(vec2 p) {
         a *= 0.5;
     }
     return v;
+}
+
+// Soft mirror UV helper to prevent edge clamping halos
+vec2 mirrorUV(vec2 p) {
+    vec2 m = abs(fract(p * 0.5) * 2.0 - 1.0);
+    return clamp(m, 0.002, 0.998);
 }
 
 void main() {
@@ -80,32 +86,43 @@ void main() {
     );
 
     // Silky fluid displacement offset
-    vec2 warpOffset = (r - 0.5) * 0.50 * intensity;
+    vec2 warpOffset = (r - 0.5) * 0.48 * intensity;
 
-    // Tangent flow direction for acrylic paint smudge
+    // Tangent flow vector & orthogonal cross-vector
     vec2 flowDir = normalize(r - q + vec2(0.005, 0.005));
-    vec2 perpDir = vec2(-flowDir.y, flowDir.x); // Orthogonal cross-vector for soft anti-aliased blur
+    vec2 perpDir = vec2(-flowDir.y, flowDir.x);
 
-    // 2. High-Quality 13-Tap Gaussian Anisotropic Smudge Filter
+    // 2. High-Quality 16-Tap Vogel Spiral Gaussian Smudge Kernel with Sub-pixel Dither
+    // Golden angle = 2.39996323 rad (~137.5 deg)
+    const float GOLDEN_ANGLE = 2.39996323;
+    const int SAMPLES = 16;
+    const float FLOW_RADIUS = 0.095;
+    const float CROSS_RADIUS = 0.038;
+
+    // Sub-pixel spatial dither to completely eliminate discrete wave bands & stepping rings
+    float dither = hash(uv * 500.0) * 6.2831853;
+
     vec4 smudgedCol = vec4(0.0);
     float totalWeight = 0.0;
-    const float SMUDGE_STEP = 0.024;
-    const float CROSS_STEP = 0.008;
 
-    for (int k = -6; k <= 6; k++) {
-        float fk = float(k);
-        // Gaussian weight curve
-        float weight = exp(-0.5 * (fk * fk) / 6.5);
+    for (int i = 0; i < SAMPLES; i++) {
+        float fi = float(i);
+        float theta = fi * GOLDEN_ANGLE + dither;
+        float rRadius = sqrt((fi + 0.5) / float(SAMPLES));
 
-        // Sample along main flow line + subtle cross-blur for ultra-smooth oil melt
-        vec2 samplePos1 = clamp(uv + warpOffset + flowDir * (fk * SMUDGE_STEP * intensity), 0.001, 0.999);
-        vec2 samplePos2 = clamp(uv + warpOffset + flowDir * (fk * SMUDGE_STEP * intensity) + perpDir * (CROSS_STEP * intensity), 0.001, 0.999);
-        vec2 samplePos3 = clamp(uv + warpOffset + flowDir * (fk * SMUDGE_STEP * intensity) - perpDir * (CROSS_STEP * intensity), 0.001, 0.999);
+        // Anisotropic elliptical stretch along the liquid flow streamline
+        vec2 offset = flowDir * (cos(theta) * rRadius * FLOW_RADIUS * intensity)
+                    + perpDir * (sin(theta) * rRadius * CROSS_RADIUS * intensity);
 
-        vec4 c = texture(source, samplePos1) * 0.6 + (texture(source, samplePos2) + texture(source, samplePos3)) * 0.2;
-        smudgedCol += c * weight;
+        vec2 samplePos = mirrorUV(uv + warpOffset + offset);
+        
+        // Gaussian radial falloff weight
+        float weight = exp(-2.2 * rRadius * rRadius);
+
+        smudgedCol += texture(source, samplePos) * weight;
         totalWeight += weight;
     }
+
     smudgedCol /= totalWeight;
 
     // 3. Smooth hover blend back to raw image
