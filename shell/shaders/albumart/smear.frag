@@ -99,13 +99,13 @@ void main() {
     float totalWeight = 0.0;
 
     if (smoothing > 0.5) {
-        // Ultra-Smooth 24-Tap Vogel Spiral with Jorge Jimenez IGN Micro-Jitter (zero visible dots)
+        // Ultra-Smooth 24-Tap Vogel Spiral with Jorge Jimenez IGN Micro-Jitter (anti-banding)
         const int SAMPLES = 24;
         const float FLOW_RADIUS = 0.092;
         const float CROSS_RADIUS = 0.036;
 
         float ign = fract(52.9829189 * fract(dot(uv * 800.0, vec2(0.06711056, 0.00583715))));
-        float dither = (ign - 0.5) * 0.35;
+        float dither = (ign - 0.5) * 0.85;
 
         for (int i = 0; i < SAMPLES; i++) {
             float fi = float(i);
@@ -149,6 +149,10 @@ void main() {
 
     // 3. Smooth hover blend back to raw image
     vec3 finalRgb = mix(rawCol.rgb, smudgedCol.rgb, intensity);
+
+    // 4. Sub-LSB Screen-space triangular debanding dither (eliminates 8-bit color quantization steps in white/grey tones)
+    float ditherNoise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5;
+    finalRgb = clamp(finalRgb + vec3(ditherNoise * (1.2 / 255.0)), 0.0, 1.0);
 
     fragColor = vec4(finalRgb, rawCol.a) * maskA * qt_Opacity;
 }

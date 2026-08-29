@@ -113,5 +113,9 @@ void main() {
     // 5. Smooth hover transition back to original artwork
     vec3 finalRgb = mix(rawCol.rgb, gradCol, intensity);
 
+    // 6. Sub-LSB Screen-space triangular debanding dither (eliminates color quantization steps)
+    float ditherNoise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5;
+    finalRgb = clamp(finalRgb + vec3(ditherNoise * (1.2 / 255.0)), 0.0, 1.0);
+
     fragColor = vec4(finalRgb, rawCol.a) * maskA * qt_Opacity;
 }

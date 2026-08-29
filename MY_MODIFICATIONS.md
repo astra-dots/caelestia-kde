@@ -1698,3 +1698,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - When OFF (smoothing <= 0.5): Classic 16-tap Vogel Spiral with spatial dither.
 2. Updated `DashboardPanel.qml` with dynamic context-aware labels ("Ultra-smooth blending" for Smear, "Adaptive color smoothing" for Pixelate).
 -->
+
+<!-- Section 198 Screen-Space Sub-LSB Debanding Dither:
+1. Added Jorge Jimenez Sub-LSB Screen-Space Triangular PDF (TPDF) debanding dither (`gl_FragCoord.xy`) to both `smear.frag` and `gradient.frag`.
+2. Dissolves 8-bit color quantization steps in bright white, grey, and subtle gradient zones into smooth continuous-tone transitions.
+3. Slightly broadened IGN micro-jitter phase coverage in the 24-tap Vogel kernel for seamless white/grey smoke blending.
+-->
