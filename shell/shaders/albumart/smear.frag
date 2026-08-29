@@ -50,9 +50,10 @@ float fbm(vec2 p) {
     return v;
 }
 
-// Soft mirror UV helper to prevent edge clamping halos
+// Soft mirror UV helper to prevent edge clamping halos without inverting orientation
 vec2 mirrorUV(vec2 p) {
-    vec2 m = abs(fract(p * 0.5) * 2.0 - 1.0);
+    vec2 t = abs(p);
+    vec2 m = 1.0 - abs(mod(t, 2.0) - 1.0);
     return clamp(m, 0.002, 0.998);
 }
 

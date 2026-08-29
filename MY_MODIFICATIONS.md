@@ -1685,3 +1685,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 1. Fixed `shapeEdgeDist` calculation in `CoverVisualiser.qml` by binding to `cover.shape.morphProgress`.
 2. When no media is playing and the cover is hovered/unhovered, `shapeEdgeDist` continuously tracks the morphing polygon in real time, ensuring the CAVA visualizer dots smoothly return to the Material You shape rather than getting stuck in a square outline.
 -->
+
+<!-- Section 196 Liquid Smear Orientation Fix:
+1. Fixed `mirrorUV` coordinate transformation in `smear.frag`.
+2. Replaced `abs(fract(p * 0.5) * 2.0 - 1.0)` (which was inverting texture space $p \rightarrow 1-p$) with `1.0 - abs(mod(abs(p), 2.0) - 1.0)`.
+3. Liquid Smear now renders completely right-side up with correct orientation.
+-->
