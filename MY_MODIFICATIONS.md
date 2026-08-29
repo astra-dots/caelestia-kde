@@ -1668,3 +1668,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 4. Updated `components/effects/AlbumArtLayer.qml` with a continuous hardware-accelerated time driver for 60fps fluid animation when active.
 5. Updated `modules/nexus/pages/panels/DashboardPanel.qml` with a 3-way Shader Style SplitButton selector and context-aware settings.
 -->
+
+<!-- Section 192 Shader Quality Polish & Nexus Settings Button Label Fix:
+1. Fixed `Shader Style` dropdown in `DashboardPanel.qml` using `SelectRow` with explicit `MenuItem` binding and `fallbackText`, ensuring the active shader name is permanently visible even after reopening Nexus.
+2. Refined `gradient.frag`: Enhanced hue-boosted anchor sampling, cubic power falloff, and angular harmonic shimmer to create distinct multi-color vibrant gradients without muddy blending.
+3. Refined `smear.frag`: Removed micro-grain particles, smoothed turbulence frequency with Quintic Hermite interpolation, and added a 13-tap Gaussian anisotropic smudge filter with cross-blur for ultra-smooth liquid oil paint swirls.
+-->

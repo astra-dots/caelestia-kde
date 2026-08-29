@@ -317,10 +317,18 @@ PageBase {
             onToggled: AlbumArtEffects.enabled = checked
         }
 
-        SplitButtonRow {
+        SelectRow {
             enabled: AlbumArtEffects.enabled
             label: qsTr("Shader Style")
+            subtext: qsTr("Choose the visual aesthetic for album art")
             active: {
+                for (let i = 0; i < root.albumArtEffectItems.length; i++) {
+                    if (root.albumArtEffectItems[i].effectId === AlbumArtEffects.effectType)
+                        return root.albumArtEffectItems[i];
+                }
+                return root.albumArtEffectItems[0];
+            }
+            fallbackText: {
                 if (AlbumArtEffects.effectType === "gradient")
                     return qsTr("Fluid Gradient");
                 if (AlbumArtEffects.effectType === "smear")
