@@ -344,10 +344,14 @@ PageBase {
 
         ToggleRow {
             last: true
-            visible: AlbumArtEffects.effectType === "pixelate"
+            visible: AlbumArtEffects.effectType === "pixelate" || AlbumArtEffects.effectType === "smear"
             enabled: AlbumArtEffects.enabled
-            text: qsTr("Adaptive color smoothing")
-            subtext: qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos")
+            text: AlbumArtEffects.effectType === "smear"
+                ? qsTr("Ultra-smooth blending")
+                : qsTr("Adaptive color smoothing")
+            subtext: AlbumArtEffects.effectType === "smear"
+                ? qsTr("24-tap dense Vogel spiral with sub-perceptual micro-jitter to eliminate stippling grain")
+                : qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos")
             checked: AlbumArtEffects.smoothing
             onToggled: AlbumArtEffects.smoothing = checked
         }

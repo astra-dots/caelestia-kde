@@ -1691,3 +1691,10 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Replaced `abs(fract(p * 0.5) * 2.0 - 1.0)` (which was inverting texture space $p \rightarrow 1-p$) with `1.0 - abs(mod(abs(p), 2.0) - 1.0)`.
 3. Liquid Smear now renders completely right-side up with correct orientation.
 -->
+
+<!-- Section 197 Liquid Smear Ultra-Smooth Toggle Integration:
+1. Implemented runtime smoothing toggle in `smear.frag`:
+   - When ON (smoothing > 0.5): 24-tap Vogel Spiral with Jorge Jimenez IGN micro-jitter (zero visible dots, creamy Gaussian oil melt).
+   - When OFF (smoothing <= 0.5): Classic 16-tap Vogel Spiral with spatial dither.
+2. Updated `DashboardPanel.qml` with dynamic context-aware labels ("Ultra-smooth blending" for Smear, "Adaptive color smoothing" for Pixelate).
+-->

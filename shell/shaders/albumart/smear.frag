@@ -93,35 +93,56 @@ void main() {
     vec2 flowDir = normalize(r - q + vec2(0.005, 0.005));
     vec2 perpDir = vec2(-flowDir.y, flowDir.x);
 
-    // 2. High-Quality 16-Tap Vogel Spiral Gaussian Smudge Kernel with Sub-pixel Dither
-    // Golden angle = 2.39996323 rad (~137.5 deg)
+    // 2. Vogel Spiral Gaussian Smudge Kernel (Selectable Smoothing)
     const float GOLDEN_ANGLE = 2.39996323;
-    const int SAMPLES = 16;
-    const float FLOW_RADIUS = 0.095;
-    const float CROSS_RADIUS = 0.038;
-
-    // Sub-pixel spatial dither to completely eliminate discrete wave bands & stepping rings
-    float dither = hash(uv * 500.0) * 6.2831853;
-
     vec4 smudgedCol = vec4(0.0);
     float totalWeight = 0.0;
 
-    for (int i = 0; i < SAMPLES; i++) {
-        float fi = float(i);
-        float theta = fi * GOLDEN_ANGLE + dither;
-        float rRadius = sqrt((fi + 0.5) / float(SAMPLES));
+    if (smoothing > 0.5) {
+        // Ultra-Smooth 24-Tap Vogel Spiral with Jorge Jimenez IGN Micro-Jitter (zero visible dots)
+        const int SAMPLES = 24;
+        const float FLOW_RADIUS = 0.092;
+        const float CROSS_RADIUS = 0.036;
 
-        // Anisotropic elliptical stretch along the liquid flow streamline
-        vec2 offset = flowDir * (cos(theta) * rRadius * FLOW_RADIUS * intensity)
-                    + perpDir * (sin(theta) * rRadius * CROSS_RADIUS * intensity);
+        float ign = fract(52.9829189 * fract(dot(uv * 800.0, vec2(0.06711056, 0.00583715))));
+        float dither = (ign - 0.5) * 0.35;
 
-        vec2 samplePos = mirrorUV(uv + warpOffset + offset);
-        
-        // Gaussian radial falloff weight
-        float weight = exp(-2.2 * rRadius * rRadius);
+        for (int i = 0; i < SAMPLES; i++) {
+            float fi = float(i);
+            float theta = fi * GOLDEN_ANGLE + dither;
+            float rRadius = sqrt((fi + 0.5) / float(SAMPLES));
 
-        smudgedCol += texture(source, samplePos) * weight;
-        totalWeight += weight;
+            vec2 offset = flowDir * (cos(theta) * rRadius * FLOW_RADIUS * intensity)
+                        + perpDir * (sin(theta) * rRadius * CROSS_RADIUS * intensity);
+
+            vec2 samplePos = mirrorUV(uv + warpOffset + offset);
+            float weight = exp(-1.85 * rRadius * rRadius);
+
+            smudgedCol += texture(source, samplePos) * weight;
+            totalWeight += weight;
+        }
+    } else {
+        // Classic 16-Tap Vogel Spiral with Spatial Dither
+        const int SAMPLES = 16;
+        const float FLOW_RADIUS = 0.095;
+        const float CROSS_RADIUS = 0.038;
+
+        float dither = hash(uv * 500.0) * 6.2831853;
+
+        for (int i = 0; i < SAMPLES; i++) {
+            float fi = float(i);
+            float theta = fi * GOLDEN_ANGLE + dither;
+            float rRadius = sqrt((fi + 0.5) / float(SAMPLES));
+
+            vec2 offset = flowDir * (cos(theta) * rRadius * FLOW_RADIUS * intensity)
+                        + perpDir * (sin(theta) * rRadius * CROSS_RADIUS * intensity);
+
+            vec2 samplePos = mirrorUV(uv + warpOffset + offset);
+            float weight = exp(-2.2 * rRadius * rRadius);
+
+            smudgedCol += texture(source, samplePos) * weight;
+            totalWeight += weight;
+        }
     }
 
     smudgedCol /= totalWeight;
