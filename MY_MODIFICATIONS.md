@@ -1680,3 +1680,8 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Added sub-pixel dither rotation to eliminate all discrete wave bands, stepping rings, and interference ripples.
 3. Added soft boundary coordinate mirroring to prevent edge clamping halos.
 -->
+
+<!-- Section 195 CAVA Visualizer Idle Morph State Sync Fix:
+1. Fixed `shapeEdgeDist` calculation in `CoverVisualiser.qml` by binding to `cover.shape.morphProgress`.
+2. When no media is playing and the cover is hovered/unhovered, `shapeEdgeDist` continuously tracks the morphing polygon in real time, ensuring the CAVA visualizer dots smoothly return to the Material You shape rather than getting stuck in a square outline.
+-->
