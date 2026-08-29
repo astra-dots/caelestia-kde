@@ -38,8 +38,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Audio")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     StyledRect {
@@ -60,8 +59,7 @@ ColumnLayout {
 
             StyledText {
                 text: qsTr("Output device")
-                font.weight: Font.Medium
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
             }
 
             Repeater {
@@ -76,7 +74,7 @@ ColumnLayout {
                     checked: Audio.sink?.id === modelData.id
                     onClicked: Audio.setAudioSink(modelData)
                     text: modelData.description
-                    font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                 }
             }
         }
@@ -100,8 +98,7 @@ ColumnLayout {
 
             StyledText {
                 text: qsTr("Input device")
-                font.weight: Font.Medium
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
             }
 
             Repeater {
@@ -116,7 +113,7 @@ ColumnLayout {
                     checked: Audio.source?.id === modelData.id
                     onClicked: Audio.setAudioSource(modelData)
                     text: modelData.description
-                    font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                 }
             }
         }
@@ -125,8 +122,7 @@ ColumnLayout {
     StyledText {
         Layout.topMargin: Tokens.spacing.medium * root.scaleOffset
         text: qsTr("Volume (%1)").arg(Audio.muted ? qsTr("Muted") : `${Math.round(Audio.volume * 100)}%`)
-        font.weight: Font.Medium
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     CustomMouseArea {
@@ -155,8 +151,7 @@ ColumnLayout {
         visible: Audio.sources.length > 0
         Layout.topMargin: Tokens.spacing.small * root.scaleOffset
         text: qsTr("Microphone (%1)").arg(Audio.sourceMuted ? qsTr("Muted") : `${Math.round(Audio.sourceVolume * 100)}%`)
-        font.weight: Font.Medium
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     CustomMouseArea {

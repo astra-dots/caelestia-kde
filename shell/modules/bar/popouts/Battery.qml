@@ -27,8 +27,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Battery")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     StyledRect {
@@ -176,8 +175,7 @@ ColumnLayout {
 
                     StyledText {
                         text: UPower.displayDevice.isLaptopBattery ? qsTr("%1%").arg(Math.round(UPower.displayDevice.percentage * 100)) : qsTr("N/A")
-                        font.pointSize: 28 * root.fontScale
-                        font.weight: 600
+                        font: Tokens.font.headline.builders.large.size(28 * root.fontScale).weight(600).build()
                     }
 
                     StyledText {
@@ -207,7 +205,7 @@ ColumnLayout {
                             return qsTr("~ %1").arg(formatSeconds(UPower.displayDevice.timeToFull, "Calculating..."));
                         }
                         color: Colours.palette.m3onSurfaceVariant
-                        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                     }
                 }
             }
@@ -244,7 +242,7 @@ ColumnLayout {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: qsTr("Degraded: %1").arg(PerformanceDegradationReason.toString(PowerProfiles.degradationReason))
                                 color: Colours.palette.m3onError
-                                font.pointSize: Tokens.font.mono.medium.pointSize * root.fontScale
+                                font: Tokens.font.mono.builders.medium.size(Tokens.font.mono.medium.pointSize * root.fontScale).build()
                             }
                         }
                     }

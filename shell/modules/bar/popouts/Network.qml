@@ -34,8 +34,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Network")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     StyledRect {
@@ -61,7 +60,7 @@ ColumnLayout {
         Layout.topMargin: visible ? Tokens.padding.medium * root.scaleOffset : 0
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("Wireless")
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
     }
 
     Toggle {
@@ -79,7 +78,7 @@ ColumnLayout {
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("%1 networks available").arg(Nmcli.networks.length) // qmllint disable missing-property
         color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
     }
 
     Repeater {
@@ -141,7 +140,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: networkItem.modelData.ssid
                 elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 color: networkItem.modelData.active ? Colours.palette.m3primary : Colours.palette.m3onSurface
             }
 
@@ -237,7 +236,7 @@ ColumnLayout {
                 Layout.topMargin: -Math.round(scanIcon.fontInfo.pointSize * 0.0575)
                 text: qsTr("Rescan networks")
                 color: Colours.palette.m3onPrimaryContainer
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
             }
 
             Behavior on opacity {
@@ -263,7 +262,7 @@ ColumnLayout {
         Layout.topMargin: visible ? Tokens.spacing.small * root.scaleOffset : 0
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("VPN")
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
     }
 
     StyledText {
@@ -273,7 +272,7 @@ ColumnLayout {
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("%1 profiles available").arg(Nmcli.vpnConnections.length)
         color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
     }
 
     Repeater {
@@ -324,7 +323,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: vpnItem.modelData.name
                 elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 color: vpnItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
             }
 
@@ -380,7 +379,7 @@ ColumnLayout {
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("No VPN profiles found")
         color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
     }
 
     // Ethernet section
@@ -390,7 +389,7 @@ ColumnLayout {
         Layout.topMargin: visible ? Tokens.padding.medium * root.scaleOffset : 0
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("Ethernet")
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
     }
 
     StyledText {
@@ -400,7 +399,7 @@ ColumnLayout {
         Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
         text: qsTr("%1 devices available").arg(Nmcli.ethernetDevices.length)
         color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
     }
 
     Repeater {
@@ -455,7 +454,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: ethernetItem.modelData.interface || qsTr("Unknown")
                 elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 color: ethernetItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
             }
 
@@ -555,7 +554,7 @@ ColumnLayout {
         StyledText {
             Layout.fillWidth: true
             text: parent.label
-            font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
         }
 
         StyledSwitch {

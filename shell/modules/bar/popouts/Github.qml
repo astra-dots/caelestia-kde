@@ -32,8 +32,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("GitHub")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     StyledRect {
@@ -66,7 +65,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: root.username.length > 0 ? `@${root.username}` : qsTr("Not authenticated")
                     color: Services.Colours.palette.m3onSurface
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 }
             }
 
@@ -85,14 +84,13 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: qsTr("Last 7 days")
                     color: Services.Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 }
 
                 StyledText {
                     text: qsTr("%1 commits").arg(root.total)
-                    font.weight: 600
                     color: Services.Colours.palette.m3onSurface
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(600).build()
                 }
             }
 
@@ -112,7 +110,7 @@ ColumnLayout {
                     text: root.lastError
                     color: Services.Colours.palette.m3error
                     wrapMode: Text.Wrap
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 }
             }
 

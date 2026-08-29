@@ -120,7 +120,7 @@ StyledRect {
                     id: fallbackText
 
                     text: root.model ? (root.model.entry ? root.model.entry.name : root.model.appClass) : ""
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                     elide: Text.ElideRight
                 }
             }
@@ -270,7 +270,7 @@ StyledRect {
                             id: titleText
 
                             text: card.modelData.title || ""
-                            font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                            font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                             color: Colours.palette.m3onSurfaceVariant
                             elide: Text.ElideRight
                             horizontalAlignment: Text.AlignHCenter

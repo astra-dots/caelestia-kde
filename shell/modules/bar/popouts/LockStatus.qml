@@ -22,8 +22,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Keyboard Locks")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     StyledRect {
@@ -44,12 +43,12 @@ ColumnLayout {
 
             StyledText {
                 text: qsTr("Capslock: %1").arg(Hypr.capsLock ? "Enabled" : "Disabled")
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
             }
 
             StyledText {
                 text: qsTr("Numlock: %1").arg(Hypr.numLock ? "Enabled" : "Disabled")
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
             }
         }
     }

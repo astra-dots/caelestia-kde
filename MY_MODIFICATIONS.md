@@ -1704,3 +1704,8 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Dissolves 8-bit color quantization steps in bright white, grey, and subtle gradient zones into smooth continuous-tone transitions.
 3. Slightly broadened IGN micro-jitter phase coverage in the 24-tap Vogel kernel for seamless white/grey smoke blending.
 -->
+
+<!-- Section 200 Popouts & System Tray Google Sans Flex FontBuilder Conversion:
+1. Replaced all detached `font.pointSize` and `font.weight` sub-property assignments in taskbar popouts and system tray menus (`Network.qml`, `Bluetooth.qml`, `Audio.qml`, `Battery.qml`, `Github.qml`, `NightLight.qml`, `LockStatus.qml`, `Updates.qml`, `DateCard.qml`, `Calendar.qml`, `DockHover.qml`, `DockContext.qml`, `TrayMenu.qml`, `WirelessPassword.qml`) with complete `Tokens.font.body.builders...build()` font builder invocations.
+2. Eliminates fallback to KDE system font (Noto Sans) in popout cards, ensuring 100% consistent Google Sans Flex typography across all shell widgets.
+-->

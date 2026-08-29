@@ -248,7 +248,7 @@ StackView {
 
                                         text: labelMetrics.elidedText
                                         color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
-                                        font.pointSize: Tokens.font.body.medium.pointSize * menu.fontScale
+                                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * menu.fontScale).build()
                                     }
 
                                     property int trayMenuWidth: Tokens.sizes.bar.trayMenuWidth * menu.scaleOffset
@@ -330,7 +330,7 @@ StackView {
                             anchors.verticalCenter: parent.verticalCenter
                             text: qsTr("Back")
                             color: Colours.palette.m3onSecondaryContainer
-                            font.pointSize: Tokens.font.body.medium.pointSize * menu.fontScale
+                            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * menu.fontScale).build()
                         }
                     }
                 }

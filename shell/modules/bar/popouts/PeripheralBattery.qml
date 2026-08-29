@@ -60,7 +60,7 @@ Column {
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
                 text: (peripheralRow.modelData.model || "Device") + ": " + Math.round(peripheralRow.modelData.percentage * 100) + "%"
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
             }
         }
     }

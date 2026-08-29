@@ -28,8 +28,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Night Light")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     IconTextButton {
@@ -52,9 +51,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.spacing.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Daylight Temperature (%1K)").arg(Math.round(2000 + daySlider.pos * 4500))
-        font.weight: Font.Medium
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-        font.features: { "tnum": 1 }
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     CustomMouseArea {
@@ -90,9 +87,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.spacing.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: HyprSunset.autoMode ? qsTr("Nightlight Temperature (%1K)").arg(Math.round(2000 + nightSlider.pos * 4500)) : qsTr("Temperature (%1K)").arg(Math.round(2000 + nightSlider.pos * 4500))
-        font.weight: Font.Medium
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-        font.features: { "tnum": 1 }
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     CustomMouseArea {

@@ -103,8 +103,7 @@ ColumnLayout {
                     text: root.statusText
                     color: Colours.palette.m3onSurface
                     wrapMode: Text.Wrap
-                    font.weight: 600
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(600).build()
                 }
             }
 
@@ -128,7 +127,7 @@ ColumnLayout {
                         return qsTr("Last check %1 ago").arg(root.formatDuration(root.nowMs - UpdateChecker.lastCheckMs));
                     }
                     color: Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 }
             }
 
@@ -147,7 +146,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: qsTr("Next check in %1").arg(root.formatDuration(UpdateChecker.lastCheckMs + UpdateChecker.checkIntervalMs - root.nowMs))
                     color: Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                 }
             }
         }
@@ -204,7 +203,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: root.checking ? qsTr("Checking…") : qsTr("Check for updates")
                         color: Colours.palette.m3onSurface
-                        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                     }
                 }
             }
@@ -245,7 +244,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: qsTr("Open Updates")
                         color: Colours.palette.m3onSurface
-                        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                     }
                 }
             }
@@ -283,7 +282,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: qsTr("Hide from bar")
                         color: Colours.palette.m3onSurface
-                        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                     }
                 }
             }

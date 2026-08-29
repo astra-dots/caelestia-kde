@@ -31,8 +31,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Bluetooth")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     StyledRect {
@@ -83,7 +82,7 @@ ColumnLayout {
             return available;
         }
         color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
     }
 
     Repeater {
@@ -130,7 +129,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: device.modelData.name
                 elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
             }
 
             RowLayout {
@@ -146,7 +145,7 @@ ColumnLayout {
                 StyledText {
                     visible: device.modelData.batteryAvailable // qmllint disable unresolved-type
                     text: device.modelData.batteryAvailable ? qsTr("%1%").arg(Math.round(device.modelData.battery * 100)) : "" // qmllint disable unresolved-type
-                    font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                    font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                     color: device.modelData.batteryAvailable && device.modelData.battery < 0.2 ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                 }
             }
@@ -239,7 +238,7 @@ ColumnLayout {
         StyledText {
             Layout.fillWidth: true
             text: parent.label
-            font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
         }
 
         StyledSwitch {

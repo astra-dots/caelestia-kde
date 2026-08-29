@@ -200,8 +200,7 @@ ColumnLayout {
             StyledText {
                 Layout.alignment: Qt.AlignHCenter
                 text: qsTr("Enter password")
-                font.pointSize: Tokens.font.body.large.pointSize * root.fontScale
-                font.weight: Font.Medium
+                font: Tokens.font.body.builders.large.size(Tokens.font.body.large.pointSize * root.fontScale).weight(Font.Medium).build()
             }
 
             StyledText {
@@ -218,7 +217,7 @@ ColumnLayout {
                     return qsTr("Network: Unknown");
                 }
                 color: Colours.palette.m3outline
-                font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
             }
 
             Timer {
@@ -266,8 +265,7 @@ ColumnLayout {
                     return "";
                 }
                 color: connectButton.hasError ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
-                font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
-                font.weight: Font.Normal
+                font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).weight(Font.Normal).build()
                 wrapMode: Text.WordWrap
                 Layout.maximumWidth: parent.width - Tokens.padding.extraLargeIncreased * root.scaleOffset
             }
@@ -394,7 +392,7 @@ ColumnLayout {
                     anchors.centerIn: parent
                     text: qsTr("Password")
                     color: Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.mono.medium.pointSize * root.fontScale
+                    font: Tokens.font.mono.builders.medium.size(Tokens.font.mono.medium.pointSize * root.fontScale).build()
                     opacity: passwordContainer.passwordBuffer ? 0 : 1
 
                     Behavior on opacity {
