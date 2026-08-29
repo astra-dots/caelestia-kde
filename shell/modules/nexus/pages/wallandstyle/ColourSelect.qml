@@ -27,55 +27,30 @@ PageBase {
         width: root.cappedWidth
         spacing: Tokens.spacing.large
 
-        StyledRect {
+        Item {
             Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.medium
-            implicitHeight: row.implicitHeight + Tokens.padding.large * 2
-            radius: Tokens.rounding.large
-            color: Colours.tPalette.m3surfaceContainer
-            
-            StateLayer {
-                anchors.fill: parent
-                radius: parent.radius
+            Layout.preferredHeight: Tokens.padding.small
+        }
+
+        // Standard Connected Navigation Rows
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.extraSmall / 2
+
+            NavRow {
+                first: true
+                icon: "settings_suggest"
+                label: qsTr("Advanced Material You Settings")
+                status: qsTr("Configure advanced color engine settings and integrations")
                 onClicked: root.nState.openSubPage(9)
             }
-            
-            RowLayout {
-                id: row
 
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Tokens.padding.large
-                spacing: Tokens.spacing.large
-                
-                MaterialIcon {
-                    text: "settings_suggest"
-                    fontStyle: Tokens.font.icon.extraLarge
-                    color: Colours.palette.m3onSurface
-                }
-                
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Tokens.spacing.extraSmall
-
-                    StyledText {
-                        text: "Advanced Material You Settings"
-                        font: Tokens.font.title.small
-                        color: Colours.palette.m3onSurface
-                    }
-                    StyledText {
-                        text: "Configure advanced color engine settings and integrations"
-                        font: Tokens.font.body.medium
-                        color: Colours.palette.m3onSurfaceVariant
-                    }
-                }
-                
-                MaterialIcon {
-                    text: "chevron_right"
-                    fontStyle: Tokens.font.icon.large
-                    color: Colours.palette.m3onSurfaceVariant
-                }
+            NavRow {
+                last: true
+                icon: "palette"
+                label: qsTr("Extracted Color Palette Inspector")
+                status: qsTr("View all extracted tokens and copyable hex codes")
+                onClicked: root.nState.openSubPage(10)
             }
         }
 
@@ -117,7 +92,7 @@ PageBase {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.preferredWidth: 1
-                    implicitHeight: modeCol.implicitHeight + Tokens.padding.large * 2
+                    implicitHeight: modeCol.implicitHeight + Tokens.padding.medium * 2
                     radius: Tokens.rounding.large
                     color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
                     border.width: isSelected ? 2 : 1
@@ -134,30 +109,30 @@ PageBase {
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.margins: Tokens.padding.large
-                        spacing: Tokens.spacing.large
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
 
                         MaterialIcon {
                             Layout.alignment: Qt.AlignTop
                             text: modeDelegateRect.modelData?.icon ?? ""
-                            fontStyle: Tokens.font.icon.extraLarge
+                            fontStyle: Tokens.font.icon.large
                             color: modeDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                         }
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: Tokens.spacing.extraSmall
+                            spacing: 2
 
                             StyledText {
                                 Layout.fillWidth: true
                                 text: modeDelegateRect.modelData?.name ?? ""
-                                font: Tokens.font.title.small
+                                font: Tokens.font.body.small
                                 color: modeDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                             }
                             StyledText {
                                 Layout.fillWidth: true
                                 text: modeDelegateRect.modelData?.description ?? ""
-                                font: Tokens.font.body.medium
+                                font: Tokens.font.label.small
                                 color: modeDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
                                 wrapMode: Text.Wrap
                             }
@@ -191,7 +166,7 @@ PageBase {
                     
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    implicitHeight: schemeRow.implicitHeight + Tokens.padding.large * 2
+                    implicitHeight: schemeRow.implicitHeight + Tokens.padding.medium * 2
                     radius: Tokens.rounding.large
                     color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
                     border.width: isSelected ? 2 : 1
@@ -206,13 +181,13 @@ PageBase {
                         id: schemeRow
 
                         anchors.fill: parent
-                        anchors.margins: Tokens.padding.large
-                        spacing: Tokens.spacing.large
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
                         
                         StyledRect {
                             id: preview
-                            Layout.preferredWidth: Tokens.sizes.launcher.itemHeight
-                            Layout.preferredHeight: Tokens.sizes.launcher.itemHeight
+                            Layout.preferredWidth: 26
+                            Layout.preferredHeight: 26
                             
                             border.width: 1
                             border.color: Qt.alpha(`#${delegateRect.modelData?.colours?.outline}`, 0.5)
@@ -242,18 +217,18 @@ PageBase {
                         
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: Tokens.spacing.extraSmall
+                            spacing: 2
                             
                             StyledText {
                                 Layout.fillWidth: true
                                 text: delegateRect.modelData?.flavour ?? ""
-                                font: Tokens.font.title.small
+                                font: Tokens.font.body.small
                                 color: delegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                             }
                             StyledText {
                                 Layout.fillWidth: true
                                 text: delegateRect.modelData?.name ?? ""
-                                font: Tokens.font.body.medium
+                                font: Tokens.font.label.small
                                 color: delegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
                             }
                         }
@@ -263,7 +238,7 @@ PageBase {
                             visible: delegateRect.isSelected
                             text: "check"
                             color: Colours.palette.m3onSecondaryContainer
-                            fontStyle: Tokens.font.icon.large
+                            fontStyle: Tokens.font.icon.medium
                         }
                     }
                 }
@@ -296,7 +271,7 @@ PageBase {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.preferredWidth: 1
-                    implicitHeight: varCol.implicitHeight + Tokens.padding.large * 2
+                    implicitHeight: varCol.implicitHeight + Tokens.padding.medium * 2
                     radius: Tokens.rounding.large
                     color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
                     border.width: isSelected ? 2 : 1
@@ -313,30 +288,30 @@ PageBase {
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.margins: Tokens.padding.large
-                        spacing: Tokens.spacing.large
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
                         
                         MaterialIcon {
                             Layout.alignment: Qt.AlignTop
                             text: varDelegateRect.modelData?.icon ?? ""
-                            fontStyle: Tokens.font.icon.extraLarge
+                            fontStyle: Tokens.font.icon.large
                             color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                         }
                         
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: Tokens.spacing.extraSmall
+                            spacing: 2
                             
                             StyledText {
                                 Layout.fillWidth: true
                                 text: varDelegateRect.modelData?.name ?? ""
-                                font: Tokens.font.title.small
+                                font: Tokens.font.body.small
                                 color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                             }
                             StyledText {
                                 Layout.fillWidth: true
                                 text: varDelegateRect.modelData?.description ?? ""
-                                font: Tokens.font.body.medium
+                                font: Tokens.font.label.small
                                 color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
                                 wrapMode: Text.Wrap
                             }

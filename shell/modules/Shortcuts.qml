@@ -67,13 +67,13 @@ Scope {
             }
         }
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "screenshot"
+        key: "Print; Meta+Shift+S"
         description: "Toggle screenshot overlay"
         onPressed: {
-            regionSelector.screenshot();
+            const vis = Visibilities.getForActive();
+            if (vis) vis.screenshot = !vis.screenshot;
         }
     }
     // qmllint disable unresolved-type
@@ -275,17 +275,17 @@ Scope {
     CustomShortcut {
         name: "foot"
         description: "Launch Terminal"
-        onPressed: Quickshell.execDetached(["kstart", "--", "foot"])
+        onPressed: Quickshell.execDetached(["kstart", "--", "kitty"])
     }
     CustomShortcut {
         name: "firefox"
         description: "Launch Browser"
-        onPressed: Quickshell.execDetached(["kstart", "--", "firefox"])
+        onPressed: Quickshell.execDetached(["bash", "-c", "gtk-launch $(xdg-settings get default-web-browser 2>/dev/null || echo zen.desktop) 2>/dev/null || zen-browser || xdg-open about:blank"])
     }
     CustomShortcut {
         name: "code"
         description: "Launch Editor"
-        onPressed: Quickshell.execDetached(["kstart", "--", "code"])
+        onPressed: Quickshell.execDetached(["bash", "-c", "code 2>/dev/null || codium 2>/dev/null || antigravity 2>/dev/null || true"])
     }
     CustomShortcut {
         name: "github-desktop"
@@ -295,80 +295,103 @@ Scope {
     CustomShortcut {
         name: "nemo"
         description: "Launch File Manager"
-        onPressed: Quickshell.execDetached(["kstart", "--", "nemo"])
+        onPressed: Quickshell.execDetached(["kstart", "--", "dolphin"])
     }
     CustomShortcut {
         name: "kcolorpicker"
         description: "Color Picker"
         onPressed: ColorPicker.pickColor()
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
+        name: "colorPickerSpace"
+        key: "Space; Tab"
+        description: "Cycle color picker format"
+        active: ColorPicker.active
+        onPressed: {
+            if (ColorPicker.active) {
+                ColorPicker.cycleFormat();
+            }
+        }
+    }
+    CustomShortcut {
+        name: "colorPickerEscape"
+        key: "Escape"
+        description: "Dismiss color picker"
+        active: ColorPicker.active
+        onPressed: {
+            if (ColorPicker.active) {
+                ColorPicker.cancel();
+            }
+        }
+    }
+    CustomShortcut {
+        name: "colorPickerEnter"
+        key: "Return; Enter; C"
+        description: "Copy picked color"
+        active: ColorPicker.active
+        onPressed: {
+            if (ColorPicker.active) {
+                ColorPicker.commitPick();
+            }
+        }
+    }
+    CustomShortcut {
         name: "workspace1"
+        key: "Meta+Shift+1; Meta+!"
         description: "Switch to workspace 1"
         onPressed: KWinWorkspaceState.setDesktop(1)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace2"
+        key: "Meta+Shift+2; Meta+@"
         description: "Switch to workspace 2"
         onPressed: KWinWorkspaceState.setDesktop(2)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace3"
+        key: "Meta+Shift+3; Meta+#"
         description: "Switch to workspace 3"
         onPressed: KWinWorkspaceState.setDesktop(3)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace4"
+        key: "Meta+Shift+4; Meta+$"
         description: "Switch to workspace 4"
         onPressed: KWinWorkspaceState.setDesktop(4)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace5"
+        key: "Meta+Shift+5; Meta+%"
         description: "Switch to workspace 5"
         onPressed: KWinWorkspaceState.setDesktop(5)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace6"
+        key: "Meta+Shift+6; Meta+^"
         description: "Switch to workspace 6"
         onPressed: KWinWorkspaceState.setDesktop(6)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace7"
+        key: "Meta+Shift+7; Meta+&"
         description: "Switch to workspace 7"
         onPressed: KWinWorkspaceState.setDesktop(7)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace8"
+        key: "Meta+Shift+8; Meta+*"
         description: "Switch to workspace 8"
         onPressed: KWinWorkspaceState.setDesktop(8)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace9"
+        key: "Meta+Shift+9; Meta+("
         description: "Switch to workspace 9"
         onPressed: KWinWorkspaceState.setDesktop(9)
     }
-    // qmllint disable unresolved-type
     CustomShortcut {
-        // qmllint enable unresolved-type
         name: "workspace10"
+        key: "Meta+Shift+0; Meta+)"
         description: "Switch to workspace 10"
         onPressed: KWinWorkspaceState.setDesktop(10)
     }
@@ -729,13 +752,62 @@ Scope {
         description: "Rotate windows within a part"
         onPressed: { if (Config.general.krohnkiteEnabled) Quickshell.execDetached(["qdbus6", "org.kde.kglobalaccel", "/component/kwin", "org.kde.kglobalaccel.Component.invokeShortcut", "KrohnkiteRotatePart"]) }
     }
-    // qmllint disable unresolved-type
+    // Taskbar Apps (Meta+1...9)
     CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "krohnkiteToggleDock"
-        description: "Toggle dock support"
-        onPressed: { if (Config.general.krohnkiteEnabled) Quickshell.execDetached(["qdbus6", "org.kde.kglobalaccel", "/component/kwin", "org.kde.kglobalaccel.Component.invokeShortcut", "KrohnkitetoggleDock"]) }
+        name: "taskbarApp1"
+        key: "Meta+1"
+        description: "Activate/Toggle Taskbar App 1"
+        onPressed: DockService.activateAppAtIndex(0)
     }
+    CustomShortcut {
+        name: "taskbarApp2"
+        key: "Meta+2"
+        description: "Activate/Toggle Taskbar App 2"
+        onPressed: DockService.activateAppAtIndex(1)
+    }
+    CustomShortcut {
+        name: "taskbarApp3"
+        key: "Meta+3"
+        description: "Activate/Toggle Taskbar App 3"
+        onPressed: DockService.activateAppAtIndex(2)
+    }
+    CustomShortcut {
+        name: "taskbarApp4"
+        key: "Meta+4"
+        description: "Activate/Toggle Taskbar App 4"
+        onPressed: DockService.activateAppAtIndex(3)
+    }
+    CustomShortcut {
+        name: "taskbarApp5"
+        key: "Meta+5"
+        description: "Activate/Toggle Taskbar App 5"
+        onPressed: DockService.activateAppAtIndex(4)
+    }
+    CustomShortcut {
+        name: "taskbarApp6"
+        key: "Meta+6"
+        description: "Activate/Toggle Taskbar App 6"
+        onPressed: DockService.activateAppAtIndex(5)
+    }
+    CustomShortcut {
+        name: "taskbarApp7"
+        key: "Meta+7"
+        description: "Activate/Toggle Taskbar App 7"
+        onPressed: DockService.activateAppAtIndex(6)
+    }
+    CustomShortcut {
+        name: "taskbarApp8"
+        key: "Meta+8"
+        description: "Activate/Toggle Taskbar App 8"
+        onPressed: DockService.activateAppAtIndex(7)
+    }
+    CustomShortcut {
+        name: "taskbarApp9"
+        key: "Meta+9"
+        description: "Activate/Toggle Taskbar App 9"
+        onPressed: DockService.activateAppAtIndex(8)
+    }
+
     LoggingCategory {
         id: lc
 

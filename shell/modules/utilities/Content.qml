@@ -40,6 +40,12 @@ Item {
             z: 1
         }
 
+        Sliders {
+            id: sliders
+
+            Layout.fillWidth: true
+        }
+
         Toggles {
             id: toggles
 

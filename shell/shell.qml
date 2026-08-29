@@ -17,6 +17,8 @@ import "modules/shimeji"
 import "modules/areapicker"
 import "modules/lock"
 import "modules/polkit"
+import "modules/colorpicker" as ColorPickerModule
+import "modules/screenshot" as Screenshot
 import "modules/screenshot/regionSelector"
 import "modules/overview"
 import "modules/welcome" as Welcome
@@ -53,12 +55,15 @@ ShellRoot {
     Background {}
     BadAppleOverlay {}
 
+    readonly property var _spotifyService: SpotifyService
+
     Drawers {}
     // AreaPicker {}
     Lock {
         id: lock
     }
     // PolkitModule {}
+    ColorPickerModule.ColorPickerOverlay {}
 
     property var regionSelector: RegionSelector {}
 
@@ -66,7 +71,8 @@ ShellRoot {
         target: "region"
 
         function screenshot(): void {
-            regionSelector.screenshot()
+            const vis = Visibilities.getForActive();
+            if (vis) vis.screenshot = !vis.screenshot;
         }
 
         function search(): void {

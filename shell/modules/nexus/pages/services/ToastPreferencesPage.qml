@@ -57,6 +57,16 @@ PageBase {
             onMoved: value => GlobalConfig.utilities.maxToasts = Math.round(value)
         }
 
+        StepperRow {
+            label: qsTr("Toast duration")
+            subtext: qsTr("Duration toasts remain visible in seconds")
+            value: ((GlobalConfig.utilities.toasts.duration || 2500) / 1000)
+            from: 1
+            to: 10
+            stepSize: 0.5
+            onMoved: value => GlobalConfig.utilities.toasts.duration = Math.round(value * 1000)
+        }
+
         ToggleRow {
             text: qsTr("Transparency")
             subtext: qsTr("Apply transparency and blur")

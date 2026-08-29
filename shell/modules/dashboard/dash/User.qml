@@ -18,7 +18,7 @@ Item {
     required property FileDialog facePicker
 
     property color pfpFallbackColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
-    property string hyprlandSplashText: ""
+    property string greetingText: ""
 
     anchors.fill: parent
     anchors.margins: Tokens.padding.large
@@ -27,13 +27,22 @@ Item {
         CAnim {}
     }
 
-    Process {
-        running: Config.dashboard.showHyprlandSplash
-        command: ["sh", "-c", "echo \"Welcome back, $USER\""]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                hyprlandSplashText = text.trim();
-            }
+    function updateGreeting(): void {
+        const username = SysInfo.user || Paths.user || "User";
+        const name = username.charAt(0).toUpperCase() + username.slice(1);
+        const greetings = ["Hello", "Hey", "Hi", "Greetings", "Welcome", "Welcome back"];
+        const chosen = greetings[Math.floor(Math.random() * greetings.length)];
+        root.greetingText = `${chosen}, ${name}!`;
+    }
+
+    Component.onCompleted: root.updateGreeting()
+
+    Connections {
+        target: root.visibilities
+
+        function onDashboardChanged(): void {
+            if (root.visibilities.dashboard)
+                root.updateGreeting();
         }
     }
 
@@ -61,7 +70,7 @@ Item {
 
                 containmentMask: QtObject {
                     function contains(pt: point): bool {
-                        return shape.contains(pt) && !logoShape.contains(mouse.mapToItem(logoShape, pt)) && !uptimeShape.contains(mouse.mapToItem(uptimeShape, pt));
+                        return shape.contains(pt) && !logoShape.contains(mouse.mapToItem(logoShape, pt));
                     }
                 }
 
@@ -92,7 +101,7 @@ Item {
                     color: Colours.palette.m3onSurfaceVariant
                     fontStyle: Tokens.font.icon.extraLarge
                     fill: 1
-                    grade: -2 // Ugh material symbols are such a pain with fill
+                    grade: -2
                 }
             }
 
@@ -184,50 +193,16 @@ Item {
         }
     }
 
-    MaterialShape {
-        id: uptimeShape
-
-        anchors.bottom: parent.bottom
-        anchors.left: pfpContainer.right
-        anchors.bottomMargin: -Tokens.padding.small // Clamshell is taller than what it is visually
-        anchors.leftMargin: -Tokens.padding.extraLargeIncreased
-        implicitSize: Tokens.sizes.dashboard.uptimeSize + Tokens.padding.small * 2
-        shape: MaterialShape.ClamShell
-        color: Colours.palette.m3tertiaryContainer
-
-        Behavior on color {
-            CAnim {}
-        }
-
-        MaterialIcon {
-            anchors.centerIn: parent
-            text: "clock_arrow_up"
-            color: Colours.palette.m3onTertiaryContainer
-            fontStyle: Tokens.font.icon.medium
-        }
-    }
-
-    StyledText {
-        anchors.left: uptimeShape.right
-        anchors.verticalCenter: uptimeShape.verticalCenter
-        anchors.leftMargin: Tokens.spacing.small
-        anchors.verticalCenterOffset: Math.round(fontInfo.pointSize * 0.1)
-
-        text: "up " + SysInfo.uptime.split(",").slice(0, 2).join(",") // Max 2 components
-        width: Tokens.sizes.dashboard.userWidth - x - Tokens.padding.extraLarge
-        elide: Text.ElideRight
-    }
-
     StyledRect {
         id: bubble1
 
         anchors.left: pfpContainer.right
-        anchors.top: bubble2.bottom
-        anchors.leftMargin: Tokens.spacing.small
-        anchors.topMargin: -Tokens.spacing.extraSmall
+        anchors.verticalCenter: pfpContainer.verticalCenter
+        anchors.leftMargin: 4
+        anchors.verticalCenterOffset: 6
 
-        implicitWidth: 10
-        implicitHeight: 10
+        implicitWidth: 6
+        implicitHeight: 6
         radius: Tokens.rounding.full
         color: Colours.palette.m3secondaryContainer
     }
@@ -236,11 +211,12 @@ Item {
         id: bubble2
 
         anchors.left: bubble1.right
-        anchors.verticalCenter: wmContainer.bottom
-        anchors.leftMargin: Tokens.spacing.extraSmall
+        anchors.verticalCenter: bubble1.verticalCenter
+        anchors.leftMargin: 3
+        anchors.verticalCenterOffset: -6
 
-        implicitWidth: 15
-        implicitHeight: 15
+        implicitWidth: 10
+        implicitHeight: 10
         radius: Tokens.rounding.full
         color: Colours.palette.m3secondaryContainer
     }
@@ -248,43 +224,29 @@ Item {
     StyledRect {
         id: wmContainer
 
-        anchors.left: bubble2.left
-        anchors.leftMargin: -Tokens.padding.medium
-        y: Tokens.padding.extraSmall
+        readonly property int maxTextWidth: Math.max(80, root.width - (bubble2.x + bubble2.width + 4) - Tokens.padding.medium * 2)
+
+        anchors.left: bubble2.right
+        anchors.leftMargin: 4
+        anchors.verticalCenter: pfpContainer.verticalCenter
 
         radius: Tokens.rounding.largeIncreased
         color: Colours.palette.m3secondaryContainer
-        implicitWidth: wmLabel.implicitWidth + Tokens.padding.medium * 2
-        implicitHeight: wmLabel.implicitHeight + Tokens.padding.small * 2
+        implicitWidth: wmText.width + Tokens.padding.medium * 2
+        implicitHeight: wmText.implicitHeight + Tokens.padding.small * 2
 
-        Row {
-            id: wmLabel
+        StyledText {
+            id: wmText
 
             anchors.centerIn: parent
-            spacing: Tokens.spacing.extraSmall
-
-            MaterialIcon {
-                id: wmIcon
-
-                visible: !Config.dashboard.showHyprlandSplash
-                anchors.verticalCenter: parent.verticalCenter
-                text: "select_window"
-                color: Colours.palette.m3onSecondaryContainer
-                fontStyle: wmText.font
-            }
-
-            StyledText {
-                id: wmText
-
-                anchors.verticalCenter: parent.verticalCenter
-                text: Config.dashboard.showHyprlandSplash && hyprlandSplashText !== "" ? hyprlandSplashText : SysInfo.wm + "..."
-                color: Colours.palette.m3onSecondaryContainer
-                font: Tokens.font.body.builders.small.vaxis("slnt", -4).build()
-                width: Math.min(implicitWidth, Tokens.sizes.dashboard.userWidth - wmContainer.x - Tokens.padding.medium * 2 - (wmIcon.visible ? wmIcon.implicitWidth + wmLabel.spacing : 0) - Tokens.padding.extraLarge)
-                wrapMode: Config.dashboard.showHyprlandSplash ? Text.WordWrap : Text.NoWrap
-                maximumLineCount: Config.dashboard.showHyprlandSplash ? 2 : 1
-                elide: Text.ElideRight
-            }
+            width: Math.min(implicitWidth, wmContainer.maxTextWidth)
+            text: root.greetingText
+            color: Colours.palette.m3onSecondaryContainer
+            font: Tokens.font.body.builders.medium.vaxis("slnt", -4).build()
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+            maximumLineCount: 2
+            elide: Text.ElideRight
         }
     }
 }

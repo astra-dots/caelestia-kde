@@ -98,6 +98,13 @@ Item {
         onClicked: modelData.close()
         Component.onCompleted: modelData.lock(this)
 
+        Timer {
+            interval: Math.max(500, (GlobalConfig.utilities.toasts.duration || 2500))
+            running: !toast.modelData.closed
+            repeat: false
+            onTriggered: toast.modelData.close()
+        }
+
         Anim {
             id: initAnim
 

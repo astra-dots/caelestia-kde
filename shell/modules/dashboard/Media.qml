@@ -1,9 +1,11 @@
 import "media"
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import M3Shapes
 import Caelestia.Config
 import qs.components
+import qs.components.controls
 import qs.services
 
 Item {
@@ -122,6 +124,25 @@ Item {
                         text: qsTr("Play something for it to show up here!")
                         color: Colours.palette.m3onSurfaceVariant
                         font: Tokens.font.body.large
+                    }
+
+                    IconTextButton {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.topMargin: Tokens.spacing.small
+                        icon: "headphones"
+                        text: qsTr("Open Spotify")
+                        type: ButtonBase.Tonal
+                        isRound: true
+
+                        onClicked: {
+                            if (root.visibilities) {
+                                root.visibilities.dashboard = false;
+                            }
+                            if (typeof KWinWorkspaceState !== "undefined") {
+                                KWinWorkspaceState.setDesktop(2);
+                            }
+                            Quickshell.execDetached(["gtk-launch", "spotify-launcher"]);
+                        }
                     }
                 }
             }

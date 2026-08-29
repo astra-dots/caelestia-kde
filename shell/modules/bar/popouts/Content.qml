@@ -38,6 +38,14 @@ Item {
             height: Math.max(viewport.height, implicitHeight)
             implicitHeight: currentPopout?.item?.implicitHeight ?? 0
 
+
+        Popout {
+            name: "date"
+            sourceComponent: DateCard {
+                popouts: root.popouts
+            }
+        }
+
         Popout {
             name: "activewindow"
             sourceComponent: ActiveWindow {

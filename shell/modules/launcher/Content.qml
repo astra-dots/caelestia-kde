@@ -187,6 +187,11 @@ Item {
             placeholderText: qsTr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
             onAccepted: {
+                if (list.showPinned && list.currentList?.launchCurrent) {
+                    list.currentList.launchCurrent();
+                    root.visibilities.launcher = false;
+                    return;
+                }
                 const currentItem = list.currentList?.currentItem;
                 if (currentItem) {
                     if (list.showWallpapers) {
@@ -208,8 +213,74 @@ Item {
                 }
             }
 
-            Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
-            Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
+            Keys.onUpPressed: event => {
+                if (list.showEmojis) {
+                    list.currentList?.moveUp();
+                    event.accepted = true;
+                } else if (list.showWallpapers) {
+                    let idx = list.wallpaperTabs.findIndex(t => t.id === list.currentWallpaperTab);
+                    if (idx !== -1 && list.wallpaperTabs.length > 0) {
+                        idx = (idx - 1 + list.wallpaperTabs.length) % list.wallpaperTabs.length;
+                        list.currentWallpaperTab = list.wallpaperTabs[idx].id;
+                    }
+                    event.accepted = true;
+                } else {
+                    list.currentList?.decrementCurrentIndex();
+                }
+            }
+            Keys.onDownPressed: event => {
+                if (list.showEmojis) {
+                    list.currentList?.moveDown();
+                    event.accepted = true;
+                } else if (list.showWallpapers) {
+                    let idx = list.wallpaperTabs.findIndex(t => t.id === list.currentWallpaperTab);
+                    if (idx !== -1 && list.wallpaperTabs.length > 0) {
+                        idx = (idx + 1) % list.wallpaperTabs.length;
+                        list.currentWallpaperTab = list.wallpaperTabs[idx].id;
+                    }
+                    event.accepted = true;
+                } else {
+                    list.currentList?.incrementCurrentIndex();
+                }
+            }
+            Keys.onLeftPressed: event => {
+                if (list.showEmojis) {
+                    list.currentList?.moveLeft();
+                    event.accepted = true;
+                } else if (list.showWallpapers) {
+                    list.currentList?.decrementCurrentIndex();
+                    event.accepted = true;
+                } else if (list.showPinned && list.currentList?.moveLeft) {
+                    list.currentList.moveLeft();
+                    event.accepted = true;
+                }
+            }
+            Keys.onRightPressed: event => {
+                if (list.showEmojis) {
+                    list.currentList?.moveRight();
+                    event.accepted = true;
+                } else if (list.showWallpapers) {
+                    list.currentList?.incrementCurrentIndex();
+                    event.accepted = true;
+                } else if (list.showPinned && list.currentList?.moveRight) {
+                    list.currentList.moveRight();
+                    event.accepted = true;
+                }
+            }
+
+            Keys.onTabPressed: event => {
+                if (list.showEmojis) {
+                    list.currentList?.nextCategory();
+                    event.accepted = true;
+                }
+            }
+
+            Keys.onBacktabPressed: event => {
+                if (list.showEmojis) {
+                    list.currentList?.prevCategory();
+                    event.accepted = true;
+                }
+            }
 
             Keys.onEscapePressed: root.visibilities.launcher = false
 
@@ -222,6 +293,30 @@ Item {
             }
 
             Keys.onPressed: event => {
+                if (list.showEmojis && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    list.currentList?.activateSelected();
+                    event.accepted = true;
+                } else if (list.showWallpapers && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    const currentItem = list.currentList?.currentItem;
+                    if (currentItem && currentItem.modelData) {
+                        if (Colours.scheme === "dynamic" && currentItem.modelData.path !== Wallpapers.actualCurrent)
+                            Wallpapers.previewColourLock = true;
+                        Wallpapers.setWallpaper(currentItem.modelData.path);
+                        root.visibilities.launcher = false;
+                        event.accepted = true;
+                        return;
+                    }
+                }
+
+                if (list.showPinned && search.text.length === 0 && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    if (list.currentList?.launchCurrent) {
+                        list.currentList.launchCurrent();
+                        root.visibilities.launcher = false;
+                        event.accepted = true;
+                        return;
+                    }
+                }
+
                 if (!GlobalConfig.launcher.vimKeybinds)
                     return;
 

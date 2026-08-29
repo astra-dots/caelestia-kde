@@ -279,10 +279,13 @@ Singleton {
     }
 
     Component.onCompleted: {
-        root.requestReloadHyprRules()
-        Qt.callLater(updatePaletteManager)
-        scheduleSchemeReload()
-        startupSchemePollTimer.start()
+        if (schemeFile.text()) {
+            root.load(schemeFile.text(), false);
+        }
+        root.requestReloadHyprRules();
+        Qt.callLater(updatePaletteManager);
+        scheduleSchemeReload();
+        startupSchemePollTimer.start();
     }
 
     Connections {

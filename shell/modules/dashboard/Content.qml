@@ -219,6 +219,8 @@ Item {
     }
 
     Behavior on implicitHeight {
-        Anim {}
+        Anim {
+            type: Anim.DefaultEffects
+        }
     }
 }

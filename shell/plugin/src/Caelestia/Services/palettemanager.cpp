@@ -159,7 +159,6 @@ void PaletteManager::update(const QVariantMap& palette,
             result.insert(key, raw);
             continue;
         }
-
         const int layer = kLayer0Keys.contains(key) ? 0 : 1;
         result.insert(key, applyLayer(color, light, transpEnabled,
                                       transpBase, transpLayers,

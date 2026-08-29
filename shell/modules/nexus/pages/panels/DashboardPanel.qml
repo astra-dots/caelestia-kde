@@ -8,6 +8,7 @@ import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.utils
+import qs.services
 import qs.modules.nexus.common
 
 PageBase {
@@ -286,6 +287,28 @@ PageBase {
             subtext: qsTr("Show a welcome message on the dashboard")
             checked: Config.dashboard.showHyprlandSplash
             onToggled: GlobalConfig.dashboard.showHyprlandSplash = checked
+        }
+
+        // Album art effects
+        SectionHeader {
+            text: qsTr("Album Art Effects")
+        }
+
+        ToggleRow {
+            first: true
+            text: qsTr("Pixelate & reveal artwork")
+            subtext: qsTr("Pixelate album art by default and smoothly reveal original artwork on hover")
+            checked: AlbumArtEffects.enabled
+            onToggled: AlbumArtEffects.enabled = checked
+        }
+
+        ToggleRow {
+            last: true
+            enabled: AlbumArtEffects.enabled
+            text: qsTr("Adaptive color smoothing")
+            subtext: qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos")
+            checked: AlbumArtEffects.smoothing
+            onToggled: AlbumArtEffects.smoothing = checked
         }
 
         // Performance widgets

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import "../drawers/blur" as Blur
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
@@ -25,7 +26,7 @@ Variants {
         screen: modelData
         name: "background"
         isDesktopWidget: true
-        color: Config.background.wallpaperEnabled ? "black" : "transparent"
+        color: "transparent"
         surfaceFormat.opaque: false
         // If Quickshell wallpaper is disabled, use empty mask so KDE desktop gets clicks
         // If enabled, use null mask so Quickshell captures clicks
@@ -49,6 +50,34 @@ Variants {
                 } else if (button === Qt.LeftButton) {
                     if (typeof KWinActiveWindowBridge !== "undefined") {
                         KWinActiveWindowBridge.setActiveOutputName(win.screen.name);
+                    }
+                }
+            }
+        }
+        Item {
+            Process {
+                id: autoClockPosProc
+                command: ["python3", `${Quickshell.shellDir}/scripts/wallpaper_clutter_analyzer.py`, Wallpapers.actualCurrent || ""]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const bestPos = text.trim();
+                        if (bestPos.length > 0 && Config.background.desktopClock.autoPosition) {
+                            GlobalConfig.background.desktopClock.position = bestPos;
+                            for (let i = 0; i < Quickshell.screens.length; i++) {
+                                let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                                if (sConf) sConf.background.desktopClock.resetOption("position");
+                            }
+                            GlobalConfig.save();
+                        }
+                    }
+                }
+            }
+
+            Connections {
+                target: Wallpapers
+                function onActualCurrentChanged() {
+                    if (Config.background.desktopClock.autoPosition) {
+                        autoClockPosProc.running = true;
                     }
                 }
             }
@@ -103,11 +132,7 @@ Variants {
                 if (Config.bar.position === "bottom") return -clockBarZone / 2;
                 return 0;
             }
-            sourceComponent: DesktopClock {
-                wallpaper: behindClock
-                absX: clockLoader.x
-                absY: clockLoader.y
-            }
+            sourceComponent: DesktopClock {}
             transitions: Transition {
                 AnchorAnim {}
             }

@@ -96,6 +96,8 @@ GridLayout {
 
         Media {
             id: media
+
+            visibilities: root.visibilities
         }
     }
 

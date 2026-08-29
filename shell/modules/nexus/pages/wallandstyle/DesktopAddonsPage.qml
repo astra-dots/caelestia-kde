@@ -2,18 +2,67 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import Caelestia.Components
 import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
+import qs.utils
 
 PageBase {
     id: root
 
     isSubPage: true
     title: qsTr("Desktop Addons")
+
+    readonly property list<MenuItem> clockStyles: [
+        MenuItem { text: qsTr("Classic Horizontal"); icon: "schedule" },
+        MenuItem { text: qsTr("M3 Cookie Analog"); icon: "nest_clock_farsight_analog" },
+        MenuItem { text: qsTr("M3 Giant 2x2 Digital"); icon: "alarm" },
+        MenuItem { text: qsTr("M3 Pill Capsule"); icon: "pill" },
+        MenuItem { text: qsTr("M3 Radial Arc Dial"); icon: "timelapse" }
+    ]
+    readonly property var clockStyleValues: ["classic", "cookie", "giant", "pill", "radial"]
+
+    readonly property list<MenuItem> clockPositions: [
+        MenuItem { text: qsTr("Top Left"); icon: "align_horizontal_left" },
+        MenuItem { text: qsTr("Top Center"); icon: "align_horizontal_center" },
+        MenuItem { text: qsTr("Top Right"); icon: "align_horizontal_right" },
+        MenuItem { text: qsTr("Middle Left"); icon: "align_horizontal_left" },
+        MenuItem { text: qsTr("Center"); icon: "align_horizontal_center" },
+        MenuItem { text: qsTr("Middle Right"); icon: "align_horizontal_right" },
+        MenuItem { text: qsTr("Bottom Left"); icon: "align_horizontal_left" },
+        MenuItem { text: qsTr("Bottom Center"); icon: "align_horizontal_center" },
+        MenuItem { text: qsTr("Bottom Right"); icon: "align_horizontal_right" }
+    ]
+    readonly property var clockPositionValues: [
+        "top-left", "top-center", "top-right",
+        "middle-left", "middle-center", "middle-right",
+        "bottom-left", "bottom-center", "bottom-right"
+    ]
+
+    Item {
+        Process {
+            id: autoProc
+            command: ["python3", `${Quickshell.shellDir}/scripts/wallpaper_clutter_analyzer.py`, Wallpapers.actualCurrent || ""]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const bestPos = text.trim();
+                    if (bestPos.length > 0) {
+                        GlobalConfig.background.desktopClock.position = bestPos;
+                        for (let i = 0; i < Quickshell.screens.length; i++) {
+                            let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                            if (sConf) sConf.background.desktopClock.resetOption("position");
+                        }
+                        GlobalConfig.save();
+                    }
+                }
+            }
+        }
+    }
 
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -35,7 +84,138 @@ PageBase {
                 first: true
                 text: qsTr("Desktop clock")
                 checked: Config.background.desktopClock.enabled
-                onToggled: GlobalConfig.background.desktopClock.enabled = checked
+                onToggled: {
+                    GlobalConfig.background.desktopClock.enabled = checked;
+                    for (let i = 0; i < Quickshell.screens.length; i++) {
+                        let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                        if (sConf) sConf.background.desktopClock.resetOption("enabled");
+                    }
+                    GlobalConfig.save();
+                }
+            }
+
+            SelectRow {
+                Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+                Layout.fillWidth: true
+                label: qsTr("Clock Style")
+                subtext: qsTr("Choose between Material You 3 expressive clockfaces")
+                menuItems: root.clockStyles
+                active: root.clockStyles[Math.max(0, root.clockStyleValues.indexOf(Config.background.desktopClock.style || "classic"))]
+                enabled: Config.background.desktopClock.enabled
+                onSelected: item => {
+                    let idx = root.clockStyles.indexOf(item);
+                    if (idx >= 0) {
+                        GlobalConfig.background.desktopClock.style = root.clockStyleValues[idx];
+                        for (let i = 0; i < Quickshell.screens.length; i++) {
+                            let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                            if (sConf) sConf.background.desktopClock.resetOption("style");
+                        }
+                        GlobalConfig.save();
+                    }
+                }
+            }
+
+            SelectRow {
+                Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+                Layout.fillWidth: true
+                label: qsTr("Clock Position")
+                subtext: qsTr("Snap desktop clock to screen sector")
+                menuItems: root.clockPositions
+                active: root.clockPositions[Math.max(0, root.clockPositionValues.indexOf(Config.background.desktopClock.position || "top-left"))]
+                enabled: Config.background.desktopClock.enabled
+                onSelected: item => {
+                    let idx = root.clockPositions.indexOf(item);
+                    if (idx >= 0) {
+                        GlobalConfig.background.desktopClock.position = root.clockPositionValues[idx];
+                        for (let i = 0; i < Quickshell.screens.length; i++) {
+                            let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                            if (sConf) sConf.background.desktopClock.resetOption("position");
+                        }
+                        GlobalConfig.save();
+                    }
+                }
+            }
+
+            SliderRow {
+                Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+                Layout.fillWidth: true
+                label: qsTr("Clock Size")
+                subtext: qsTr("Scale factor for desktop clock")
+                value: (Config.background.desktopClock.scale - 0.5) / 1.5
+                valueLabel: `${Math.round(Config.background.desktopClock.scale * 100)}%`
+                enabled: Config.background.desktopClock.enabled
+                onMoved: v => {
+                    let scaled = 0.5 + v * 1.5;
+                    GlobalConfig.background.desktopClock.scale = Math.round(scaled * 10) / 10;
+                    for (let i = 0; i < Quickshell.screens.length; i++) {
+                        let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                        if (sConf) sConf.background.desktopClock.resetOption("scale");
+                    }
+                    GlobalConfig.save();
+                }
+            }
+
+            ToggleRow {
+                Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+                Layout.fillWidth: true
+                text: qsTr("Auto-position on wallpaper change")
+                subtext: qsTr("Automatically move clock to the cleanest spot when wallpaper changes")
+                checked: Config.background.desktopClock.autoPosition
+                enabled: Config.background.desktopClock.enabled
+                onToggled: {
+                    GlobalConfig.background.desktopClock.autoPosition = checked;
+                    for (let i = 0; i < Quickshell.screens.length; i++) {
+                        let sConf = GlobalConfig.forScreen(Quickshell.screens[i].name);
+                        if (sConf) sConf.background.desktopClock.resetOption("autoPosition");
+                    }
+                    GlobalConfig.save();
+                }
+            }
+
+            ConnectedRect {
+                Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+                Layout.fillWidth: true
+                implicitHeight: autoRowLayout.implicitHeight + autoRowLayout.anchors.margins * 2
+                clip: false
+                enabled: Config.background.desktopClock.enabled
+
+                RowLayout {
+                    id: autoRowLayout
+                    anchors.fill: parent
+                    anchors.margins: Tokens.padding.medium
+                    anchors.leftMargin: Tokens.padding.largeIncreased
+                    anchors.rightMargin: Tokens.padding.largeIncreased
+                    spacing: Tokens.spacing.medium
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Smart Auto-Position Now")
+                            font: Tokens.font.body.small
+                            elide: Text.ElideRight
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Analyze current wallpaper to place clock in cleanest space")
+                            color: Colours.palette.m3onSurfaceVariant
+                            font: Tokens.font.label.small
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    IconTextButton {
+                        icon: "auto_awesome"
+                        text: qsTr("Auto-Position")
+                        type: ButtonBase.Tonal
+                        onClicked: {
+                            autoProc.running = true;
+                        }
+                    }
+                }
             }
 
             ToggleRow {

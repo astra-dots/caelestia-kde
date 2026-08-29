@@ -14,6 +14,7 @@ Item {
 
     required property Brightness.Monitor monitor
     required property DrawerVisibilities visibilities
+    required property string activeIndicator
 
     required property real volume
     required property bool muted
@@ -21,134 +22,117 @@ Item {
     required property bool sourceMuted
     required property real brightness
 
-    implicitWidth: layout.implicitWidth + Tokens.padding.large * 2
-    implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
-
-    ColumnLayout {
-        id: layout
-
-        anchors.centerIn: parent
-        spacing: Tokens.spacing.medium
-
-        // Speaker volume
-        WrappedLoader {
-            Layout.alignment: Qt.AlignHCenter
-            shouldBeActive: Config.osd.enableVolume !== false
-            targetWidth: Tokens.sizes.osd.sliderWidth
-            targetHeight: Tokens.sizes.osd.sliderHeight
-
-            sourceComponent: CustomMouseArea {
-                function onWheel(event: WheelEvent) {
-                    if (event.angleDelta.y > 0)
-                        Audio.incrementVolume();
-                    else if (event.angleDelta.y < 0)
-                        Audio.decrementVolume();
-                }
-
-                implicitWidth: Tokens.sizes.osd.sliderWidth
-                implicitHeight: Tokens.sizes.osd.sliderHeight
-
-                FilledSlider {
-                    anchors.fill: parent
-
-                    icon: Icons.getVolumeIcon(value, root.muted)
-                    value: root.volume
-                    to: GlobalConfig.services.maxVolume
-                    onMoved: Audio.setVolume(value)
-                }
-            }
-        }
-
-        // Microphone volume
-        WrappedLoader {
-            Layout.alignment: Qt.AlignHCenter
-            shouldBeActive: Config.osd.enableMicrophone && (!Config.osd.enableBrightness || !root.visibilities.session)
-            targetWidth: Tokens.sizes.osd.sliderWidth
-            targetHeight: Tokens.sizes.osd.sliderHeight
-
-            sourceComponent: CustomMouseArea {
-                function onWheel(event: WheelEvent) {
-                    if (event.angleDelta.y > 0)
-                        Audio.incrementSourceVolume();
-                    else if (event.angleDelta.y < 0)
-                        Audio.decrementSourceVolume();
-                }
-
-                implicitWidth: Tokens.sizes.osd.sliderWidth
-                implicitHeight: Tokens.sizes.osd.sliderHeight
-
-                FilledSlider {
-                    anchors.fill: parent
-
-                    icon: Icons.getMicVolumeIcon(value, root.sourceMuted)
-                    value: root.sourceVolume
-                    to: GlobalConfig.services.maxVolume
-                    onMoved: Audio.setSourceVolume(value)
-                }
-            }
-        }
-
-        // Brightness
-        WrappedLoader {
-            Layout.alignment: Qt.AlignHCenter
-            shouldBeActive: Config.osd.enableBrightness
-            targetWidth: Tokens.sizes.osd.sliderWidth
-            targetHeight: Tokens.sizes.osd.sliderHeight
-
-            sourceComponent: CustomMouseArea {
-                function onWheel(event: WheelEvent) {
-                    const monitor = root.monitor;
-                    if (!monitor)
-                        return;
-                    if (event.angleDelta.y > 0)
-                        monitor.setBrightness(monitor.brightness + GlobalConfig.services.brightnessIncrement);
-                    else if (event.angleDelta.y < 0)
-                        monitor.setBrightness(monitor.brightness - GlobalConfig.services.brightnessIncrement);
-                }
-
-                implicitWidth: Tokens.sizes.osd.sliderWidth
-                implicitHeight: Tokens.sizes.osd.sliderHeight
-
-                FilledSlider {
-                    anchors.fill: parent
-
-                    icon: HyprSunset.active ? "bedtime" : `brightness_${(Math.round(value * 6) + 1)}`
-                    value: root.brightness
-                    onMoved: root.monitor?.setBrightness(value)
-                    enableIconTap: true
-                    onIconTapped: HyprSunset.toggle(5000)
-                }
-            }
-        }
+    readonly property real currentValue: {
+        if (root.activeIndicator === "brightness")
+            return root.brightness;
+        if (root.activeIndicator === "microphone")
+            return root.sourceVolume;
+        return root.volume;
     }
 
-    component WrappedLoader: Loader {
-        required property bool shouldBeActive
-        property real targetWidth: 0
-        property real targetHeight: 0
+    readonly property bool isMuted: {
+        if (root.activeIndicator === "microphone")
+            return root.sourceMuted;
+        if (root.activeIndicator === "volume")
+            return root.muted;
+        return false;
+    }
 
-        asynchronous: true
-        Layout.preferredWidth: shouldBeActive ? targetWidth : 0
-        Layout.preferredHeight: shouldBeActive ? targetHeight : 0
-        opacity: shouldBeActive ? 1 : 0
-        active: opacity > 0
-        visible: active
+    readonly property string icon: {
+        if (root.activeIndicator === "brightness")
+            return HyprSunset.active ? "bedtime" : `brightness_${Math.min(7, Math.max(1, Math.round(root.brightness * 6) + 1))}`;
+        if (root.activeIndicator === "microphone")
+            return Icons.getMicVolumeIcon(root.sourceVolume, root.sourceMuted);
+        return Icons.getVolumeIcon(root.volume, root.muted);
+    }
 
-        Behavior on Layout.preferredWidth {
-            Anim {
-                type: Anim.Emphasized
+    readonly property string title: {
+        if (root.activeIndicator === "brightness")
+            return qsTr("Brightness");
+        if (root.activeIndicator === "microphone")
+            return qsTr("Microphone");
+        return qsTr("Volume");
+    }
+
+    implicitWidth: 380
+    implicitHeight: layout.implicitHeight + Tokens.padding.medium * 2
+
+    RowLayout {
+        id: layout
+
+        anchors.fill: parent
+        anchors.leftMargin: Tokens.padding.large
+        anchors.rightMargin: Tokens.padding.large
+        anchors.topMargin: Tokens.padding.medium
+        anchors.bottomMargin: Tokens.padding.medium
+        spacing: Tokens.spacing.medium
+
+        // Left Icon Badge
+        StyledRect {
+            implicitWidth: 38
+            implicitHeight: 38
+            Layout.alignment: Qt.AlignVCenter
+
+            radius: Tokens.rounding.full
+            color: root.isMuted ? Colours.palette.m3errorContainer : Colours.palette.m3primaryContainer
+
+            MaterialIcon {
+                anchors.centerIn: parent
+                text: root.icon
+                color: root.isMuted ? Colours.palette.m3onErrorContainer : Colours.palette.m3onPrimaryContainer
+                fontStyle: Tokens.font.icon.builders.medium.size(20).build()
             }
         }
 
-        Behavior on Layout.preferredHeight {
-            Anim {
-                type: Anim.Emphasized
-            }
-        }
+        // Right Info Section
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            spacing: Tokens.spacing.extraSmall
 
-        Behavior on opacity {
-            Anim {
-                type: Anim.DefaultEffects
+            RowLayout {
+                Layout.fillWidth: true
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.title
+                    font: Tokens.font.body.builders.small.weight(Font.Medium).build()
+                    color: Colours.palette.m3onSurface
+                    renderType: Text.QtRendering
+                }
+
+                StyledText {
+                    Layout.preferredWidth: 42
+                    horizontalAlignment: Text.AlignRight
+                    text: `${Math.round(root.currentValue * 100)}%`
+                    font: Tokens.font.body.builders.small.weight(Font.Medium).build()
+                    color: root.isMuted ? Colours.palette.m3error : Colours.palette.m3secondary
+                    renderType: Text.QtRendering
+                }
+            }
+
+            // Progress Bar Track
+            StyledRect {
+                Layout.fillWidth: true
+                implicitHeight: 6
+                radius: Tokens.rounding.full
+                color: Colours.palette.m3surfaceContainerHighest
+                clip: true
+
+                StyledRect {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    implicitWidth: parent.width * Math.min(1.0, Math.max(0.0, root.currentValue))
+                    radius: parent.radius
+                    color: root.isMuted ? Colours.palette.m3error : Colours.palette.m3primary
+
+                    Behavior on implicitWidth {
+                        Anim {
+                            type: Anim.StandardSmall
+                        }
+                    }
+                }
             }
         }
     }

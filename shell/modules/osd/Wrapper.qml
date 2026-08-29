@@ -16,7 +16,8 @@ Item {
     readonly property Brightness.Monitor monitor: Brightness.getMonitorForScreen(root.screen)
     readonly property bool shouldBeActive: visibilities.osd && Config.osd.enabled && !(visibilities.utilities && Config.utilities.enabled) && !visibilities.overview
     property real offsetScale: shouldBeActive ? 0 : 1
-    property real sidebarOffset: sidebarOrSessionVisible ? 12 : 0
+
+    property string activeIndicator: "volume"
     property real volume
     property bool muted
     property real sourceVolume
@@ -35,44 +36,34 @@ Item {
         sourceMuted = Audio.sourceMuted;
         brightness = root.monitor?.brightness ?? 0;
     }
+
+    clip: Config.bar.position === "bottom"
     visible: offsetScale < 1
-    anchors.leftMargin: Config.bar.position === "right" ? (-implicitWidth - 5 - sidebarOffset) * offsetScale : 0
-    anchors.rightMargin: Config.bar.position !== "right" ? (-implicitWidth - 5 - sidebarOffset) * offsetScale : 0
-    implicitWidth: content.implicitWidth
+    anchors.bottomMargin: (Config.bar.position === "bottom" ? 0 : -implicitHeight - 5) * offsetScale
+    height: Config.bar.position === "bottom" ? implicitHeight * (1 - offsetScale) : implicitHeight
     implicitHeight: content.implicitHeight
+    implicitWidth: content.implicitWidth || 380
     opacity: 1 - offsetScale
 
     Behavior on offsetScale {
         Anim {}
     }
+
     Connections {
         function onMutedChanged(): void {
-            root.show();
             root.muted = Audio.muted;
+            root.activeIndicator = "volume";
+            root.show();
         }
         function onVolumeChanged(): void {
-            root.show();
             root.volume = Audio.volume;
-        }
-        function onSourceMutedChanged(): void {
+            root.activeIndicator = "volume";
             root.show();
-            root.sourceMuted = Audio.sourceMuted;
-        }
-        function onSourceVolumeChanged(): void {
-            root.show();
-            root.sourceVolume = Audio.sourceVolume;
         }
 
         target: Audio
     }
-    Connections {
-        function onBrightnessChanged(): void {
-            root.show();
-            root.brightness = root.monitor?.brightness ?? 0;
-        }
 
-        target: root.monitor
-    }
     Timer {
         id: timer
 
@@ -82,16 +73,17 @@ Item {
                 root.visibilities.osd = false;
         }
     }
+
     Loader {
         id: content
 
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: parent.left
-        asynchronous: true
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
         active: root.shouldBeActive || root.visible
         sourceComponent: Content {
             monitor: root.monitor
             visibilities: root.visibilities
+            activeIndicator: root.activeIndicator
             volume: root.volume
             muted: root.muted
             sourceVolume: root.sourceVolume

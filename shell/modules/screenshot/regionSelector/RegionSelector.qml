@@ -37,7 +37,7 @@ Scope {
 
             required property var modelData
 
-            active: root.screenshotActive && modelData.name === KWinActiveWindowBridge.cursorOutputName()
+            active: root.screenshotActive && (Quickshell.screens.length <= 1 || modelData.name === KWinActiveWindowBridge.cursorOutputName() || modelData === Quickshell.screens[0])
 
             sourceComponent: RegionSelection {
                 screen: regionSelectorLoader.modelData
@@ -53,6 +53,14 @@ Scope {
     function screenshot() {
         root.action = RegionSelection.SnipAction.Copy
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        root.showWindowOutlines = false
+        root.screenshotActive = true
+    }
+
+    function snipWindowHover() {
+        root.action = RegionSelection.SnipAction.Copy
+        root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        root.showWindowOutlines = true
         root.screenshotActive = true
     }
 

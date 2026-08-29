@@ -9,5 +9,6 @@ PersistentProperties {
     property bool utilities
     property bool sidebar
     property bool overview
+    property bool screenshot: false
     property bool skipLauncherAnim: false
 }

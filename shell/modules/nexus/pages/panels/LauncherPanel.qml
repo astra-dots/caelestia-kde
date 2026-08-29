@@ -5,9 +5,11 @@ import QtQuick.Layouts
 import Quickshell.Io
 import Caelestia.Config
 import qs.components
+import qs.components.controls
 import qs.components.filedialog
 import qs.utils
 import qs.modules.nexus.common
+import qs.modules.launcher.services
 
 PageBase {
     id: root
@@ -119,6 +121,49 @@ PageBase {
         // Display
         SectionHeader {
             text: qsTr("Display")
+        }
+
+        // Pinned Apps & Bento Layout
+        SectionHeader {
+            text: qsTr("Pinned Apps & Bento Grid")
+        }
+
+        SelectRow {
+            first: true
+            label: qsTr("Pinned layout style")
+            subtext: qsTr("Choose between standard uniform grid or Material 3 expressive bento boxes")
+            active: LauncherPins.layoutStyle === "bento" ? bentoItem : gridItem
+            menuItems: [
+                MenuItem {
+                    id: bentoItem
+                    text: qsTr("Expressive Bento Grid")
+                    icon: "dashboard_customize"
+                    onClicked: {
+                        LauncherPins.layoutStyle = "bento";
+                        LauncherPins.save();
+                    }
+                },
+                MenuItem {
+                    id: gridItem
+                    text: qsTr("Standard Uniform Grid")
+                    icon: "grid_view"
+                    onClicked: {
+                        LauncherPins.layoutStyle = "grid";
+                        LauncherPins.save();
+                    }
+                }
+            ]
+        }
+
+        ToggleRow {
+            last: true
+            text: qsTr("Open to pinned grid by default")
+            subtext: qsTr("Show pinned apps first instead of the full application list")
+            checked: LauncherPins.showPinnedOnOpen
+            onToggled: {
+                LauncherPins.showPinnedOnOpen = checked;
+                LauncherPins.save();
+            }
         }
 
         ToggleRow {

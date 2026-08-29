@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
+import Quickshell
 import Caelestia.Components
 import Caelestia.Config
 import Caelestia.Services
@@ -14,6 +15,7 @@ import qs.utils
 Item {
     id: root
 
+    property DrawerVisibilities visibilities: null
     property real playerProgress: {
         const active = Players.active;
         return active?.length ? (active.position % active.length) / active.length : 0;
@@ -64,6 +66,7 @@ Item {
     CoverArt {
         id: cover
 
+        shrinkOnHover: true
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -71,65 +74,64 @@ Item {
         implicitHeight: width
     }
 
-    StyledText {
+    readonly property bool hasMedia: !!Players.active
+
+    MarqueeText {
         id: title
 
         anchors.top: cover.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.topMargin: Tokens.spacing.medium
 
-        animate: true
         horizontalAlignment: Text.AlignHCenter
-        text: (Players.active?.trackTitle ?? qsTr("No media")) || qsTr("Unknown title")
+        text: root.hasMedia ? (Players.active.trackTitle || qsTr("Unknown title")) : qsTr("No media playing")
         color: Colours.palette.m3primary
         font: Tokens.font.title.small
 
         width: parent.implicitWidth - Tokens.padding.extraLargeIncreased
-        elide: Text.ElideRight
     }
 
-    StyledText {
+    MarqueeText {
         id: album
 
         anchors.top: title.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.topMargin: Tokens.spacing.small
 
-        animate: true
         horizontalAlignment: Text.AlignHCenter
-        text: (Players.active?.trackAlbum ?? qsTr("No media")) || qsTr("Unknown album")
+        text: root.hasMedia ? (Players.active.trackAlbum || qsTr("Unknown album")) : qsTr("Ready to play")
         color: Colours.palette.m3onSurfaceVariant
         font: Tokens.font.body.small
 
         width: parent.implicitWidth - Tokens.padding.extraLargeIncreased
-        elide: Text.ElideRight
     }
 
-    StyledText {
+    MarqueeText {
         id: artist
 
         anchors.top: album.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.topMargin: Tokens.spacing.small
 
-        animate: true
         horizontalAlignment: Text.AlignHCenter
-        text: (Players.active?.trackArtist ?? qsTr("No media")) || qsTr("Unknown artist")
+        text: root.hasMedia ? (Players.active.trackArtist || qsTr("Unknown artist")) : ""
+        visible: root.hasMedia && text.length > 0
         color: Colours.palette.m3secondary
+        font: Tokens.font.body.small
 
         width: parent.implicitWidth - Tokens.padding.extraLargeIncreased
-        elide: Text.ElideRight
     }
 
     ButtonRow {
         id: controls
 
-        anchors.top: artist.bottom
+        anchors.top: root.hasMedia ? (artist.visible ? artist.bottom : album.bottom) : album.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.topMargin: Tokens.spacing.medium
         anchors.margins: Tokens.padding.large
 
+        visible: root.hasMedia
         spacing: Tokens.spacing.extraSmall
 
         IconButton {
@@ -161,10 +163,34 @@ Item {
         }
     }
 
+    IconTextButton {
+        id: launchButton
+
+        anchors.top: album.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: Tokens.spacing.medium
+
+        visible: !root.hasMedia
+        icon: "headphones"
+        text: qsTr("Open Spotify")
+        type: ButtonBase.Tonal
+        isRound: true
+
+        onClicked: {
+            if (root.visibilities) {
+                root.visibilities.dashboard = false;
+            }
+            if (typeof KWinWorkspaceState !== "undefined") {
+                KWinWorkspaceState.setDesktop(2);
+            }
+            Quickshell.execDetached(["gtk-launch", "spotify-launcher"]);
+        }
+    }
+
     Item {
         id: bongocat
 
-        anchors.top: controls.bottom
+        anchors.top: root.hasMedia ? controls.bottom : launchButton.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right

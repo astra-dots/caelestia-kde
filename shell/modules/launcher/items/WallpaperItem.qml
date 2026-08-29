@@ -83,7 +83,7 @@ Item {
             visible: path !== ""
             sourceSize: {
                 const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
-                return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
+                return Qt.size(image.implicitWidth * dpr * 2, image.implicitHeight * dpr * 2);
             }
         }
     }

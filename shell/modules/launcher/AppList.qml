@@ -1,12 +1,14 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.components.containers
 import qs.components.controls
 import qs.services
+import qs.utils
 import qs.modules.launcher.items
 import qs.modules.launcher.services
 
@@ -15,8 +17,44 @@ StyledListView {
 
     required property StyledTextField search
     required property DrawerVisibilities visibilities
+    property var parentList: null
 
     property string displayText
+
+    header: Item {
+        visible: root.parentList?.showAllApps && root.search.text.length === 0
+        implicitWidth: root.width
+        implicitHeight: visible ? (headerRow.implicitHeight + Tokens.spacing.medium) : 0
+
+        RowLayout {
+            id: headerRow
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.leftMargin: Tokens.padding.small
+            anchors.rightMargin: Tokens.padding.small
+            anchors.bottomMargin: Tokens.spacing.small
+
+            StyledText {
+                text: qsTr("All Applications")
+                font: Tokens.font.title.small
+                color: Colours.palette.m3onSurface
+                renderType: Text.QtRendering
+            }
+
+            Item { Layout.fillWidth: true }
+
+            IconTextButton {
+                icon: "arrow_back"
+                text: qsTr("Back to Pinned")
+                type: TextButton.Tonal
+                onClicked: {
+                    if (root.parentList)
+                        root.parentList.showAllApps = false;
+                }
+            }
+        }
+    }
 
     readonly property string requestedState: stateForText(search.text)
     readonly property string displayState: stateForText(displayText)
@@ -67,8 +105,13 @@ StyledListView {
         }
         case "windows":
             return Windows.items;
-        default:
+        default: {
+            if (!text) {
+                const all = DesktopEntries.applications.values.filter(a => a && a.id && !Strings.testRegexList(GlobalConfig.launcher.hiddenApps, a.id));
+                return [...all].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            }
             return Apps.search(text);
+        }
         }
     }
 
@@ -79,7 +122,31 @@ StyledListView {
 
     spacing: Tokens.spacing.small
     orientation: Qt.Vertical
-    implicitHeight: Math.max(0, (Tokens.sizes.launcher.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing)
+    implicitHeight: {
+        if (root.count === 0)
+            return 0;
+
+        if (root.displayState === "clipboard") {
+            const maxItems = Math.min(Config.launcher.maxShown, root.count);
+            const res = root.resultsForText(root.displayText);
+            if (!res || res.length === 0)
+                return 0;
+
+            let totalH = 0;
+            for (let i = 0; i < maxItems && i < res.length; i++) {
+                const item = res[i];
+                const isImg = item && (item.isImage === true || (typeof item.preview === "string" && item.preview.indexOf("[[ binary data") !== -1));
+                let itemH = isImg ? (Tokens.sizes.launcher.itemHeight * 2) : Tokens.sizes.launcher.itemHeight;
+                if (root.currentIndex === i && root.currentItem && root.currentItem.isExpanded) {
+                    itemH = root.currentItem.implicitHeight;
+                }
+                totalH += itemH + root.spacing;
+            }
+            return Math.max(0, totalH - root.spacing);
+        }
+
+        return Math.max(0, (Tokens.sizes.launcher.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing);
+    }
     cacheBuffer: Tokens.sizes.launcher.itemHeight * 10
 
     preferredHighlightBegin: 0

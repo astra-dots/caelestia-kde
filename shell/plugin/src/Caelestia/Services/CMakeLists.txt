@@ -51,6 +51,8 @@ qml_module(caelestia-services
         schemeloader.hpp
         palettemanager.cpp
         palettemanager.hpp
+        pixelreader.cpp
+        pixelreader.hpp
         dinogame.cpp
         dinogame.hpp
         kwinworkspacestate.cpp

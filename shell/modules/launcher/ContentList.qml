@@ -9,6 +9,7 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.utils
+import qs.modules.launcher.services
 
 Item {
     id: root
@@ -22,12 +23,15 @@ Item {
     required property int rounding
 
     property string currentWallpaperTab: "Main"
+    property bool showAllApps: false
 
+    readonly property bool showEmojis: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}emoji `) || search.text === `${GlobalConfig.launcher.actionPrefix}emoji`
     readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
     readonly property bool showWindowSwitcher: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}windows `)
     readonly property bool showKeybinds: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}keybinds `)
     readonly property bool showAnimations: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}animations `)
-    readonly property var currentList: showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : appList.item)))
+    readonly property bool showPinned: LauncherPins.showPinnedOnOpen && search.text.length === 0 && !showAllApps && !showWallpapers && !showWindowSwitcher && !showKeybinds && !showAnimations && !showEmojis
+    readonly property var currentList: showEmojis ? emojiList.item : (showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : (showPinned ? pinnedList.item : appList.item)))))
 
     readonly property var wallpaperTabs: {
         const res = [];
@@ -44,9 +48,18 @@ Item {
     height: implicitHeight
 
     clip: true
-    state: showAnimations ? "animations" : (showWindowSwitcher ? "windowSwitcher" : (showKeybinds ? "keybinds" : (showWallpapers ? "wallpapers" : "apps")))
+    state: showEmojis ? "emoji" : (showAnimations ? "animations" : (showWindowSwitcher ? "windowSwitcher" : (showKeybinds ? "keybinds" : (showWallpapers ? "wallpapers" : (showPinned ? "pinned" : "apps")))))
 
     states: [
+        State {
+            name: "pinned"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: root.Tokens.sizes.launcher.itemWidth
+                implicitHeight: Math.min(root.maxHeight, pinnedList.implicitHeight > 0 ? pinnedList.implicitHeight : empty.implicitHeight)
+            }
+        },
         State {
             name: "apps"
 
@@ -90,6 +103,15 @@ Item {
                 target: root
                 implicitWidth: root.Tokens.sizes.launcher.itemWidth
                 implicitHeight: Math.min(root.maxHeight, root.Tokens.sizes.launcher.itemHeight * 7)
+            }
+        },
+        State {
+            name: "emoji"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.15, 490)
+                implicitHeight: Math.min(root.maxHeight, 380)
             }
         }
     ]
@@ -164,6 +186,19 @@ Item {
     // show* flags) keeps the existing cross-fade timing, since the state change
     // itself is deferred by the Behavior below.
     Loader {
+        id: pinnedList
+
+        active: root.state === "pinned"
+
+        anchors.fill: parent
+
+        sourceComponent: PinnedList {
+            parentList: root
+            visibilities: root.visibilities
+        }
+    }
+
+    Loader {
         id: appList
 
         active: root.state === "apps"
@@ -173,6 +208,25 @@ Item {
         sourceComponent: AppList {
             search: root.search
             visibilities: root.visibilities
+            parentList: root
+        }
+    }
+
+    Connections {
+        target: root.search
+
+        function onTextChanged() {
+            if (root.search.text.length > 0)
+                root.showAllApps = false;
+        }
+    }
+
+    Connections {
+        target: root.visibilities
+
+        function onLauncherChanged() {
+            if (!root.visibilities.launcher)
+                root.showAllApps = false;
         }
     }
 
@@ -403,6 +457,19 @@ Item {
         }
     }
 
+    Loader {
+        id: emojiList
+
+        active: root.state === "emoji"
+
+        anchors.fill: parent
+
+        sourceComponent: EmojiList {
+            search: root.search
+            visibilities: root.visibilities
+        }
+    }
+
     Row {
         id: empty
 
@@ -410,8 +477,9 @@ Item {
         /// its own, so ask the list itself.
         readonly property bool cliphistMissing: root.currentList?.state === "clipboard" && !Clipboard.available
 
-        opacity: root.currentList?.count === 0 ? 1 : 0
+        opacity: (root.state !== "emoji" && root.currentList?.count === 0) ? 1 : 0
         scale: root.currentList?.count === 0 ? 1 : 0.5
+        visible: root.state !== "emoji" && opacity > 0
 
         spacing: Tokens.spacing.medium
         padding: Tokens.padding.large

@@ -18,8 +18,9 @@ MouseArea {
     readonly property bool hasMenuEntries: menuOpener.children.values.some(entry => !entry.isSeparator)
 
     acceptedButtons: Qt.LeftButton | Qt.RightButton
-    implicitWidth: Tokens.font.body.small.pointSize * 2
-    implicitHeight: Tokens.font.body.small.pointSize * 2
+    readonly property int iconSize: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0) * 0.52)
+    implicitWidth: iconSize
+    implicitHeight: iconSize
 
     onClicked: event => {
         if (event.button === Qt.RightButton) {

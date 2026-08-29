@@ -1,25 +1,26 @@
 import ".."
-import "../../../components/controls"
 import QtQuick
+import QtQuick.Layouts
 import QtQuick.Controls
 import Qt.labs.synchronizer
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Caelestia.Config
 import Caelestia.Services
+import qs.components
+import qs.components.controls
 import qs.services
 import qs.utils
 
 PanelWindow {
     id: root
 
-    visible: false
+    visible: true
     color: "transparent"
     WlrLayershell.namespace: "osd"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    
-
 
     exclusionMode: ExclusionMode.Ignore
     anchors {
@@ -29,70 +30,45 @@ PanelWindow {
         bottom: true
     }
 
-    // Modes
-    // TODO: Ask: sidebar AI
     enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound }
-
     enum SelectionMode { RectCorners, Circle }
-
     enum Phase { Select, Post }
 
     property var action: RegionSelection.SnipAction.Copy
-
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
-
     property var phase: RegionSelection.Phase.Select
+    property bool shiftHeld: false
+    property int delaySeconds: 0
 
     signal dismiss()
 
-    // Reset per-session state when the overlay is closed
     onDismiss: {
         root.snapshotWorkspaceId = 0;
         root.snapshotWorkspaceUuid = "";
         root.lastHoverFocusedAddress = "";
+        root.shiftHeld = false;
     }
 
-    // Styles
     property string screenshotDir: `${Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"}/caelestia-screenshot`
-
-    property color overlayColor: Qt.rgba("#000000".r, "#000000".g, "#000000".b, 1.0 - 0.4)
-
-    property color brightText: true ? Colours.palette.m3onSurface : Colours.palette.m3surface
-
-    property color brightSecondary: true ? Colours.palette.m3secondary : Colours.palette.m3onSecondary
-
-    property color brightTertiary: true ? Colours.palette.m3tertiary : Qt.lighter(Colours.palette.m3primary)
-
+    property color overlayColor: Qt.rgba(0, 0, 0, 0.45)
+    property color brightText: Colours.palette.m3onSurface
+    property color brightSecondary: Colours.palette.m3secondary
+    property color brightTertiary: Colours.palette.m3tertiary
     property color selectionBorderColor: brightSecondary
-
     property color selectionFillColor: "#33ffffff"
-
-    property color windowBorderColor: brightSecondary
-
-    property color windowFillColor: Qt.rgba(windowBorderColor.r, windowBorderColor.g, windowBorderColor.b, 1.0 - 0.85)
-
+    property color windowBorderColor: Colours.palette.m3primary
+    property color windowFillColor: Qt.alpha(Colours.palette.m3primary, 0.18)
     property color imageBorderColor: brightTertiary
-
-    property color imageFillColor: Qt.rgba(imageBorderColor.r, imageBorderColor.g, imageBorderColor.b, 1.0 - 0.85)
-
+    property color imageFillColor: Qt.rgba(imageBorderColor.r, imageBorderColor.g, imageBorderColor.b, 0.15)
     property color onBorderColor: "#ff000000"
-
-    property real targetRegionOpacity: 0.6
-
+    property real targetRegionOpacity: 0.8
     property bool contentRegionOpacity: false
 
-    // Vars for indicators
-    // Snapshot of the active workspace when the overlay opened — used to filter
-    // windows so that hover-focus actions never cause workspace switching that
-    // would update this filter mid-session.
     property int snapshotWorkspaceId: 0
     property string snapshotWorkspaceUuid: ""
 
     readonly property var windows: {
         let arr = Array.from(KWinActiveWindowBridge.windowList || []);
-
-        // Prefer the snapshotted workspace (set when overlay opens) so that
-        // focusWindow() calls during hover cannot cause the filter to shift.
         const useSnapshot = root.snapshotWorkspaceId > 0 || root.snapshotWorkspaceUuid !== "";
         const activeId = useSnapshot ? root.snapshotWorkspaceId
             : (typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : 0);
@@ -104,61 +80,41 @@ PanelWindow {
         if (activeId > 0 || activeUuid !== "") {
             arr = arr.filter(w => {
                 if (!w.workspace) return true;
-
                 if (typeof w.workspace.id === "number") {
-                    if (w.workspace.id === -1) return true; // On all workspaces
+                    if (w.workspace.id === -1) return true;
                     return w.workspace.id === activeId;
                 } else if (typeof w.workspace.id === "string") {
                     if (w.workspace.id === "") return true;
                     return w.workspace.id === activeUuid;
                 }
-
                 return true;
             });
         }
 
         return arr.sort((a, b) => {
-            // Sort floating=true windows before others
             if (a.floating === b.floating) return 0;
             return a.floating ? -1 : 1;
         });
     }
 
     readonly property var layers: ({})
-
     readonly property real falsePositivePreventionRatio: 0.5
-
-    // Screen & interaction vars
     readonly property real monitorScale: (frozenImage.sourceSize.width > 0 && root.screen.width > 0) ? (frozenImage.sourceSize.width / root.screen.width) : (screen.devicePixelRatio || 1.0)
-
     readonly property real monitorOffsetX: screen.x || 0
-
     readonly property real monitorOffsetY: screen.y || 0
-
     property string activeWorkspaceId: ""
-
     property string screenshotPath: `${root.screenshotDir}/image-${screen.name}.png`
 
     property real dragStartX: 0
-
     property real dragStartY: 0
-
     property real draggingX: 0
-
     property real draggingY: 0
-
     property real dragDiffX: 0
-
     property real dragDiffY: 0
-
     property bool draggedAway: (dragDiffX !== 0 || dragDiffY !== 0)
-
     property bool dragging: false
-
     property var points: []
-
     property var mouseButton: null
-
     property var imageRegions: []
 
     readonly property var windowRegions: RegionFunctions.filterWindowRegionsByLayers(
@@ -174,127 +130,64 @@ PanelWindow {
         }
     })
 
-    readonly property var layerRegions: {
-        const layersOfThisMonitor = undefined
-        const topLayers = undefined
-        if (!topLayers) return [];
-        const nonBarTopLayers = topLayers
-            .filter(layer => !(layer.namespace.includes(":bar") || layer.namespace.includes(":verticalBar") || layer.namespace.includes(":dock")))
-            .map(layer => {
-            return {
-                at: [layer.x, layer.y],
-                size: [layer.w, layer.h],
-                namespace: layer.namespace,
-            }
-        })
-        const offsetAdjustedLayers = nonBarTopLayers.map(layer => {
-            return {
-                at: [layer.at[0] - root.monitorOffsetX, layer.at[1] - root.monitorOffsetY],
-                size: layer.size,
-                namespace: layer.namespace,
-            }
-        });
-        return offsetAdjustedLayers;
-    }
+    readonly property var layerRegions: []
 
-    // Config
-    property bool isCircleSelection: (root.selectionMode === RegionSelection.SelectionMode.Circle)
+    property bool enableWindowRegions: root.phase === RegionSelection.Phase.Select && root.showWindowOutlines
+    property bool enableLayerRegions: root.phase === RegionSelection.Phase.Select && false
+    property bool enableContentRegions: false
 
     property bool showWindowOutlines: false
 
-    property bool enableWindowRegions: showWindowOutlines && !isCircleSelection
-
-    property bool enableLayerRegions: true && !isCircleSelection
-
-    property bool enableContentRegions: false
-
-    // Target
     property real targetedRegionX: -1
-
     property real targetedRegionY: -1
-
     property real targetedRegionWidth: 0
-
     property real targetedRegionHeight: 0
-
-    // The address (uuid) of the window currently under the cursor in window-outline mode
     property string targetedWindowAddress: ""
-
-    // Tracks the last window we focused on hover — avoids redundant focus calls
     property string lastHoverFocusedAddress: ""
 
-    // Debounce timer: focus the hovered window shortly after the mouse enters it
     Timer {
         id: focusHoverTimer
-
-        interval: 120
+        interval: 80
         repeat: false
         onTriggered: {
-            if (root.showWindowOutlines && root.targetedWindowAddress
-                    && root.targetedWindowAddress !== root.lastHoverFocusedAddress) {
-                // Verify the window is still on the current workspace before focusing
-                const stillVisible = root.windowRegions.some(
-                    r => r.address === root.targetedWindowAddress
-                );
-                if (stillVisible) {
-                    KWinActiveWindowBridge.focusWindow(root.targetedWindowAddress);
-                    root.lastHoverFocusedAddress = root.targetedWindowAddress;
-                }
+            if (root.targetedWindowAddress && root.targetedWindowAddress !== root.lastHoverFocusedAddress) {
+                root.lastHoverFocusedAddress = root.targetedWindowAddress;
+                KWinActiveWindowBridge.focusWindow(root.targetedWindowAddress);
             }
         }
     }
 
-    function targetedRegionValid() {
-        return (root.targetedRegionX >= 0 && root.targetedRegionY >= 0)
+    function targetedRegionValid(): bool {
+        return targetedRegionX >= 0 && targetedRegionY >= 0 && targetedRegionWidth > 0 && targetedRegionHeight > 0
     }
 
     function setRegionToTargeted() {
-        const padding = 0; // Make borders not cut off n stuff
-        root.regionX = root.targetedRegionX - padding;
-        root.regionY = root.targetedRegionY - padding;
-        root.regionWidth = root.targetedRegionWidth + padding * 2;
-        root.regionHeight = root.targetedRegionHeight + padding * 2;
+        if (!targetedRegionValid()) return;
+        root.dragStartX = root.targetedRegionX;
+        root.dragStartY = root.targetedRegionY;
+        root.draggingX = root.targetedRegionX + root.targetedRegionWidth;
+        root.draggingY = root.targetedRegionY + root.targetedRegionHeight;
     }
 
-    function updateTargetedRegion(x, y) {
-        // Image regions
-        const clickedRegion = root.imageRegions.find(region => {
-            return region.at[0] <= x && x <= region.at[0] + region.size[0] && region.at[1] <= y && y <= region.at[1] + region.size[1];
-        });
-        if (clickedRegion) {
-            root.targetedRegionX = clickedRegion.at[0];
-            root.targetedRegionY = clickedRegion.at[1];
-            root.targetedRegionWidth = clickedRegion.size[0];
-            root.targetedRegionHeight = clickedRegion.size[1];
+    function updateTargetedRegion(mouseX, mouseY) {
+        if (!root.enableWindowRegions && !root.enableLayerRegions && !root.enableContentRegions) {
+            root.targetedRegionX = -1;
+            root.targetedRegionY = -1;
+            root.targetedRegionWidth = 0;
+            root.targetedRegionHeight = 0;
+            root.targetedWindowAddress = "";
             return;
         }
 
-        // Layer regions
-        const clickedLayer = root.layerRegions.find(region => {
-            return region.at[0] <= x && x <= region.at[0] + region.size[0] && region.at[1] <= y && y <= region.at[1] + region.size[1];
-        });
-        if (clickedLayer) {
-            root.targetedRegionX = clickedLayer.at[0];
-            root.targetedRegionY = clickedLayer.at[1];
-            root.targetedRegionWidth = clickedLayer.size[0];
-            root.targetedRegionHeight = clickedLayer.size[1];
-            return;
-        }
+        let clickedWindow = RegionFunctions.findClickedRegion(
+            mouseX, mouseY,
+            root.enableLayerRegions ? root.layerRegions : [],
+            root.enableWindowRegions ? root.windowRegions : [],
+            root.enableContentRegions ? root.imageRegions : [],
+            root.falsePositivePreventionRatio
+        );
 
-        // Window regions — pick the smallest (most specific) window containing the cursor
-        let clickedWindow = null;
-        let smallestArea = Infinity;
-        for (const region of root.windowRegions) {
-            if (region.at[0] <= x && x <= region.at[0] + region.size[0]
-                    && region.at[1] <= y && y <= region.at[1] + region.size[1]) {
-                const area = region.size[0] * region.size[1];
-                if (area < smallestArea) {
-                    smallestArea = area;
-                    clickedWindow = region;
-                }
-            }
-        }
-        if (clickedWindow) {
+        if (clickedWindow !== null) {
             root.targetedRegionX = clickedWindow.at[0];
             root.targetedRegionY = clickedWindow.at[1];
             root.targetedRegionWidth = clickedWindow.size[0];
@@ -317,56 +210,27 @@ PanelWindow {
     }
 
     property real regionWidth: Math.abs(draggingX - dragStartX)
-
     property real regionHeight: Math.abs(draggingY - dragStartY)
-
     property real regionX: Math.min(dragStartX, draggingX)
-
     property real regionY: Math.min(dragStartY, draggingY)
 
-    // Screenshot stuff
     TempScreenshotProcess {
         id: screenshotProc
-
         running: true
         screen: root.screen
         screenshotDir: root.screenshotDir
         screenshotPath: root.screenshotPath
         onExited: (exitCode, exitStatus) => {
-            if (root.enableContentRegions) imageDetectionProcess.running = true;
-            root.preparationDone = !checkRecordingProc.running;
-        }
-    }
-
-    property bool isRecording: root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound
-
-    property bool recordingShouldStop: false
-    Process {
-        id: checkRecordingProc
-
-        running: isRecording
-        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && f=\"$(cat $HOME/.local/state/caelestia/record/current_recording_path 2>/dev/null)\" && [ -n \"$f\" ] && test -f \"$f\""]
-        onExited: (exitCode, exitStatus) => {
-            root.preparationDone = !screenshotProc.running
-            root.recordingShouldStop = (exitCode === 0);
+            root.preparationDone = true;
         }
     }
 
     property bool preparationDone: false
-
-    property bool regionConfirmPending: false
-
     property string frozenImageSource: ""
 
     onPreparationDoneChanged: {
         if (!preparationDone) return;
-        if (root.isRecording && root.recordingShouldStop) {
-            Quickshell.execDetached([Paths.absolutePath("~/.local/bin/caelestia-record")]);
-            root.dismiss();
-            return;
-        }
         root.frozenImageSource = "file://" + root.screenshotPath;
-        // Freeze the workspace context so hover-focus never shifts the filter
         if (typeof KWinWorkspaceState !== "undefined") {
             const snapId = KWinWorkspaceState.activeId;
             root.snapshotWorkspaceId = snapId;
@@ -384,145 +248,100 @@ PanelWindow {
         }
     }
 
-    Process {
-        id: imageDetectionProcess
-
-        command: ["bash", "-c", `${"~/.config/caelestia/scripts"}/images/find-regions-venv.sh `
-            + `--image '${ScreenshotAction.escapeShellStr(root.screenshotPath)}' `
-            + `--max-width ${Math.round(root.screen.width * root.falsePositivePreventionRatio)} `
-            + `--max-height ${Math.round(root.screen.height * root.falsePositivePreventionRatio)} `]
-        stdout: StdioCollector {
-            id: imageDimensionCollector
-
-            onStreamFinished: {
-                imageRegions = RegionFunctions.filterImageRegions(
-                    JSON.parse(imageDimensionCollector.text),
-                    root.windowRegions
-                );
-            }
-        }
-    }
-
-    function getScreenshotAction() {
-        switch(root.action) {
-            case RegionSelection.SnipAction.Copy:
-                return ScreenshotAction.Action.Copy;
-            case RegionSelection.SnipAction.Edit:
-                return ScreenshotAction.Action.Edit;
-            case RegionSelection.SnipAction.Search:
-                return ScreenshotAction.Action.Search;
-            case RegionSelection.SnipAction.CharRecognition:
-                return ScreenshotAction.Action.CharRecognition;
-            case RegionSelection.SnipAction.Record:
-                return ScreenshotAction.Action.Record;
-            case RegionSelection.SnipAction.RecordWithSound:
-                return ScreenshotAction.Action.RecordWithSound;
-            default:
-                console.warn("[Region Selector] Unknown snip action, skipping snip.");
-                root.dismiss();
-                return;
-        }
-    }
-
     property bool screenshotConsumed: false
 
-    // Execution after selection
     function snip() {
         root.screenshotConsumed = true;
-
-        // Clamp region to screen bounds
         root.regionX = Math.max(0, Math.min(root.regionX, root.screen.width - root.regionWidth));
         root.regionY = Math.max(0, Math.min(root.regionY, root.screen.height - root.regionHeight));
         root.regionWidth = Math.max(0, Math.min(root.regionWidth, root.screen.width - root.regionX));
         root.regionHeight = Math.max(0, Math.min(root.regionHeight, root.screen.height - root.regionY));
 
-        // Adjust action
-        if (root.action === RegionSelection.SnipAction.Copy || root.action === RegionSelection.SnipAction.Edit) {
-            root.action = root.mouseButton === Qt.RightButton ? RegionSelection.SnipAction.Edit : RegionSelection.SnipAction.Copy;
-        }
-
-        const screenshotDir = "" !== "" ? //
-            "" : "";
-        var screenshotAction = root.getScreenshotAction();
         const command = ScreenshotAction.getCommand(
-            root.regionX * root.monitorScale, //
-            root.regionY * root.monitorScale, //
-            root.regionWidth * root.monitorScale,//
-            root.regionHeight * root.monitorScale, //
-            root.screenshotPath, //
-            screenshotAction, //
-            screenshotDir
-        )
+            root.regionX * root.monitorScale,
+            root.regionY * root.monitorScale,
+            root.regionWidth * root.monitorScale,
+            root.regionHeight * root.monitorScale,
+            root.screenshotPath,
+            ScreenshotAction.Action.Copy,
+            "",
+            root.shiftHeld
+        );
         Quickshell.execDetached(command);
-        if (root.action == RegionSelection.SnipAction.Record || root.action == RegionSelection.SnipAction.RecordWithSound) {
-            root.phase = RegionSelection.Phase.Post
-            root.selectionMode = RegionSelection.SelectionMode.RectCorners
-        } else {
-            root.dismiss();
-        }
+        root.dismiss();
     }
 
-    // Window screenshot via spectacle — focuses the target window then calls spectacle -b -a
     function snipWindow(windowAddress) {
         root.screenshotConsumed = true;
-
-        const saveDir = `${Paths.absolutePath("~/Pictures/Screenshots")}`;
-        const saveFile = `${saveDir}/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png`;
-
-        // Determine spectacle flags based on action
-        let spectacleFlags = "-b -a -n";
-        if (root.mouseButton === Qt.RightButton || root.action === RegionSelection.SnipAction.Edit) {
-            spectacleFlags = "-b -a -n -e"; // exclude decorations on right-click (edit)
-        }
-
+        const saveDir = `${Paths.pictures}/Screenshots`;
         const tmpFile = Paths.runtimeTemp(`snip-window-${Date.now()}.png`);
         const actionCmdArray = ScreenshotAction.getCommand(
-            0, 0, 99999, 99999, tmpFile, root.getScreenshotAction(), saveDir
+            0, 0, 99999, 99999, tmpFile, ScreenshotAction.Action.Copy, saveDir, root.shiftHeld
         );
         const actionScript = actionCmdArray[2];
 
         const command = [
             "bash", "-c",
             `set -euo pipefail; ` +
-            `spectacle ${spectacleFlags} -o '${tmpFile}' && ${actionScript}`
+            `spectacle -b -a -n -o '${tmpFile}' && ${actionScript}`
         ];
 
-        // Focus the window, dismiss overlay, then shoot after a short delay
         if (windowAddress) {
             KWinActiveWindowBridge.focusWindow(windowAddress);
         }
         root.dismiss();
-        // Small delay so the window has time to come to front before spectacle fires
         Qt.callLater(() => { Quickshell.execDetached(command); });
     }
 
-    // Only clickable in Selection phase
-    mask: Region {
-        item: switch(root.phase) {
-            case RegionSelection.Phase.Select: return mouseArea;
-            case RegionSelection.Phase.Post: return null;
+    Item {
+        id: keyHandler
+        anchors.fill: parent
+        focus: root.visible
+
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Shift) {
+                root.shiftHeld = true;
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Escape) {
+                root.dismiss();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_1) {
+                root.showWindowOutlines = false;
+                event.accepted = true;
+            } else if (event.key === Qt.Key_2) {
+                root.showWindowOutlines = true;
+                event.accepted = true;
+            } else if (event.key === Qt.Key_3) {
+                root.regionX = 0;
+                root.regionY = 0;
+                root.regionWidth = root.screen.width;
+                root.regionHeight = root.screen.height;
+                root.snip();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_4) {
+                Quickshell.execDetached(["spectacle", "-g"]);
+                root.dismiss();
+                event.accepted = true;
+            }
+        }
+
+        Keys.onReleased: (event) => {
+            if (event.key === Qt.Key_Shift) {
+                root.shiftHeld = false;
+                event.accepted = true;
+            }
         }
     }
 
-    Image { // For freezing
+    Image {
         id: frozenImage
-
         anchors.fill: parent
         source: root.frozenImageSource
-        cache: false
-        // In window-outline mode hide the frozen frame so the live desktop shows through
-        visible: root.phase === RegionSelection.Phase.Select && !root.showWindowOutlines
-    }
-
-    GlobalShortcut {
-        name: "caelestia_screenshot_escape"
-        key: root.visible ? "Escape" : ""
-        onActivated: root.dismiss()
+        visible: root.frozenImageSource !== ""
     }
 
     MouseArea {
         id: mouseArea
-
         anchors.fill: parent
         focus: root.visible
         cursorShape: root.showWindowOutlines
@@ -531,8 +350,17 @@ PanelWindow {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
 
-        // Controls
         onPressed: (mouse) => {
+            if (mouse.button === Qt.RightButton) {
+                root.dismiss();
+                return;
+            }
+            if (mouse.modifiers & Qt.ShiftModifier) root.shiftHeld = true;
+            // Ignore clicks within top bar area
+            if (mouse.y < pillBar.y + pillBar.height + 15 && mouse.x >= pillBar.x - 10 && mouse.x <= pillBar.x + pillBar.width + 10) {
+                return;
+            }
+
             mouse.accepted = true;
             root.mouseButton = mouse.button;
             if (root.showWindowOutlines) return;
@@ -542,7 +370,9 @@ PanelWindow {
             root.draggingY = mouse.y;
             root.dragging = true;
         }
+
         onReleased: (mouse) => {
+            if (mouse.modifiers & Qt.ShiftModifier) root.shiftHeld = true;
             if (root.showWindowOutlines) {
                 if (root.targetedWindowAddress) {
                     root.snipWindow(root.targetedWindowAddress);
@@ -554,29 +384,18 @@ PanelWindow {
             }
 
             root.dragging = false;
-            // Detect if it was a click -> Try to select targeted region
             if (root.draggingX === root.dragStartX && root.draggingY === root.dragStartY) {
                 if (root.targetedRegionValid()) {
                     root.setRegionToTargeted();
                 }
             }
-            // Circle dragging?
-            else if (root.selectionMode === RegionSelection.SelectionMode.Circle) {
-                const padding = 0 + 2 / 2;
-                const dragPoints = (root.points.length > 0) ? root.points : [{ x: mouseArea.mouseX, y: mouseArea.mouseY }];
-                const maxX = Math.max(...dragPoints.map(p => p.x));
-                const minX = Math.min(...dragPoints.map(p => p.x));
-                const maxY = Math.max(...dragPoints.map(p => p.y));
-                const minY = Math.min(...dragPoints.map(p => p.y));
-                root.regionX = minX - padding;
-                root.regionY = minY - padding;
-                root.regionWidth = maxX - minX + padding * 2;
-                root.regionHeight = maxY - minY + padding * 2;
+            if (root.regionWidth > 10 && root.regionHeight > 10) {
+                root.snip();
             }
-
-            root.snip();
         }
+
         onPositionChanged: (mouse) => {
+            if (mouse.modifiers & Qt.ShiftModifier) root.shiftHeld = true;
             root.updateTargetedRegion(mouse.x, mouse.y);
             if (root.showWindowOutlines || !root.dragging) return;
             root.draggingX = mouse.x;
@@ -603,77 +422,24 @@ PanelWindow {
             }
         }
 
-        Loader {
-            z: 2
-            anchors.fill: parent
-            active: !root.showWindowOutlines && root.selectionMode === RegionSelection.SelectionMode.Circle
-            sourceComponent: CircleSelectionDetails {
-                color: root.selectionBorderColor
-                overlayColor: root.overlayColor
-                points: root.points
-            }
-        }
-
-        // The thing to the bottom-right with an icon
-        CursorGuide {
-            z: 9999
-            active: !root.showWindowOutlines && root.phase === RegionSelection.Phase.Select && root.visible
-            x: mouseArea.mouseX
-            y: mouseArea.mouseY
-            action: root.action
-            selectionMode: root.selectionMode
-        }
-
-        // Window regions
+        // Caelestia Native Window Regions with Title, Icon & Hover Highlights
         Repeater {
             model: ScriptModel {
                 values: {
                     if (root.phase === RegionSelection.Phase.Select && root.enableWindowRegions) {
-                        return root.windowRegions
+                        return root.windowRegions;
                     } else {
-                        return []
+                        return [];
                     }
                 }
             }
             delegate: TargetRegion {
                 z: targeted ? 99 : 2
-
                 required property var modelData
                 clientDimensions: modelData
                 showIcon: true
                 text: modelData.title || modelData["class"] || ""
                 iconName: modelData["class"] || ""
-                targeted: !root.draggedAway && //
-                    (root.targetedRegionX === modelData.at[0]  //
-                    && root.targetedRegionY === modelData.at[1] //
-                    && root.targetedRegionWidth === modelData.size[0] //
-                    && root.targetedRegionHeight === modelData.size[1])
-                opacity: root.draggedAway ? 0 : (root.targetedRegionValid() && !targeted ? 0 : root.targetRegionOpacity)
-                borderColor: root.windowBorderColor
-                // Fade alpha to 0 instead of the literal "transparent" string,
-                // which would animate RGB through black via TargetRegion's
-                // Behavior on color.
-                fillColor: targeted ? root.windowFillColor : Qt.alpha(root.windowFillColor, 0)
-                radius: 12
-            }
-        }
-
-        // Layer regions
-        Repeater {
-            model: ScriptModel {
-                values: {
-                    if (root.phase === RegionSelection.Phase.Select && root.enableLayerRegions) {
-                        return root.layerRegions
-                    } else {
-                        return []
-                    }
-                }
-            }
-            delegate: TargetRegion {
-                z: targeted ? 99 : 2
-
-                required property var modelData
-                clientDimensions: modelData
                 targeted: !root.draggedAway &&
                     (root.targetedRegionX === modelData.at[0]
                     && root.targetedRegionY === modelData.at[1]
@@ -682,132 +448,283 @@ PanelWindow {
                 opacity: root.draggedAway ? 0 : (root.targetedRegionValid() && !targeted ? 0 : root.targetRegionOpacity)
                 borderColor: root.windowBorderColor
                 fillColor: targeted ? root.windowFillColor : Qt.alpha(root.windowFillColor, 0)
-                text: `${modelData.namespace}`
                 radius: 12
             }
         }
+    }
 
-        // Content regions
-        Repeater {
-            model: ScriptModel {
-                values: {
-                    if (root.phase === RegionSelection.Phase.Select && root.enableContentRegions) {
-                        return root.imageRegions
-                    } else {
-                        return []
-                    }
-                }
-            }
-            delegate: TargetRegion {
-                z: 4
+    // ==========================================
+    // TOP FLOATING MATERIAL 3 EXPRESSIVE TOOLBAR
+    // ==========================================
+    StyledRect {
+        id: pillBar
+        z: 100
 
-                required property var modelData
-                clientDimensions: modelData
-                targeted: !root.draggedAway &&
-                    (root.targetedRegionX === modelData.at[0]
-                    && root.targetedRegionY === modelData.at[1]
-                    && root.targetedRegionWidth === modelData.size[0]
-                    && root.targetedRegionHeight === modelData.size[1])
-
-                opacity: root.draggedAway ? 0 : root.contentRegionOpacity
-                borderColor: root.imageBorderColor
-                fillColor: targeted ? root.imageFillColor : Qt.alpha(root.imageFillColor, 0)
-                text: qsTr("Content region")
-            }
+        anchors {
+            top: parent.top
+            topMargin: 18
+            horizontalCenter: parent.horizontalCenter
         }
 
-        // Controls
-        Row {
-            id: regionSelectionControls
+        color: Colours.layer(Colours.palette.m3surfaceContainerHighest, 1)
+        border.color: Colours.palette.m3outlineVariant
+        border.width: 1
+        radius: 28
 
-            z: 10
-            visible: root.phase === RegionSelection.Phase.Select
-            anchors {
-                horizontalCenter: parent.horizontalCenter
-                bottom: parent.bottom
-                bottomMargin: -height
-            }
-            opacity: 0
+        implicitHeight: 54
+        implicitWidth: contentRow.implicitWidth + 24
 
-            Connections {
-                target: root
-
-                function onVisibleChanged() {
-                    if (!visible) return;
-                    regionSelectionControls.anchors.bottomMargin = 8;
-                    regionSelectionControls.opacity = 1;
-                }
-            }
-            Behavior on opacity {
-                animation: NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
-            }
-            Behavior on anchors.bottomMargin {
-                animation: NumberAnimation { duration: 300; easing.type: Easing.OutQuad }
-            }
-
+        RowLayout {
+            id: contentRow
+            anchors.centerIn: parent
             spacing: 6
 
-            OptionsToolbar {
-                Synchronizer on action {
-                    property alias source: root.action
+            // Header Camera Icon Badge
+            StyledRect {
+                implicitWidth: 36
+                implicitHeight: 36
+                radius: 18
+                color: Colours.palette.m3primaryContainer
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "photo_camera"
+                    color: Colours.palette.m3onPrimaryContainer
+                    fontStyle: Tokens.font.icon.small
                 }
-                Synchronizer on selectionMode {
-                    property alias source: root.selectionMode
-                }
-                Synchronizer on showWindowOutlines {
-                    property alias source: root.showWindowOutlines
+            }
+
+            // Divider
+            Rectangle {
+                implicitWidth: 1
+                implicitHeight: 22
+                color: Colours.palette.m3outlineVariant
+                Layout.leftMargin: 2
+                Layout.rightMargin: 2
+            }
+
+            // 1. REGION MODE
+            StyledRect {
+                id: btnRegion
+                implicitWidth: regionLayout.implicitWidth + 16
+                implicitHeight: 36
+                radius: 18
+                color: !root.showWindowOutlines ? Colours.palette.m3primary : Colours.palette.m3surfaceContainerHigh
+
+                StateLayer {
+                    radius: 18
+                    onClicked: root.showWindowOutlines = false
                 }
 
-                onDismiss: root.dismiss();
-            }
-            IconButton {
-                anchors.verticalCenter: parent.verticalCenter
-                icon: "fullscreen"
-                onClicked: {
-                    root.regionX = 0;
-                    root.regionY = 0;
-                    root.regionWidth = root.screen.width;
-                    root.regionHeight = root.screen.height;
-                    root.snip();
+                RowLayout {
+                    id: regionLayout
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    MaterialIcon {
+                        text: "crop_free"
+                        color: !root.showWindowOutlines ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                        fontStyle: Tokens.font.icon.small
+                    }
+
+                    StyledText {
+                        text: qsTr("Region")
+                        font: Tokens.font.label.medium
+                        color: !root.showWindowOutlines ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                    }
                 }
 
                 Tooltip {
-                    target: parent
-                    text: qsTr("Full Screen Screenshot")
+                    text: qsTr("Drag anywhere to snip a region & annotate in Spectacle")
                 }
             }
-            // Confirm snip button — appears after a region is drawn
-            IconButton {
-                anchors.verticalCenter: parent.verticalCenter
-                visible: root.regionConfirmPending
-                icon: "check"
-                onClicked: root.snip();
+
+            // 2. WINDOW HOVER MODE (Caelestia Native TargetRegion Outlines)
+            StyledRect {
+                id: btnWindow
+                implicitWidth: winLayout.implicitWidth + 16
+                implicitHeight: 36
+                radius: 18
+                color: root.showWindowOutlines ? Colours.palette.m3primary : Colours.palette.m3surfaceContainerHigh
+
+                StateLayer {
+                    radius: 18
+                    onClicked: root.showWindowOutlines = true
+                }
+
+                RowLayout {
+                    id: winLayout
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    MaterialIcon {
+                        text: "near_me"
+                        color: root.showWindowOutlines ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                        fontStyle: Tokens.font.icon.small
+                    }
+
+                    StyledText {
+                        text: qsTr("Window")
+                        font: Tokens.font.label.medium
+                        color: root.showWindowOutlines ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                    }
+                }
 
                 Tooltip {
-                    target: parent
-                    text: qsTr("Snip selected region (Enter)")
+                    text: qsTr("Hover over any window to highlight and click to capture")
                 }
             }
-            IconButton {
-                anchors.verticalCenter: parent.verticalCenter
-                icon: "close"
-                onClicked: {
-                    if (root.regionConfirmPending) {
-                        // Reset selection — let user redraw
-                        root.regionConfirmPending = false;
-                        root.regionWidth = 0;
-                        root.regionHeight = 0;
-                    } else {
+
+            // 3. FULLSCREEN BUTTON
+            StyledRect {
+                id: btnFull
+                implicitWidth: fullLayout.implicitWidth + 16
+                implicitHeight: 36
+                radius: 18
+                color: Colours.palette.m3surfaceContainerHigh
+
+                StateLayer {
+                    radius: 18
+                    onClicked: {
+                        root.regionX = 0;
+                        root.regionY = 0;
+                        root.regionWidth = root.screen.width;
+                        root.regionHeight = root.screen.height;
+                        root.snip();
+                    }
+                }
+
+                RowLayout {
+                    id: fullLayout
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    MaterialIcon {
+                        text: "fullscreen"
+                        color: Colours.palette.m3onSurface
+                        fontStyle: Tokens.font.icon.small
+                    }
+
+                    StyledText {
+                        text: qsTr("Full Screen")
+                        font: Tokens.font.label.medium
+                        color: Colours.palette.m3onSurface
+                    }
+                }
+
+                Tooltip {
+                    text: qsTr("Instant Fullscreen Capture")
+                }
+            }
+
+            // Divider
+            Rectangle {
+                implicitWidth: 1
+                implicitHeight: 22
+                color: Colours.palette.m3outlineVariant
+                Layout.leftMargin: 2
+                Layout.rightMargin: 2
+            }
+
+            // 4. OPEN SPECTACLE BUTTON
+            StyledRect {
+                id: btnSpectacle
+                implicitWidth: specLayout.implicitWidth + 16
+                implicitHeight: 36
+                radius: 18
+                color: Colours.palette.m3tertiaryContainer
+
+                StateLayer {
+                    radius: 18
+                    onClicked: {
+                        Quickshell.execDetached(["spectacle", "-g"]);
                         root.dismiss();
                     }
                 }
 
+                RowLayout {
+                    id: specLayout
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    MaterialIcon {
+                        text: "camera"
+                        color: Colours.palette.m3onTertiaryContainer
+                        fontStyle: Tokens.font.icon.small
+                    }
+
+                    StyledText {
+                        text: qsTr("Spectacle")
+                        font: Tokens.font.label.medium
+                        color: Colours.palette.m3onTertiaryContainer
+                    }
+                }
+
                 Tooltip {
-                    target: parent
-                    text: root.regionConfirmPending ? qsTr("Clear selection") : qsTr("Close")
+                    text: qsTr("Launch KDE Spectacle App")
+                }
+            }
+
+            // Divider
+            Rectangle {
+                implicitWidth: 1
+                implicitHeight: 22
+                color: Colours.palette.m3outlineVariant
+                Layout.leftMargin: 2
+                Layout.rightMargin: 2
+            }
+
+            // 5. SAVE MODIFIER INDICATOR (Fixed Width 78px, Reactive to Shift)
+            StyledRect {
+                id: btnSaveMod
+                implicitWidth: 78
+                implicitHeight: 34
+                radius: 17
+                color: root.shiftHeld ? Colours.palette.m3secondaryContainer : Colours.palette.m3surfaceContainerHigh
+                border.color: root.shiftHeld ? Colours.palette.m3secondary : Colours.palette.m3outlineVariant
+                border.width: 1
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on border.color { ColorAnimation { duration: 120 } }
+
+                StateLayer {
+                    radius: 17
+                    onPressed: root.shiftHeld = true
+                    onReleased: root.shiftHeld = false
+                    onCanceled: root.shiftHeld = false
+                }
+
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    MaterialIcon {
+                        text: root.shiftHeld ? "save" : "content_copy"
+                        fontStyle: Tokens.font.icon.small
+                        color: root.shiftHeld ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
+                    }
+
+                    StyledText {
+                        text: root.shiftHeld ? qsTr("Save") : qsTr("Copy")
+                        font: Tokens.font.label.medium
+                        color: root.shiftHeld ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
+                    }
+                }
+
+                Tooltip {
+                    text: qsTr("Hold Shift while capturing to save to disk. Default is copy to clipboard.")
+                }
+            }
+
+            // 6. CLOSE BUTTON
+            IconButton {
+                id: btnClose
+                icon: "close"
+                onClicked: root.dismiss()
+                Tooltip {
+                    text: qsTr("Close (Esc)")
                 }
             }
         }
-
     }
 }

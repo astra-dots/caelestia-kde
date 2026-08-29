@@ -23,7 +23,7 @@ Singleton {
     property alias dnd: props.dnd
     property string lastSavedState: ""
 
-    property bool loaded
+    property bool loaded: true
 
     function hasFullscreen(): bool {
         return Hypr.hasFullscreen();
@@ -88,26 +88,6 @@ Singleton {
             Toaster.toast(qsTr("Do not disturb disabled"), qsTr("Popup notifications are now enabled"), "do_not_disturb_off");
     }
 
-    onListChanged: {
-        if (loaded)
-            saveTimer.restart();
-    }
-
-    Timer {
-        id: saveTimer
-
-        // Back off when the list is large to reduce serialisation pressure.
-        // At 500 items this is ~8 s; at 0 it is 3 s.
-        interval: Math.min(10000, 3000 + root.list.length * 10)
-        onTriggered: {
-            const serialized = root.serializeState();
-            if (serialized === root.lastSavedState)
-                return;
-            root.lastSavedState = serialized;
-            storage.setText(serialized);
-        }
-    }
-
     PersistentProperties {
         id: props
 
@@ -125,7 +105,7 @@ Singleton {
         bodyImagesSupported: true
         bodyMarkupSupported: true
         imageSupported: true
-        persistenceSupported: true
+        persistenceSupported: false
 
         onNotification: notif => {
             notif.tracked = true;
@@ -154,31 +134,6 @@ Singleton {
 
             if (!props.dnd && notif.appName !== "caelestia-cli" && !GlobalConfig.audio.sounds.disabledNotifApps.includes(notif.appName))
                 Audio.playNotification();
-        }
-    }
-
-    FileView {
-        id: storage
-
-        printErrors: false
-        path: `${Paths.state}/notifs.json`
-        onLoaded: {
-            const data = JSON.parse(text());
-            const cap = GlobalConfig.notifs.maxNotifs;
-            for (const notif of data.slice(0, cap))
-                root.list.push(notifComp.createObject(root, notif));
-            root.list.sort((a, b) => b.time - a.time);
-            root.openCount = root.list.filter(n => !n.closed).length;
-            root.popupCount = root.list.filter(n => n.popup).length;
-            root.lastSavedState = root.serializeState();
-            root.loaded = true;
-        }
-        onLoadFailed: err => {
-            if (err === FileViewError.FileNotFound) {
-                root.loaded = true;
-                root.lastSavedState = "[]";
-                Qt.callLater(() => setText("[]"));
-            }
         }
     }
 

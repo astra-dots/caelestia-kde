@@ -9,7 +9,7 @@ Text {
 
     property bool animate: false
 
-    renderType: Text.NativeRendering
+    renderType: Text.QtRendering
     textFormat: Text.PlainText
     color: Colours.palette.m3onSurface
     font: Tokens.font.body.small

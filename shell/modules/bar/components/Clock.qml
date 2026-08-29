@@ -9,12 +9,18 @@ import qs.services
 StyledRect {
     id: root
 
-    readonly property color colour: Colours.palette.m3tertiary
+    readonly property color colour: Colours.palette.m3secondary
     readonly property int padding: Config.bar.clock.background ? Tokens.padding.medium : Tokens.padding.extraSmall
-    readonly property var font: Tokens.font.body.builders.small.scale(1.1)
+    readonly property var font: Tokens.font.clock.size(Tokens.font.body.small.pointSize * 1.1)
     readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0))
 
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
+    property var bar: null
+    readonly property bool isHovered: hoverHandler.hovered
+
+    HoverHandler {
+        id: hoverHandler
+    }
 
     implicitWidth: isHorizontal ? (horizontalLayout.implicitWidth + root.padding * 2) : barThickness
     implicitHeight: isHorizontal ? barThickness : (verticalLayout.implicitHeight + root.padding * 2)
@@ -29,48 +35,13 @@ StyledRect {
         visible: isHorizontal
         spacing: Tokens.spacing.extraSmall
 
-        Loader {
-            asynchronous: true
-            active: Config.bar.clock.showIcon
-            visible: active
-
-            sourceComponent: MaterialIcon {
-                text: "calendar_month"
-                color: root.colour
-            }
-        }
-
-        StyledText {
-            Layout.alignment: Qt.AlignVCenter
-            visible: Config.bar.clock.showDate
-            text: Time.format("ddd")
-            font: Tokens.font.body.small
-            color: root.colour
-        }
-
-        StyledText {
-            Layout.alignment: Qt.AlignVCenter
-            visible: Config.bar.clock.showDate
-            text: Time.format("d")
-            font: Tokens.font.body.small
-            color: root.colour
-        }
-
-        Rectangle {
-            Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: 1
-            Layout.preferredHeight: 16
-            visible: Config.bar.clock.showDate
-
-            color: root.colour
-            opacity: 0.2
-        }
-
+        // Time Container (Always Visible & Stationary - No Sideways Expansion)
         StyledText {
             Layout.alignment: Qt.AlignVCenter
             text: Time.hourStr
             font: root.font.build()
             color: root.colour
+            renderType: Text.QtRendering
         }
 
         StyledText {
@@ -78,6 +49,7 @@ StyledRect {
             text: ":"
             font: root.font.build()
             color: root.colour
+            renderType: Text.QtRendering
         }
 
         StyledText {
@@ -85,6 +57,7 @@ StyledRect {
             text: Time.minuteStr
             font: root.font.build()
             color: root.colour
+            renderType: Text.QtRendering
         }
 
         Loader {
@@ -95,8 +68,9 @@ StyledRect {
 
             sourceComponent: StyledText {
                 text: Time.amPmStr.toLowerCase()
-                font: Tokens.font.body.builders.small.scale(0.9).build()
+                font: Tokens.font.clock.size(Tokens.font.body.small.pointSize * 0.9).build()
                 color: root.colour
+                renderType: Text.QtRendering
             }
         }
     }
@@ -108,43 +82,15 @@ StyledRect {
         visible: !isHorizontal
         spacing: Tokens.spacing.extraSmall
 
-        Loader {
-            Layout.alignment: Qt.AlignHCenter
-            asynchronous: true
-            active: Config.bar.clock.showIcon
-            visible: active
-
-            sourceComponent: MaterialIcon {
-                text: "calendar_month"
-                color: root.colour
-            }
-        }
-
-        StyledText {
-            Layout.alignment: Qt.AlignHCenter
-            visible: Config.bar.clock.showDate
-
-            horizontalAlignment: StyledText.AlignHCenter
-            text: Time.format("ddd\nd")
-            font: Tokens.font.body.small
-            color: root.colour
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            visible: Config.bar.clock.showDate
-            implicitHeight: 1
-            color: Colours.palette.m3onSurfaceVariant
-        }
-
         StyledText {
             Layout.alignment: Qt.AlignHCenter
             text: Time.hourStr
             font: {
                 const scale = text === "11" ? 1.15 : Math.min(1.05, Math.max(hourMetrics.width, minMetrics.width) / hourMetrics.width);
-                return root.font.width(scale * 100).letterSpacing(scale).build();
+                return root.font.letterSpacing(scale).build();
             }
             color: root.colour
+            renderType: Text.QtRendering
 
             TextMetrics {
                 id: hourMetrics
@@ -160,9 +106,10 @@ StyledRect {
             text: Time.minuteStr
             font: {
                 const scale = text === "11" ? 1.15 : Math.min(1.05, Math.max(hourMetrics.width, minMetrics.width) / minMetrics.width);
-                return root.font.width(scale * 100).letterSpacing(scale).build();
+                return root.font.letterSpacing(scale).build();
             }
             color: root.colour
+            renderType: Text.QtRendering
 
             TextMetrics {
                 id: minMetrics
@@ -181,8 +128,9 @@ StyledRect {
 
             sourceComponent: StyledText {
                 text: Time.amPmStr.toLowerCase()
-                font: Tokens.font.body.builders.small.scale(0.9).build()
+                font: Tokens.font.clock.size(Tokens.font.body.small.pointSize * 0.9).build()
                 color: root.colour
+                renderType: Text.QtRendering
             }
         }
     }

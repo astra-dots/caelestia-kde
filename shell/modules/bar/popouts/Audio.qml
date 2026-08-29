@@ -151,6 +151,36 @@ ColumnLayout {
         }
     }
 
+    StyledText {
+        visible: Audio.sources.length > 0
+        Layout.topMargin: Tokens.spacing.small * root.scaleOffset
+        text: qsTr("Microphone (%1)").arg(Audio.sourceMuted ? qsTr("Muted") : `${Math.round(Audio.sourceVolume * 100)}%`)
+        font.weight: Font.Medium
+        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+    }
+
+    CustomMouseArea {
+        visible: Audio.sources.length > 0
+        Layout.fillWidth: true
+        implicitHeight: Tokens.padding.medium * 3 * root.scaleOffset
+
+        onWheel: event => {
+            if (event.angleDelta.y > 0)
+                Audio.incrementSourceVolume();
+            else if (event.angleDelta.y < 0)
+                Audio.decrementSourceVolume();
+        }
+
+        StyledSlider {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            implicitHeight: parent.implicitHeight
+
+            value: Audio.sourceVolume
+            onInteraction: v => Audio.setSourceVolume(v)
+        }
+    }
+
     IconTextButton {
         Layout.fillWidth: true
         inactiveColour: Colours.palette.m3primaryContainer

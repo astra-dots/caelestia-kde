@@ -95,7 +95,7 @@ Item {
         id: metrics
 
         text: root.windowTitle
-        font: root.Tokens.font.body.builders.small.letterSpacing(1.4).build()
+        font: Tokens.font.clock.size(Tokens.font.body.small.pointSize).letterSpacing(1.4).build()
 
         onTextChanged: {
             const next = root.current === text1 ? text2 : text1;

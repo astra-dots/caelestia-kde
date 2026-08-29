@@ -1,10 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Services.Mpris
+import M3Shapes
 import Caelestia.Components
 import Caelestia.Config
 import qs.components
 import qs.components.controls
+import qs.components.effects
+import qs.components.images
 import qs.services
 
 ColumnLayout {
@@ -33,34 +36,28 @@ ColumnLayout {
         onTriggered: Players.active?.positionChanged()
     }
 
-    StyledText {
+    MarqueeText {
         Layout.fillWidth: true
         text: Players.active?.trackTitle ?? ""
         font: Tokens.font.title.large
-        elide: Text.ElideRight
-        animate: true
     }
 
-    StyledText {
+    MarqueeText {
         Layout.fillWidth: true
         text: Players.active?.trackArtist || qsTr("Unknown artist")
         color: Colours.palette.m3onSurfaceVariant
         font: Tokens.font.title.medium
-        elide: Text.ElideRight
-        animate: true
     }
 
-    StyledText {
+    MarqueeText {
         Layout.fillWidth: true
         text: Players.active?.trackAlbum || qsTr("Unknown album")
         color: Colours.palette.m3secondary
         font: Tokens.font.title.medium
-        elide: Text.ElideRight
-        animate: true
     }
 
     RowLayout {
-        Layout.topMargin: Tokens.spacing.extraLargeIncreased
+        Layout.topMargin: Tokens.spacing.small
         Layout.fillWidth: true
         spacing: Tokens.spacing.small
 
@@ -116,7 +113,7 @@ ColumnLayout {
     }
 
     ButtonRow {
-        Layout.topMargin: Tokens.spacing.largeIncreased
+        Layout.topMargin: Tokens.spacing.small
         Layout.fillWidth: true
         spacing: Tokens.spacing.extraSmall
 
@@ -187,6 +184,225 @@ ColumnLayout {
                     Players.active.loopState = MprisLoopState.None;
             }
             implicitWidth: Math.round(implicitHeight * 0.9)
+        }
+
+        IconButton {
+            id: likeBtn
+            type: IconButton.Tonal
+            icon: "favorite"
+            isRound: true
+            shapeMorph: true
+            isToggle: true
+            checked: SpotifyService.isLiked
+            activeColour: Colours.palette.m3primary
+            activeOnColour: Colours.palette.m3onPrimary
+            font: Tokens.font.icon.builders.medium.weight(Font.Medium).build()
+            visible: SpotifyService.isSpotify
+            onClicked: SpotifyService.toggleLike()
+            implicitWidth: Math.round(implicitHeight * 0.9)
+        }
+    }
+
+    // --- Spotify Exclusive: Up Next Expandable Card ---
+    Item {
+        id: upcomingContainer
+
+        Layout.topMargin: Tokens.spacing.small
+        Layout.fillWidth: true
+        Layout.preferredHeight: visible ? (hoverArea.containsMouse ? 84 : 28) : 0
+        visible: SpotifyService.isSpotify && SpotifyService.hasUpcoming
+        clip: true
+
+        Behavior on Layout.preferredHeight {
+            Anim {
+                type: Anim.DefaultEffects
+            }
+        }
+
+        Rectangle {
+            id: upcomingBg
+
+            anchors.fill: parent
+            radius: Tokens.rounding.medium
+            color: hoverArea.containsMouse ? Colours.layer(Colours.palette.m3surfaceContainerHighest, 1) : Colours.layer(Colours.palette.m3surfaceContainerHigh, 1)
+            border.color: hoverArea.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
+            border.width: hoverArea.containsMouse ? 1 : 0
+
+            Behavior on color {
+                CAnim {}
+            }
+            Behavior on border.width {
+                CAnim {}
+            }
+            Behavior on border.color {
+                CAnim {}
+            }
+
+            // Collapsed View
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Tokens.padding.medium
+                anchors.rightMargin: Tokens.padding.medium
+                spacing: Tokens.spacing.small
+                opacity: hoverArea.containsMouse ? 0 : 1
+                visible: opacity > 0
+
+                Behavior on opacity {
+                    Anim {
+                        type: Anim.DefaultEffects
+                    }
+                }
+
+                MaterialIcon {
+                    text: "queue_music"
+                    fontStyle: Tokens.font.icon.small
+                    color: Colours.palette.m3primary
+                }
+
+                StyledText {
+                    text: qsTr("Up Next:")
+                    font: Tokens.font.label.small
+                    color: Colours.palette.m3primary
+                }
+
+                MarqueeText {
+                    Layout.fillWidth: true
+                    text: `${SpotifyService.upcomingTitle} • ${SpotifyService.upcomingArtist}`
+                    font: Tokens.font.label.small
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+
+                MaterialIcon {
+                    text: "expand_more"
+                    fontStyle: Tokens.font.icon.small
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+            }
+
+            // Expanded View (on Hover)
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.small
+                anchors.leftMargin: Tokens.padding.medium
+                anchors.rightMargin: Tokens.padding.medium
+                spacing: Tokens.spacing.medium
+                opacity: hoverArea.containsMouse ? 1 : 0
+                visible: opacity > 0
+
+                Behavior on opacity {
+                    Anim {
+                        type: Anim.DefaultEffects
+                    }
+                }
+
+                // Album Art Thumbnail with Material 3 Expressive Shape (Cookie9Sided)
+                Item {
+                    id: thumbContainer
+                    implicitWidth: 48
+                    implicitHeight: 48
+                    Layout.preferredWidth: 48
+                    Layout.preferredHeight: 48
+                    width: 48
+                    height: 48
+                    Layout.alignment: Qt.AlignVCenter
+
+                    readonly property bool isHovered: hoverArea.containsMouse && hoverArea.mouseX >= 0 && hoverArea.mouseX <= (thumbContainer.x + thumbContainer.width + 12)
+
+                    Item {
+                        id: thumbShapeWrapper
+                        anchors.fill: parent
+                        layer.enabled: true
+
+                        MaterialShape {
+                            id: thumbShape
+                            anchors.centerIn: parent
+                            implicitSize: parent.width
+                            shape: (thumbContainer.isHovered && AlbumArtEffects.enabled) ? MaterialShape.Square : MaterialShape.Cookie9Sided
+                            color: Colours.palette.m3surfaceContainerLowest
+                        }
+                    }
+
+                    FadeImage {
+                        id: thumbImage
+                        anchors.fill: parent
+                        source: SpotifyService.upcomingArtUrl
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        visible: SpotifyService.upcomingArtUrl.length > 0
+
+                        layer.enabled: true
+                        layer.effect: AlbumArtLayer {
+                            maskSource: thumbShapeWrapper
+                            isHovered: thumbContainer.isHovered
+                        }
+                    }
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        text: "music_note"
+                        fontStyle: Tokens.font.icon.medium
+                        color: Colours.palette.m3primary
+                        visible: !SpotifyService.upcomingArtUrl || thumbImage.status !== Image.Ready
+                    }
+                }
+
+                // Track Details Column with Marquee Scrolling
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 0
+
+                    RowLayout {
+                        spacing: Tokens.spacing.extraSmall
+                        MaterialIcon {
+                            text: "queue_music"
+                            fontStyle: Tokens.font.icon.small
+                            color: Colours.palette.m3primary
+                        }
+                        StyledText {
+                            text: qsTr("UP NEXT")
+                            font: Tokens.font.label.small
+                            color: Colours.palette.m3primary
+                        }
+                    }
+
+                    MarqueeText {
+                        Layout.fillWidth: true
+                        text: SpotifyService.upcomingTitle
+                        font: Tokens.font.title.small
+                        color: Colours.palette.m3onSurface
+                    }
+
+                    MarqueeText {
+                        Layout.fillWidth: true
+                        text: SpotifyService.upcomingArtist
+                        font: Tokens.font.label.small
+                        color: Colours.palette.m3onSurfaceVariant
+                    }
+                }
+
+                // Skip / Play Next Action Button
+                IconButton {
+                    type: IconButton.Tonal
+                    icon: "skip_next"
+                    isRound: true
+                    shapeMorph: true
+                    font: Tokens.font.icon.small
+                    implicitWidth: 34
+                    implicitHeight: 34
+                    activeColour: Colours.palette.m3primary
+                    activeOnColour: Colours.palette.m3onPrimary
+                    onClicked: SpotifyService.skipNext()
+                }
+            }
+
+            MouseArea {
+                id: hoverArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: SpotifyService.skipNext()
+            }
         }
     }
 }

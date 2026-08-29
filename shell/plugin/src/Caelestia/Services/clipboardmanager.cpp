@@ -307,7 +307,8 @@ void ClipboardManager::reload() {
 
         // Parse natively: each line is "<id>\t<preview>"
         static const QRegularExpression imageRe(
-            QStringLiteral(R"(\[\[ binary data \d+ KiB png \d+x\d+ \]\])"));
+            QStringLiteral(R"(^\[\[ binary data .* \]\]$)"),
+            QRegularExpression::CaseInsensitiveOption);
 
         QVariantList result;
         const auto lines = output.split('\n');

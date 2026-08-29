@@ -648,6 +648,34 @@ Item {
         }
     }
 
+    function isWindowOnCurrentWorkspace(toplevel): bool {
+        if (!toplevel) return false;
+        
+        // KWin (KDE Plasma 6)
+        if (typeof KWinWorkspaceState !== "undefined" && typeof KWinActiveWindowBridge !== "undefined") {
+            const activeWsId = KWinWorkspaceState.activeId;
+            if (toplevel.onAllDesktops) return true;
+            if (toplevel.workspace) {
+                const ws = toplevel.workspace;
+                if (ws.id === -1 || ws.index === -1) return true;
+                return (ws.id === activeWsId || ws.index === activeWsId);
+            }
+            if (toplevel.desktops && Array.isArray(toplevel.desktops)) {
+                return toplevel.desktops.length === 0 || toplevel.desktops.includes(activeWsId);
+            }
+            return true;
+        }
+        
+        // Hyprland
+        if (typeof Hyprland !== "undefined" && Hyprland.activeWorkspace) {
+            if (toplevel.workspace) {
+                return toplevel.workspace.id === Hyprland.activeWorkspace.id;
+            }
+        }
+        
+        return true;
+    }
+
     property var modelDataArray: []
 
     property var currentOrder: []
@@ -685,6 +713,7 @@ Item {
             if (!appClass) continue;
             
             if (appClass.toLowerCase().includes("xwaylandvideobridge")) continue;
+            if (!root.isWindowOnCurrentWorkspace(toplevel)) continue;
             
             let found = false;
             for (const app of apps) {
@@ -857,6 +886,15 @@ Item {
     }
 
     Connections {
+        target: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState : null
+
+        function onActiveIdChanged(): void {
+            root.rebuildModel();
+            delayedRebuildTimer.restart();
+        }
+    }
+
+    Connections {
         target: GlobalConfig.launcher
 
         function onFavouriteAppsChanged(): void {
@@ -864,5 +902,74 @@ Item {
         }
     }
 
-    Component.onCompleted: root.rebuildModel()
+    function activateAppAtIndex(index: int): void {
+        if (index < 0 || index >= root.modelDataArray.length) return;
+        const modelData = root.modelDataArray[index];
+        if (!modelData) return;
+
+        if (modelData.toplevels && modelData.toplevels.length > 0) {
+            let activeIdx = -1;
+            let activeAddr = "";
+            
+            if (typeof KWinActiveWindowBridge !== "undefined" && KWinActiveWindowBridge.activeWindow) {
+                activeAddr = KWinActiveWindowBridge.activeWindow.address ? String(KWinActiveWindowBridge.activeWindow.address) : "";
+            } else if (root.activeTop && root.activeTop.address) {
+                activeAddr = String(root.activeTop.address);
+            }
+
+            for (let i = 0; i < modelData.toplevels.length; i++) {
+                let top = modelData.toplevels[i];
+                let topAddr = String(top.address);
+                let isMinimized = top.minimized || false;
+                if (!isMinimized && (top.focused || (activeAddr !== "" && activeAddr === topAddr))) {
+                    activeIdx = i;
+                    break;
+                }
+            }
+            
+            const isKWin = (typeof KWinActiveWindowBridge !== "undefined" && KWinActiveWindowBridge.windowList);
+            
+            if (modelData.toplevels.length === 1) {
+                let addr = String(modelData.toplevels[0].address);
+                if (activeIdx === 0) {
+                    if (isKWin) {
+                        KWinActiveWindowBridge.minimizeWindow(addr);
+                    }
+                } else {
+                    if (isKWin) {
+                        KWinActiveWindowBridge.focusWindow(addr);
+                    } else {
+                        Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
+                    }
+                }
+            } else {
+                let nextIdx = activeIdx !== -1 ? (activeIdx + 1) % modelData.toplevels.length : 0;
+                let addr = String(modelData.toplevels[nextIdx].address);
+                if (isKWin) {
+                    KWinActiveWindowBridge.focusWindow(addr);
+                } else {
+                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
+                }
+            }
+        } else if (modelData.entry) {
+            let newLaunching = Object.assign({}, root.launchingApps);
+            newLaunching[modelData.appClass || modelData.id] = true;
+            root.launchingApps = newLaunching;
+            
+            const subCmd = modelData.entry.runInTerminal
+                ? [...GlobalConfig.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...modelData.entry.command]
+                : modelData.entry.command;
+            const finalCmd = GlobalConfig.services.useSystemd ? ["app2unit", "--", ...subCmd] : subCmd;
+            Quickshell.execDetached({
+                command: finalCmd,
+                workingDirectory: modelData.entry.workingDirectory
+            });
+        }
+    }
+
+    Component.onCompleted: {
+        if (typeof DockService !== "undefined")
+            DockService.registerDock(root);
+        root.rebuildModel();
+    }
 }

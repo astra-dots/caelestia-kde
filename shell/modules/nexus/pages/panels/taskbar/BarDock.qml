@@ -66,6 +66,14 @@ PageBase {
 
         ToggleRow {
             Layout.fillWidth: true
+            text: qsTr("Only current workspace")
+            subtext: qsTr("Only show open windows from the active virtual desktop")
+            checked: Config.bar.dock.onlyCurrentWorkspace ?? true
+            onToggled: GlobalConfig.bar.dock.onlyCurrentWorkspace = checked
+        }
+
+        ToggleRow {
+            Layout.fillWidth: true
             last: true
             text: Strings.localizeEnglishSpelling(qsTr("Recolour icons"))
             subtext: Strings.localizeEnglishSpelling(qsTr("Recolour application icons using the system theme"))

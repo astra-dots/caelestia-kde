@@ -58,6 +58,9 @@ QtObject {
                 Component {
                     KMYCSettings {}
                 }
+                Component {
+                    AllColorsPalettePage {}
+                }
             }
         },
         Component {

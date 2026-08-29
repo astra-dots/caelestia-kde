@@ -28,8 +28,7 @@ Singleton {
         return str.replace(/'/g, "'\\''");
     }
 
-    function getCommand(x, y, width, height, screenshotPath, action, saveDir = "") {
-        // Set command for action
+    function getCommand(x, y, width, height, screenshotPath, action, saveDir = "", saveToFile = false) {
         const rx = Math.round(x);
         const ry = Math.round(y);
         const rw = Math.round(width);
@@ -37,95 +36,81 @@ Singleton {
 
         const cropBase = `magick '${escapeShellStr(screenshotPath)}' `
             + `-crop ${rw}x${rh}+${rx}+${ry} +repage`
-        const cropToFile = (outPath) => `${cropBase} '${escapeShellStr(outPath)}'`
         const cleanup = `rm -f '${escapeShellStr(screenshotPath)}'`
-        const annotationCommand = `swappy -f -`; // default to swappy
-        const uploadAndGetUrl = (filePath) => {
-            return `curl -sF files[]=@'${escapeShellStr(filePath)}' ${root.fileUploadApiEndpoint} | jq -r '.files[0].url'`
-        }
-        
-        const rawSaveDir = saveDir;
+        const rawSaveDir = saveDir === "" ? "~/Pictures/Screenshots" : saveDir;
 
         switch (action) {
             case ScreenshotAction.Action.Copy: {
-                let saveDir = rawSaveDir === "" ? "~/Pictures/Screenshots" : rawSaveDir;
+                if (saveToFile) {
+                    return [
+                        "bash", "-c",
+                        `set -euo pipefail; ` +
+                        `SAVE_DIR='${escapeShellStr(rawSaveDir)}'; ` +
+                        `SAVE_DIR="\${SAVE_DIR/#\\~/$HOME}"; ` +
+                        `mkdir -p "$SAVE_DIR" && ` +
+                        `saveFile="$SAVE_DIR/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png" && ` +
+                        `${cropBase} "$saveFile" && ` +
+                        `wl-copy -t image/png < "$saveFile"; ` +
+                        `notify-send "Screenshot Saved & Copied" "Saved to $saveFile & copied to clipboard" -i "$saveFile" -a "Screenshot" || true; ` +
+                        `spectacle -E "$saveFile" 2>/dev/null || spectacle "$saveFile" 2>/dev/null || true; ` +
+                        `${cleanup}`
+                    ];
+                } else {
+                    return [
+                        "bash", "-c",
+                        `set -euo pipefail; ` +
+                        `TMPF=$(mktemp /tmp/qs-crop-XXXXXX.png); ` +
+                        `${cropBase} "$TMPF" && ` +
+                        `wl-copy -t image/png < "$TMPF"; ` +
+                        `notify-send "Screenshot Copied" "Copied to clipboard (Hold Shift to also save)" -a "Screenshot" || true; ` +
+                        `spectacle -E "$TMPF" 2>/dev/null || spectacle "$TMPF" 2>/dev/null || true; ` +
+                        `${cleanup}; (sleep 40 && rm -f "$TMPF") &`
+                    ];
+                }
+            }
+
+            case ScreenshotAction.Action.Edit: {
                 return [
                     "bash", "-c",
                     `set -euo pipefail; ` +
-                    `SAVE_DIR='${escapeShellStr(saveDir)}'; ` +
+                    `SAVE_DIR='${escapeShellStr(rawSaveDir)}'; ` +
                     `SAVE_DIR="\${SAVE_DIR/#\\~/$HOME}"; ` +
                     `mkdir -p "$SAVE_DIR" && ` +
                     `saveFile="$SAVE_DIR/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png" && ` +
                     `${cropBase} "$saveFile" && ` +
                     `wl-copy -t image/png < "$saveFile"; ` +
-                    `ACTION=$(notify-send "Screenshot Captured" "Saved to $saveFile" -i "$saveFile" -a "Screenshot" --action="open=Open" --action="folder=Open Folder" || true); ` +
-                    `if [ "$ACTION" = "open" ]; then xdg-open "$saveFile"; elif [ "$ACTION" = "folder" ]; then xdg-open "$SAVE_DIR"; fi; ` +
+                    `spectacle -E "$saveFile" 2>/dev/null || spectacle "$saveFile" 2>/dev/null || true; ` +
                     `${cleanup}`
-                ]
-            }
-
-            case ScreenshotAction.Action.Edit: {
-                let saveDir = rawSaveDir === "" ? "~/Pictures/Screenshots" : rawSaveDir;
-                return ["bash", "-c",
-                    `set -euo pipefail; ` +
-                    `SAVE_DIR='${escapeShellStr(saveDir)}'; ` +
-                    `SAVE_DIR="\${SAVE_DIR/#\\~/$HOME}"; ` +
-                    `mkdir -p "$SAVE_DIR" && ` +
-                    `saveFile="$SAVE_DIR/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png" && ` +
-                    `TMPF=$(mktemp /tmp/qs-snip-XXXXXX.png); ` +
-                    `${cropBase} "$TMPF" && ` +
-                    `CONF_DIR=$(mktemp -d); ln -s ~/.config/* "$CONF_DIR/" 2>/dev/null || true; rm -rf "$CONF_DIR/swappy"; mkdir -p "$CONF_DIR/swappy"; ` +
-                    `SWAPPY_OUT_DIR=$(mktemp -d /tmp/swappy-out-XXXXXX); ` +
-                    `if [ -f ~/.config/swappy/config ]; then cp ~/.config/swappy/config "$CONF_DIR/swappy/config"; else echo "[Default]" > "$CONF_DIR/swappy/config"; fi; ` +
-                    `sed -i '/^early_exit.*/d; /^save_dir.*/d; /^save_filename_format.*/d; /^auto_save.*/d' "$CONF_DIR/swappy/config"; ` +
-                    `echo -e "early_exit=true\\nsave_dir=$SWAPPY_OUT_DIR\\nsave_filename_format=swappy-out.png\\nauto_save=true" >> "$CONF_DIR/swappy/config"; ` +
-                    `XDG_CONFIG_HOME="$CONF_DIR" ${annotationCommand} -f "$TMPF" -o "$saveFile" || true; ` +
-                    `rm -rf "$CONF_DIR"; ` +
-                    `if [ ! -s "$saveFile" ]; then ` +
-                        `OUT_FILE=$(ls "$SWAPPY_OUT_DIR"/*.png 2>/dev/null | head -n 1); ` +
-                        `if [ -n "$OUT_FILE" ]; then mv "$OUT_FILE" "$saveFile"; fi; ` +
-                    `fi; ` +
-                    `rm -rf "$SWAPPY_OUT_DIR"; ` +
-                    `if [ -s "$saveFile" ]; then ` +
-                        `wl-copy -t image/png < "$saveFile"; ` +
-                        `ACTION=$(notify-send "Screenshot Captured" "Saved to $saveFile" -i "$saveFile" -a "Screenshot" --action="open=Open" --action="folder=Open Folder" || true); ` +
-                        `if [ "$ACTION" = "open" ]; then xdg-open "$saveFile"; elif [ "$ACTION" = "folder" ]; then xdg-open "$SAVE_DIR"; fi; ` +
-                    `fi; ` +
-                    `rm -f "$TMPF"; ${cleanup}`
-                ]
+                ];
             }
 
             case ScreenshotAction.Action.Search: {
-                const tmpFile = Paths.runtimeTemp("snip-search.png")
-                return ["bash", "-c",
+                const tmpFile = Paths.runtimeTemp("snip-search.png");
+                return [
+                    "bash", "-c",
                     `set -euo pipefail; ` +
-                    `${cropToFile(tmpFile)} && ` +
-                    `xdg-open "${root.imageSearchEngineBaseUrl}$(${uploadAndGetUrl(tmpFile)})"; ` +
+                    `magick '${escapeShellStr(screenshotPath)}' -crop ${rw}x${rh}+${rx}+${ry} +repage '${tmpFile}' && ` +
+                    `URL=$(curl -sF files[]=@'${tmpFile}' ${root.fileUploadApiEndpoint} | jq -r '.files[0].url') && ` +
+                    `xdg-open "${root.imageSearchEngineBaseUrl}$URL"; ` +
                     `rm -f '${tmpFile}'; ${cleanup}`
-                ]
+                ];
             }
 
-            case ScreenshotAction.Action.CharRecognition:
-                return ["bash", "-c",
-                    `set -euo pipefail; TMPF=$(mktemp /tmp/qs-snip-XXXXXX.png); ` +
-                    // Crop and heavily preprocess the image for Tesseract (upscale and grayscale for better accuracy)
+            case ScreenshotAction.Action.CharRecognition: {
+                return [
+                    "bash", "-c",
+                    `set -euo pipefail; TMPF=$(mktemp /tmp/qs-ocr-XXXXXX.png); ` +
                     `${cropBase} -colorspace gray -type grayscale -contrast-stretch 0 -resize 300% "$TMPF" && ` +
-                    `LANGS=$(tesseract --list-langs 2>/dev/null | awk 'NR>1 && $1!="osd" {print $1}' | tr '\\n' '+' | sed 's/\\+$//'); ` +
-                    `if [ -n "$LANGS" ]; then ` +
-                        `TEXT=$(tesseract "$TMPF" stdout -l "$LANGS" 2>/dev/null); ` +
-                    `else ` +
-                        `TEXT=$(tesseract "$TMPF" stdout 2>/dev/null); ` +
-                    `fi; ` +
+                    `TEXT=$(tesseract "$TMPF" stdout 2>/dev/null || true); ` +
                     `printf "%s" "$TEXT" | wl-copy; ` +
                     `notify-send "Text Recognized" "$TEXT" -a "Screenshot" || true; ` +
                     `rm -f "$TMPF"; ${cleanup}`
-                ]
+                ];
+            }
 
             case ScreenshotAction.Action.Record:
-                return ["bash", "-c", `spectacle -R r`]
-
             case ScreenshotAction.Action.RecordWithSound:
-                return ["bash", "-c", `spectacle -R r`]
+                return ["bash", "-c", `spectacle -R r`];
 
             default:
                 console.warn("[Region Selector] Unknown snip action, skipping snip.");

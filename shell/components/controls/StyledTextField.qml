@@ -12,7 +12,7 @@ TextField {
     color: Colours.palette.m3onSurface
     placeholderTextColor: Colours.palette.m3outline
     font: Tokens.font.body.small
-    renderType: echoMode === TextField.Password ? TextField.QtRendering : TextField.NativeRendering
+    renderType: TextField.QtRendering
     cursorVisible: !readOnly
 
     background: null

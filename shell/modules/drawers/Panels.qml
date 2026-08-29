@@ -12,6 +12,7 @@ import qs.modules.overview as Overview
 import qs.modules.session as Session
 import qs.modules.sidebar as Sidebar
 import qs.modules.utilities as Utilities
+import qs.modules.screenshot as Screenshot
 import qs.modules.bar.popouts as BarPopouts
 import qs.modules.utilities.toasts as Toasts
 
@@ -25,12 +26,13 @@ Item {
     required property real overviewBorderThickness
     property var overviewAnimConfig
     readonly property alias osd: osd
-    readonly property alias osdWrapper: osdWrapper
+    readonly property alias osdWrapper: osd
     readonly property alias notifications: notifications
     readonly property alias session: session
     readonly property alias sessionWrapper: sessionWrapper
     readonly property alias launcher: launcher
     readonly property alias dashboard: dashboard
+    readonly property alias screenshotBar: screenshotBar
     readonly property alias popouts: popoutsWrapper.content
     readonly property alias popoutsWrapper: popoutsWrapper
     readonly property alias utilities: utilities
@@ -161,30 +163,17 @@ Item {
         }
     ]
 
-    Item {
-        id: osdWrapper
+    Osd.Wrapper {
+        id: osd
 
-        property string vAnchor: "center"
-        property string hAnchor: Config.bar.position === "right" ? "left" : "right"
+        property string vAnchor: "bottom"
+        property string hAnchor: "center"
 
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
-        anchors.leftMargin: Config.bar.position === "right" ? sidebar.width * (1 - sidebar.offsetScale) + session.width * (1 - session.offsetScale) : 0
-        anchors.rightMargin: Config.bar.position !== "right" ? sidebar.width * (1 - sidebar.offsetScale) + session.width * (1 - session.offsetScale) : 0
-        clip: sidebar.visible || session.visible
-        implicitWidth: osd.implicitWidth * (1 - osd.offsetScale)
-        implicitHeight: osd.implicitHeight
-        visible: osd.offsetScale < 1
-
-        Osd.Wrapper {
-            id: osd
-
-            screen: root.screen
-            visibilities: root.visibilities
-            sidebarOrSessionVisible: sidebar.visible || session.visible
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-        }
+        screen: root.screen
+        visibilities: root.visibilities
+        sidebarOrSessionVisible: sidebar.visible || session.visible
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
     }
     Notifications.Wrapper {
         id: notifications
@@ -285,6 +274,16 @@ Item {
     }
     Dashboard.Wrapper {
         id: dashboard
+
+        property string vAnchor: "top"
+        property string hAnchor: "center"
+
+        visibilities: root.visibilities
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+    }
+    Screenshot.Wrapper {
+        id: screenshotBar
 
         property string vAnchor: "top"
         property string hAnchor: "center"

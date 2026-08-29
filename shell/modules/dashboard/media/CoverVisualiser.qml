@@ -27,6 +27,13 @@ Item {
         asynchronous: true
         preferredRendererType: Shape.CurveRenderer
         data: bars.instances
+        opacity: (cover.isHovered && AlbumArtEffects.enabled) ? 0.0 : 1.0
+
+        Behavior on opacity {
+            Anim {
+                duration: 350
+            }
+        }
     }
 
     Variants {
@@ -46,6 +53,8 @@ Item {
             readonly property real dist: shapeEdgeDist + value * root.maxMagnitude
             readonly property real shapeEdgeDist: {
                 cover.shape.rotation; // Update when shape rotation changes
+                cover.shape.shape;    // Update when shape morphs
+                cover.isHovered;      // Update when hover changes
                 const sDist = cover.shape.distanceAtAngle(modelData * 360 / GlobalConfig.services.visualiserBars + 90);
                 return sDist + root.spacing + strokeWidth / 2;
             }
@@ -75,7 +84,7 @@ Item {
         id: cover
 
         anchors.centerIn: parent
-        shape.shape: MaterialShape.Cookie9Sided
+        defaultShape: MaterialShape.Cookie9Sided
         implicitWidth: Tokens.sizes.dashboard.mediaCoverArtSize
         implicitHeight: Tokens.sizes.dashboard.mediaCoverArtSize
     }

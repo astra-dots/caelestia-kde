@@ -22,6 +22,7 @@ CustomMouseArea {
     property bool dashboardShortcutActive
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
+    property bool sidebarShortcutActive
     readonly property bool isBarHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
     // Uses clampedThickness rather than the raw implicit size so the bar stays
     // reachable when the border thickness is set to 0 (the collapsed bar is 0px wide).
@@ -141,12 +142,16 @@ CustomMouseArea {
         }
     }
     onContainsMouseChanged: {
+        if (visibilities.screenshot) return;
         if (!containsMouse) {
             // Only hide if not activated by shortcut
             if (!osdShortcutActive) {
                 visibilities.osd = false;
                 root.panels.osd.hovered = false;
             }
+
+            if (!sidebarShortcutActive)
+                visibilities.sidebar = false;
 
             if (Config.dashboard.showOnHover && !dashboardShortcutActive)
                 visibilities.dashboard = false;
@@ -164,7 +169,7 @@ CustomMouseArea {
         }
     }
     onPositionChanged: event => {
-        if (popouts.isDetached)
+        if (popouts.isDetached || visibilities.screenshot)
             return;
 
         const x = event.x;
@@ -207,17 +212,13 @@ CustomMouseArea {
         }
 
         if (panels.sidebar.offsetScale === 1) {
-            // Show osd on hover
-            const showOsd = inRightPanel(panels.osdWrapper, x, y, Config.osd.hoverThickness, Config.osd.hoverWidth);
+            // Show sidebar on hover near right edge in the center
+            const showSidebarHover = inRightPanel(panels.sidebar, x, y, Config.osd.hoverThickness, Config.osd.hoverWidth);
 
-            // Always update visibility based on hover if not in shortcut mode
-            if (!osdShortcutActive) {
-                visibilities.osd = showOsd;
-                root.panels.osd.hovered = showOsd;
-            } else if (showOsd) {
-                // If hovering over OSD area while in shortcut mode, transition to hover control
-                osdShortcutActive = false;
-                root.panels.osd.hovered = true;
+            if (!sidebarShortcutActive) {
+                visibilities.sidebar = showSidebarHover;
+            } else if (showSidebarHover) {
+                sidebarShortcutActive = false;
             }
 
             const showSidebar = Config.bar.position === "right" ? pressed && dragStart.x < Math.max(Config.border.minThickness, panels.leftMargin + panels.sidebar.x + panels.sidebar.width) + Config.sidebar.grabWidth : pressed && dragStart.x > Math.min(screen.width - Config.border.minThickness, panels.leftMargin + panels.sidebar.x) - Config.sidebar.grabWidth;
@@ -241,18 +242,12 @@ CustomMouseArea {
                 visibilities.sidebar = true;
             }
         } else {
-            const outOfSidebar = Config.bar.position === "right" ? x > panels.leftMargin + panels.sidebar.width * (1 - panels.sidebar.offsetScale) : x < screen.width - panels.sidebar.width * (1 - panels.sidebar.offsetScale);
-            // Show osd on hover
-            const showOsd = outOfSidebar && inRightPanel(panels.osdWrapper, x, y, Config.osd.hoverThickness, Config.osd.hoverWidth);
+            const inSidebar = inRightPanel(panels.sidebar, x, y, Config.osd.hoverThickness, 100);
 
-            // Always update visibility based on hover if not in shortcut mode
-            if (!osdShortcutActive) {
-                visibilities.osd = showOsd;
-                root.panels.osd.hovered = showOsd;
-            } else if (showOsd) {
-                // If hovering over OSD area while in shortcut mode, transition to hover control
-                osdShortcutActive = false;
-                root.panels.osd.hovered = true;
+            if (!sidebarShortcutActive) {
+                visibilities.sidebar = inSidebar;
+            } else if (inSidebar) {
+                sidebarShortcutActive = false;
             }
 
             // Show/hide session on drag
@@ -397,15 +392,17 @@ CustomMouseArea {
     // Monitor individual visibility changes
     Connections {
         function onLauncherChanged() {
-            // If launcher is hidden, clear shortcut flags for dashboard and OSD
+            // If launcher is hidden, clear shortcut flags for dashboard, OSD and sidebar
             if (!root.visibilities.launcher) {
                 root.dashboardShortcutActive = false;
                 root.osdShortcutActive = false;
                 root.utilitiesShortcutActive = false;
+                root.sidebarShortcutActive = false;
 
-                // Also hide dashboard and OSD if they're not being hovered
+                // Also hide dashboard, OSD and sidebar if they're not being hovered
                 const inDashboardArea = root.inTopPanel(root.panels.dashboard, root.mouseX, root.mouseY, Config.dashboard.hoverThickness, Config.dashboard.hoverWidth);
                 const inOsdArea = root.inRightPanel(root.panels.osdWrapper, root.mouseX, root.mouseY, Config.osd.hoverThickness, Config.osd.hoverWidth);
+                const inSidebarArea = root.inRightPanel(root.panels.sidebar, root.mouseX, root.mouseY, Config.osd.hoverThickness, Config.osd.hoverWidth);
 
                 if (!inDashboardArea) {
                     root.visibilities.dashboard = false;
@@ -414,6 +411,19 @@ CustomMouseArea {
                     root.visibilities.osd = false;
                     root.panels.osd.hovered = false;
                 }
+                if (!inSidebarArea) {
+                    root.visibilities.sidebar = false;
+                }
+            }
+        }
+        function onSidebarChanged() {
+            if (root.visibilities.sidebar) {
+                const inSidebarArea = root.inRightPanel(root.panels.sidebar, root.mouseX, root.mouseY, Config.osd.hoverThickness, Config.osd.hoverWidth);
+                if (!inSidebarArea) {
+                    root.sidebarShortcutActive = true;
+                }
+            } else {
+                root.sidebarShortcutActive = false;
             }
         }
         function onDashboardChanged() {

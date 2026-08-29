@@ -10,10 +10,11 @@ Item {
         console.log("StartupTasks Loaded!");
         Quickshell.execDetached(["bash", "-c", `
             STATE_FILE="$HOME/.local/share/caelestia/state/startup_tasks.txt"
+            TASKS_DIR="$HOME/.config/quickshell/caelestia/services/startuptasks"
+            [[ ! -d "$TASKS_DIR" ]] && exit 0
             mkdir -p "$(dirname "$STATE_FILE")"
             touch "$STATE_FILE"
             
-            TASKS_DIR="$HOME/.config/quickshell/caelestia/services/startuptasks"
             MODIFIED=false
             RAN_TASKS=""
             
@@ -26,7 +27,7 @@ Item {
             for script_name in "\${TASKS[@]}"; do
                 script="$TASKS_DIR/$script_name.sh"
                 if [[ -f "$script" ]]; then
-                    if ! grep -q "^\${script_name}$" "$STATE_FILE"; then
+                    if ! grep -Fxq "$script_name" "$STATE_FILE"; then
                         bash "$script"
                         if [[ $? -eq 1 ]]; then
                             MODIFIED=true
@@ -39,10 +40,6 @@ Item {
             
             if [[ "$MODIFIED" == "true" ]]; then
                 qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
-            fi
-
-            if [[ -n "$RAN_TASKS" ]]; then
-                notify-send "Caelestia Startup Tasks" "Executed the following initialization tasks:$RAN_TASKS" -i dialog-information
             fi
         `]);
     }

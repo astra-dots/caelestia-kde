@@ -19,7 +19,7 @@ StyledRect {
     readonly property bool hasImage: modelData.image.length > 0
     readonly property bool hasAppIcon: modelData.appIcon.length > 0
     readonly property int bodyTextFormat: /[<*_`#\[\]]/.test(modelData.body) ? Text.MarkdownText : Text.PlainText
-    readonly property int nonAnimHeight: summary.implicitHeight + (root.expanded ? Tokens.spacing.extraSmall * 2 + appName.height + body.height + actions.height + actions.anchors.topMargin : bodyPreview.height) + inner.anchors.margins * 2
+    readonly property int nonAnimHeight: summary.implicitHeight + (root.expanded ? Tokens.spacing.extraSmall * 2 + appName.height + body.height + (previewCard.visible ? previewCard.height + Tokens.spacing.small : 0) + actions.height + actions.anchors.topMargin : (previewCard.visible ? previewCard.height + Tokens.spacing.small + bodyPreview.height : bodyPreview.height)) + inner.anchors.margins * 2
     property bool expanded: Config.notifs.openExpanded
 
     color: root.modelData.urgency === NotificationUrgency.Critical ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
@@ -81,6 +81,17 @@ StyledRect {
             }
         }
         onClicked: event => {
+            if (previewCard.visible) {
+                const pt = mapToItem(previewCard, event.x, event.y);
+                if (pt.x >= 0 && pt.x <= previewCard.width && pt.y >= 0 && pt.y <= previewCard.height) {
+                    const img = String(root.modelData.image).replace(/^file:\/\//, "");
+                    if (img.length > 0) {
+                        Quickshell.execDetached(["xdg-open", img]);
+                        return;
+                    }
+                }
+            }
+
             if (!GlobalConfig.notifs.actionOnClick || event.button !== Qt.LeftButton)
                 return;
 
@@ -125,10 +136,6 @@ StyledRect {
                         anchors.fill: parent
                         source: Qt.resolvedUrl(root.modelData.image)
                         fillMode: Image.PreserveAspectCrop
-                        sourceSize: {
-                            const size = TokenConfig.sizes.notifs.image * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1);
-                            return Qt.size(size, size);
-                        }
                         cache: false
                         asynchronous: true
                     }
@@ -447,12 +454,47 @@ StyledRect {
                 }
             }
 
+            // Rich Screenshot / Image Preview Card
+            StyledClippingRect {
+                id: previewCard
+
+                visible: root.hasImage
+                anchors.left: summary.left
+                anchors.right: expandBtn.left
+                anchors.top: root.expanded ? body.bottom : bodyPreview.bottom
+                anchors.topMargin: Tokens.spacing.small
+                anchors.rightMargin: Tokens.spacing.small
+                implicitHeight: visible ? Math.min(160, Math.max(90, width * 0.52)) : 0
+                radius: Tokens.rounding.medium
+                color: Colours.palette.m3surfaceContainerHigh
+
+                Image {
+                    anchors.fill: parent
+                    source: Qt.resolvedUrl(root.modelData.image)
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: false
+                    mipmap: true
+                    smooth: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.modelData.image.startsWith("/")) {
+                            Quickshell.execDetached(["xdg-open", root.modelData.image]);
+                        }
+                    }
+                }
+            }
+
             ButtonRow {
                 id: actions
 
                 anchors.left: body.left
                 anchors.right: body.right
-                anchors.top: body.bottom
+                anchors.top: previewCard.visible ? previewCard.bottom : body.bottom
                 anchors.topMargin: Tokens.spacing.small
 
                 spacing: Tokens.spacing.extraSmall

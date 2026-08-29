@@ -238,10 +238,47 @@ PageBase {
                             text: "favorite"
                             fill: 1
                             color: Colours.palette.m3primary
-                            fontStyle: Tokens.font.icon.small
                         }
                     }
                 }
+            }
+        }
+
+        RowLayout {
+            id: content
+
+            anchors.fill: parent
+            anchors.margins: Tokens.padding.medium
+            anchors.leftMargin: Tokens.padding.largeIncreased
+            anchors.rightMargin: Tokens.padding.largeIncreased
+            spacing: Tokens.spacing.medium
+
+            MaterialIcon {
+                text: row.icon
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: row.label
+                    font: Tokens.font.body.small
+                    elide: Text.ElideRight
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: row.status
+                    color: Colours.palette.m3onSurfaceVariant
+                    font: Tokens.font.label.small
+                    elide: Text.ElideRight
+                }
+            }
+
+            MaterialIcon {
+                text: "expand_more"
             }
         }
     }

@@ -17,6 +17,7 @@ import qs.services
 import qs.modules.background
 import qs.modules.bar
 import qs.modules.overview as Overview
+import qs.modules.screenshot as Screenshot
 
 StyledWindow {
     id: root
@@ -41,7 +42,7 @@ StyledWindow {
     // active workspace changes — hasFullscreenOn() filters by workspace, but
     // a plain function call only re-runs when its direct property deps change.
     readonly property bool actualFullscreen: (Hypr.activeWsId, Hypr.hasFullscreenOn(screen?.name ?? ""))
-    readonly property bool hasOpenOverlay: focusGrabState.active || panels.popouts.isDetached || desktopContextMenu.expanded || visibilities.overview || visibilities.launcher || visibilities.dashboard || visibilities.sidebar || visibilities.session || visibilities.utilities
+    readonly property bool hasOpenOverlay: focusGrabState.active || panels.popouts.isDetached || desktopContextMenu.expanded || visibilities.overview || visibilities.launcher || visibilities.dashboard || visibilities.sidebar || visibilities.session || visibilities.utilities || visibilities.screenshot
     readonly property bool hasFullscreen: actualFullscreen && !hasOpenOverlay
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
@@ -78,7 +79,7 @@ StyledWindow {
     // surface the active window; KWin does not give focus back to what had it
     // when we stop asking, it just leaves nothing focused, so that has to be
     // put right by hand below.
-    readonly property bool wantsKeyboard: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent
+    readonly property bool wantsKeyboard: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent || visibilities.screenshot
 
     // Remembered on the way in, not read on the way out: as the application
     // gives up focus KWin passes through a moment with no active window at all,
@@ -93,6 +94,7 @@ StyledWindow {
         visibilities.launcher = false;
         visibilities.session = false;
         visibilities.dashboard = false;
+        visibilities.screenshot = false;
         panels.popouts.close();
     }
 
@@ -177,8 +179,13 @@ StyledWindow {
             return;
         }
 
-        if (addr)
-            KWinActiveWindowBridge.focusWindow(addr);
+        if (addr) {
+            const winList = KWinActiveWindowBridge.windowList || [];
+            const targetWin = winList.find(w => String(w.address) === String(addr));
+            if (!targetWin || !targetWin.minimized) {
+                KWinActiveWindowBridge.focusWindow(addr);
+            }
+        }
     }
 
     Overview.Anim {
@@ -208,10 +215,10 @@ StyledWindow {
         height: panels.notifications.height
 
         Region {
-            x: root.width - width
-            y: panels.osdWrapper.y + panels.topMargin
-            width: panels.osdWrapper.width * (1 - panels.osd.offsetScale) + panels.topMargin
-            height: panels.osd.height
+            x: panels.osd.x + panels.leftMargin
+            y: panels.osd.y + panels.topMargin
+            width: panels.osd.width
+            height: panels.osd.height * (1 - panels.osd.offsetScale) + panels.topMargin
         }
     }
     Regions {
@@ -239,6 +246,7 @@ StyledWindow {
             visibilities.session = false;
             visibilities.sidebar = false;
             visibilities.dashboard = false;
+            visibilities.screenshot = false;
             visibilities.utilities = false;
             visibilities.overview = false;
             panels.popouts.hasCurrent = false;
@@ -423,6 +431,12 @@ StyledWindow {
             deformAmount: 0.1
         }
         PanelBg {
+            id: screenshotBg
+
+            panel: panels.screenshotBar
+            deformAmount: 0.1
+        }
+        PanelBg {
             id: launcherBg
 
             panel: panels.launcher
@@ -458,10 +472,8 @@ StyledWindow {
         PanelBg {
             id: osdBg
 
-            panel: panels.osdWrapper
-            deformAmount: 0.25
-            x: panels.osdWrapper.x + panels.leftMargin
-            implicitWidth: panels.osdWrapper.width
+            panel: panels.osd
+            deformAmount: 0.1
         }
         PanelBg {
             id: notifsBg
@@ -649,8 +661,15 @@ StyledWindow {
             visible: visibilities.overview
             onClicked: visibilities.overview = false
         }
+        Screenshot.ScreenshotOverlay {
+            id: screenshotOverlay
+            visibilities: root.visibilities
+            barItem: panels.screenshotBar
+            z: 10
+        }
         Panels {
             id: panels
+            z: 100
 
             screen: root.screen
             visibilities: visibilities
@@ -662,6 +681,9 @@ StyledWindow {
             utilities.deformMatrix: utilsBg.rawDeformMatrix
             dashboard.transform: Matrix4x4 {
                 matrix: dashBg.deformMatrix
+            }
+            screenshotBar.transform: Matrix4x4 {
+                matrix: screenshotBg.deformMatrix
             }
             launcher.transform: Matrix4x4 {
                 matrix: launcherBg.deformMatrix
@@ -839,14 +861,14 @@ StyledWindow {
             deformMatrix: notifsBg.deformMatrix
         }
         BlurMask {
-            target: panels.osdWrapper
+            target: panels.osd
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
             blurOffsetBottom: root.blurOffsetBottom
             blurOffsetLeft: root.blurOffsetLeft
             blurOffsetRight: root.blurOffsetRight
-            vAnchor: panels.osdWrapper.vAnchor
-            hAnchor: panels.osdWrapper.hAnchor
+            vAnchor: panels.osd.vAnchor
+            hAnchor: panels.osd.hAnchor
             offsetScale: panels.osd.offsetScale
             deformMatrix: osdBg.deformMatrix
         }
@@ -885,6 +907,18 @@ StyledWindow {
             hAnchor: panels.dashboard.hAnchor
             offsetScale: panels.dashboard.offsetScale
             deformMatrix: dashBg.deformMatrix
+        }
+        BlurMask {
+            target: panels.screenshotBar
+            contentItem: root.contentItem
+            blurOffsetTop: root.blurOffsetTop
+            blurOffsetBottom: root.blurOffsetBottom
+            blurOffsetLeft: root.blurOffsetLeft
+            blurOffsetRight: root.blurOffsetRight
+            vAnchor: panels.screenshotBar.vAnchor
+            hAnchor: panels.screenshotBar.hAnchor
+            offsetScale: panels.screenshotBar.offsetScale
+            deformMatrix: screenshotBg.deformMatrix
         }
         BlurMask {
             target: panels.popoutsWrapper

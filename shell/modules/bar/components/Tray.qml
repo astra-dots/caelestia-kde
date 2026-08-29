@@ -22,6 +22,7 @@ StyledRect {
     property var popouts
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
     readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0))
+    readonly property int iconSize: Math.round(barThickness * 0.52)
 
     readonly property real nonAnimHeight: {
         if (isHorizontal)
@@ -144,7 +145,8 @@ StyledRect {
                 anchors.bottomMargin: isHorizontal ? 0 : (Config.bar.tray.background ? Tokens.padding.extraSmall : -Tokens.padding.extraSmall)
                 anchors.rightMargin: isHorizontal ? (Config.bar.tray.background ? Tokens.padding.extraSmall : -Tokens.padding.extraSmall) : 0
                 text: "expand_less"
-                fontStyle: Tokens.font.icon.large
+                color: Colours.palette.m3secondary
+                fontStyle: Tokens.font.icon.builders.small.weight(Font.Bold).size(root.iconSize).build()
                 rotation: isHorizontal ? (root.expanded ? 270 : 90) : (root.expanded ? 180 : 0)
 
                 Behavior on rotation {
@@ -169,16 +171,18 @@ StyledRect {
     Behavior on implicitHeight {
         enabled: !isHorizontal
 
-        Anim {
-            type: Anim.DefaultSpatial
+        NumberAnimation {
+            duration: 220
+            easing.type: Easing.OutCubic
         }
     }
 
     Behavior on implicitWidth {
         enabled: isHorizontal
 
-        Anim {
-            type: Anim.DefaultSpatial
+        NumberAnimation {
+            duration: 220
+            easing.type: Easing.OutCubic
         }
     }
 }

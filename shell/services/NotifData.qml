@@ -124,7 +124,7 @@ QtObject {
 
         function onImageChanged(): void {
             notif.image = notif.notification.image;
-            notif.maybeTriggerDummyImageLoader();
+            notif.resolveImageIfEmpty();
         }
 
         function onExpireTimeoutChanged(): void {
@@ -184,9 +184,34 @@ QtObject {
         }
     }
 
+    function resolveImage(): void {
+        const h = notif.hints || notif.notification?.hints;
+        if (h && h["image-path"] && String(h["image-path"]).length > 0) {
+            notif.image = String(h["image-path"]);
+            return;
+        }
+        if (h && h["x-kde-urls"]) {
+            const u = String(h["x-kde-urls"]);
+            if (u.length > 0) {
+                notif.image = u.replace(/^file:\/\//, "");
+                return;
+            }
+        }
+        if (!image || image.length === 0) {
+            const textBlock = (notif.summary || "") + " " + (notif.body || "");
+            const fullMatch = textBlock.match(/(?:\/|\bfile:\/\/)[^\s'"]+\.(?:png|jpg|jpeg|webp|gif)/i);
+            if (fullMatch) {
+                notif.image = fullMatch[0].replace(/^file:\/\//, "");
+            } else {
+                const quotedMatch = textBlock.match(/'([^']+\.(?:png|jpg|jpeg|webp|gif))'\s+to\s+'([^']+)'/i);
+                if (quotedMatch) {
+                    notif.image = quotedMatch[2] + "/" + quotedMatch[1];
+                }
+            }
+        }
+    }
+
     function maybeTriggerDummyImageLoader(): void {
-        if (image && !image.startsWith("image://icon/") && !image.startsWith(Paths.notifimagecache))
-            dummyImageLoader.active = true;
     }
 
     function lock(item: Item): void {
@@ -223,10 +248,10 @@ QtObject {
         body = notification.body;
         appIcon = notification.appIcon;
         appName = notification.appName;
-        image = notification.image;
-        maybeTriggerDummyImageLoader();
-        expireTimeout = notification.expireTimeout;
         hints = notification.hints;
+        image = notification.image;
+        resolveImage();
+        expireTimeout = notification.expireTimeout;
         urgency = notification.urgency;
         resident = notification.resident;
         hasActionIcons = notification.hasActionIcons;

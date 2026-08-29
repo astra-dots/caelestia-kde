@@ -10,8 +10,9 @@ import qs.modules.nexus
 Controls.Menu {
     id: root
 
+    maxHeight: 500
     property real _menuW: root.backgroundItem && root.backgroundItem.implicitWidth > 0 ? root.backgroundItem.implicitWidth : 250
-    property real _menuH: root.backgroundItem && root.backgroundItem.implicitHeight > 0 ? root.backgroundItem.implicitHeight : 350
+    property real _menuH: 480
     property bool _flipX: attachTo && attachTo.parent && (attachTo.x + _menuW > attachTo.parent.width)
     property bool _flipY: attachTo && attachTo.parent && (attachTo.y + _menuH > attachTo.parent.height)
     property string screenName: ""
@@ -22,6 +23,7 @@ Controls.Menu {
     function defaultEntries() {
         return [
             { id: "toggle_desktop_icons", label: qsTr("Desktop Icons"), icon: "desktop_windows", action: "ToggleDesktopIcons", enabled: true, type: "default" },
+            { id: "desktop_addons", label: qsTr("Desktop Clock & Addons"), icon: "schedule", action: "OpenDesktopAddons", enabled: true, type: "default" },
             { id: "next_wallpaper", label: qsTr("Next Wallpaper"), icon: "skip_next", action: "Wallpapers.next()", enabled: true, type: "default" },
             { id: "wallpaper_style", label: qsTr("Wallpaper & style"), icon: "wallpaper", action: "WindowFactory.create()", enabled: true, type: "default" },
             { id: "system_settings", label: qsTr("System Settings"), icon: "settings", command: "systemsettings", enabled: true, type: "default" },
@@ -45,7 +47,12 @@ Controls.Menu {
                 if (entry.action === "Wallpapers.next()") Wallpapers.next();
                 else if (entry.action === "Quickshell.reload()") Quickshell.reload();
                 else if (entry.action === "WindowFactory.create()") WindowFactory.create();
-                else if (entry.action === "ToggleDesktopIcons") {
+                else if (entry.action === "OpenDesktopAddons") {
+                    WindowFactory.create(null, {
+                        initialPageIdx: 1, // Desktop
+                        initialSubPageIdx: 1 // Desktop Addons is index 1
+                    });
+                } else if (entry.action === "ToggleDesktopIcons") {
                     let newState = !GlobalConfig.background.desktopIconsEnabled;
                     GlobalConfig.background.desktopIconsEnabled = newState;
                     for (let i = 0; i < Quickshell.screens.length; i++) {

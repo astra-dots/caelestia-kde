@@ -145,6 +145,34 @@ StyledRect {
             }
         }
 
+        // Attached Screenshot / Image Preview
+        StyledClippingRect {
+            visible: (root.modelData?.image ?? "").length > 0
+            Layout.fillWidth: true
+            implicitHeight: visible ? Math.min(150, Math.max(80, width * 0.52)) : 0
+            radius: Tokens.rounding.medium
+            color: Colours.palette.m3surfaceContainerHighest
+
+            Image {
+                anchors.fill: parent
+                source: Qt.resolvedUrl(root.modelData?.image ?? "")
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: false
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    const img = root.modelData?.image ?? "";
+                    if (img.startsWith("/")) {
+                        Quickshell.execDetached(["xdg-open", img]);
+                    }
+                }
+            }
+        }
+
         NotifActionList {
             notif: root.modelData
         }

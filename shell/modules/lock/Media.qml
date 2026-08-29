@@ -53,24 +53,20 @@ StyledClippingRect {
         anchors.margins: Tokens.padding.extraLarge
         spacing: Tokens.spacing.extraSmall
 
-        StyledText {
+        MarqueeText {
             Layout.fillWidth: true
-            animate: true
             text: (Players.active?.trackTitle ?? qsTr("Nothing playing")) || qsTr("Unknown track")
             color: Colours.palette.m3primary
             horizontalAlignment: Text.AlignHCenter
             font: Tokens.font.title.medium
-            elide: Text.ElideRight
         }
 
-        StyledText {
+        MarqueeText {
             Layout.fillWidth: true
-            animate: true
             text: (Players.active?.trackArtist ?? qsTr("Try playing some music!")) || qsTr("Unknown artist")
             color: Colours.palette.m3onSurfaceVariant
             horizontalAlignment: Text.AlignHCenter
             font: Tokens.font.body.small
-            elide: Text.ElideRight
         }
 
         ButtonRow {
