@@ -1715,3 +1715,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Previous calls (e.g. `Tokens.font.title.small.size()`) attempted to call `.size()` directly on a QFont object rather than on `Tokens.font.title.builders.small`, causing QML property evaluation errors that silently fell back to KDE's system application font (Noto Sans).
 3. All text in the Notifications taskbar popout, Date & Time live digital clock card, and Calendar grid now properly constructs complete Google Sans Flex QFont instances with responsive scaling and variable font axes.
 -->
+
+<!-- Section 202 Notification & Digital Clock Typography Weight Refinement:
+1. Reduced font weight on notification total pill ("X total") and app count pill from `Font.Bold` (700) to `Font.Medium` (500) for a cleaner, consistent Material 3 look.
+2. Removed bold weight override on notification app names, aligning them with standard body typography.
+3. Softened the live digital clock time string ("HH:MM:SS AM") in DateCard from `Font.Bold` (700) to `Font.Medium` (500) while keeping its large headline size (`Tokens.font.headline.builders.small.size()`), preserving clear prominence without excessive thickness.
+-->

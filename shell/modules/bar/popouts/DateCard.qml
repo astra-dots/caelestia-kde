@@ -74,7 +74,7 @@ ColumnLayout {
 
                 StyledText {
                     text: root.timeWithSeconds
-                    font: Tokens.font.headline.builders.small.size(Tokens.font.headline.small.pointSize * root.fontScale * 1.05).weight(Font.Bold).build()
+                    font: Tokens.font.headline.builders.small.size(Tokens.font.headline.small.pointSize * root.fontScale * 1.05).weight(Font.Medium).build()
                     color: Colours.palette.m3primary
                     Layout.alignment: Qt.AlignVCenter
                 }

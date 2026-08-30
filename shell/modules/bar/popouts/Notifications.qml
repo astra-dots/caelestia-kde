@@ -69,7 +69,7 @@ ColumnLayout {
                 id: countText
                 anchors.centerIn: parent
                 text: qsTr("%1 total").arg(Notifs.openCount)
-                font: Tokens.font.label.builders.small.size(Tokens.font.label.small.pointSize * root.fontScale).weight(Font.Bold).build()
+                font: Tokens.font.label.builders.small.size(Tokens.font.label.small.pointSize * root.fontScale).weight(Font.Medium).build()
                 color: Colours.palette.m3onPrimaryContainer
             }
         }
@@ -138,7 +138,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
                         text: appRow.modelData.name
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).build()
                         color: Colours.palette.m3onSurface
                         elide: Text.ElideRight
                     }
@@ -154,7 +154,7 @@ ColumnLayout {
                             id: appCountText
                             anchors.centerIn: parent
                             text: String(appRow.modelData.count)
-                            font: Tokens.font.label.builders.small.size(Tokens.font.label.small.pointSize * root.fontScale * 0.9).weight(Font.Bold).build()
+                            font: Tokens.font.label.builders.small.size(Tokens.font.label.small.pointSize * root.fontScale * 0.9).weight(Font.Medium).build()
                             color: Colours.palette.m3primary
                         }
                     }
