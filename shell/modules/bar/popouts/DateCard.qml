@@ -42,7 +42,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Date & Time")
-        font: Tokens.font.title.small.size(Tokens.font.title.small.pointSize * root.fontScale).build()
+        font: Tokens.font.title.builders.small.size(Tokens.font.title.small.pointSize * root.fontScale).build()
         color: Colours.palette.m3onSurface
     }
 
@@ -74,7 +74,7 @@ ColumnLayout {
 
                 StyledText {
                     text: root.timeWithSeconds
-                    font: Tokens.font.headline.small.size(Tokens.font.headline.small.pointSize * root.fontScale * 1.05).weight(Font.Bold).build()
+                    font: Tokens.font.headline.builders.small.size(Tokens.font.headline.small.pointSize * root.fontScale * 1.05).weight(Font.Bold).build()
                     color: Colours.palette.m3primary
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -102,7 +102,7 @@ ColumnLayout {
 
                 StyledText {
                     text: root.dateString
-                    font: Tokens.font.body.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
                     color: Colours.palette.m3onSurface
                     elide: Text.ElideRight
                     Layout.fillWidth: true

@@ -1709,3 +1709,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 1. Replaced all detached `font.pointSize` and `font.weight` sub-property assignments in taskbar popouts and system tray menus (`Network.qml`, `Bluetooth.qml`, `Audio.qml`, `Battery.qml`, `Github.qml`, `NightLight.qml`, `LockStatus.qml`, `Updates.qml`, `DateCard.qml`, `Calendar.qml`, `DockHover.qml`, `DockContext.qml`, `TrayMenu.qml`, `WirelessPassword.qml`) with complete `Tokens.font.body.builders...build()` font builder invocations.
 2. Eliminates fallback to KDE system font (Noto Sans) in popout cards, ensuring 100% consistent Google Sans Flex typography across all shell widgets.
 -->
+
+<!-- Section 201 Taskbar Notifications & Date/Time Popouts FontBuilder Fix:
+1. Fixed missing `.builders.` namespace in `Notifications.qml`, `DateCard.qml`, and `Calendar.qml`.
+2. Previous calls (e.g. `Tokens.font.title.small.size()`) attempted to call `.size()` directly on a QFont object rather than on `Tokens.font.title.builders.small`, causing QML property evaluation errors that silently fell back to KDE's system application font (Noto Sans).
+3. All text in the Notifications taskbar popout, Date & Time live digital clock card, and Calendar grid now properly constructs complete Google Sans Flex QFont instances with responsive scaling and variable font axes.
+-->

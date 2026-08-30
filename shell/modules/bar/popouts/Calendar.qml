@@ -119,7 +119,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             text: grid.title
                             color: Colours.palette.m3primary
-                            font: Tokens.font.title.builders.small.capitalisation(Font.Capitalize).build()
+                            font: Tokens.font.title.builders.small.size(Tokens.font.title.small.pointSize * root.fontScale).capitalisation(Font.Capitalize).build()
                         }
                     }
 
@@ -144,7 +144,7 @@ ColumnLayout {
 
                         horizontalAlignment: Text.AlignHCenter
                         text: model.shortName
-                        font: Tokens.font.body.builders.small.weight(Font.Medium).build()
+                        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).weight(Font.Medium).build()
                         color: (model.day === 0 || model.day === 6) ? Colours.palette.m3tertiary : Colours.palette.m3onSurface
                         renderType: Text.QtRendering
                     }
@@ -193,7 +193,7 @@ ColumnLayout {
                                     return Colours.palette.m3onSurfaceVariant;
                                 }
                                 opacity: dayItem.model.today || dayItem.model.month === grid.month ? 1 : 0.4
-                                font: Tokens.font.body.small
+                                font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                                 renderType: Text.QtRendering
                             }
                         }
