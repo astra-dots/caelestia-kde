@@ -115,6 +115,9 @@ PathView {
             } else {
                 res = Wallpapers.grouped[contentList.currentWallpaperTab] || [];
             }
+            if (res.length === 2) {
+                return [res[0], res[1], res[0], res[1]];
+            }
             return res;
         }
         onValuesChanged: {

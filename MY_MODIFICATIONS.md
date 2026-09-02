@@ -1721,3 +1721,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Removed bold weight override on notification app names, aligning them with standard body typography.
 3. Softened the live digital clock time string ("HH:MM:SS AM") in DateCard from `Font.Bold` (700) to `Font.Medium` (500) while keeping its large headline size (`Tokens.font.headline.builders.small.size()`), preserving clear prominence without excessive thickness.
 -->
+
+<!-- Section 203 Media Dropdown, Wallpaper Switcher 2-Item Carousel, and Up Next Art Fixes:
+1. Fixed Media Dropdown click-through and opacity in `Menu.qml`: Assigned `z: 9999` to `Menu.qml` root mouse area and added explicit border/solid background so dropdown options render above `Panels` (z: 100), receive click events without falling through to lyrics, and remain completely legible.
+2. Explained Wallpaper Switcher tabs (Images, Animated, Videos) and resolved 2-wallpaper category display in `WallpaperList.qml`: Duplicated 2-item categories into a 4-item circular loop `[A, B, A, B]`, enabling `PathView`'s odd-count centering symmetry (numItems = 3). Both wallpapers are now displayed on screen with the active wallpaper highlighted and enlarged in the center.
+3. Fixed Up Next album art black box in `Details.qml` & `FadeImage.qml`: Set explicit 96x96 `sourceSize` on `thumbImage` to prevent zero-size decoding when the upcoming card is collapsed, guarded `FadeImage` against `(0, 0)` sourceSize, and added an opacity watchdog on `status === Image.Ready`.
+-->

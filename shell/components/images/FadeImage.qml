@@ -24,13 +24,25 @@ Image {
 
     sourceSize: {
         const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
-        return Qt.size(width * dpr, height * dpr);
+        const w = width > 0 ? width : implicitWidth;
+        const h = height > 0 ? height : implicitHeight;
+        if (w <= 0 || h <= 0) return undefined;
+        return Qt.size(w * dpr, h * dpr);
     }
 
     retainWhileLoading: true
     opacity: 0
 
-    onStatusChanged: maybeStartInAnim()
+    onStatusChanged: {
+        maybeStartInAnim();
+        if (status === Image.Ready && opacity === 0 && !fadingOut) {
+            Qt.callLater(() => {
+                if (status === Image.Ready && opacity === 0 && !fadingOut && !opacityInAnim.running) {
+                    opacity = 1;
+                }
+            });
+        }
+    }
     onPreventInitChanged: maybeStartInAnim()
 
     Anim on opacity {

@@ -15,6 +15,8 @@ import qs.modules.drawers
 MouseArea {
     id: root
 
+    z: 9999
+
     enum Side {
         Top,
         Bottom,
@@ -142,6 +144,8 @@ MouseArea {
             }
             
             radius: parent.radius
+            border.color: root.transparentBackground ? "transparent" : Colours.palette.m3outlineVariant
+            border.width: root.transparentBackground ? 0 : 1
             // Fade alpha to 0 instead of the literal "transparent" string, which
             // would animate RGB through black via StyledRect's inherited
             // Behavior on color.

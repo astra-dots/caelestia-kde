@@ -326,9 +326,16 @@ ColumnLayout {
                         id: thumbImage
                         anchors.fill: parent
                         source: SpotifyService.upcomingArtUrl
+                        sourceSize: Qt.size(96, 96)
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         visible: SpotifyService.upcomingArtUrl.length > 0
+
+                        onStatusChanged: {
+                            if (status === Image.Ready && opacity === 0 && !fadingOut) {
+                                opacity = 1;
+                            }
+                        }
 
                         layer.enabled: true
                         layer.effect: AlbumArtLayer {
