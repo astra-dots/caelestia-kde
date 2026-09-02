@@ -1727,3 +1727,11 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Explained Wallpaper Switcher tabs (Images, Animated, Videos) and resolved 2-wallpaper category display in `WallpaperList.qml`: Duplicated 2-item categories into a 4-item circular loop `[A, B, A, B]`, enabling `PathView`'s odd-count centering symmetry (numItems = 3). Both wallpapers are now displayed on screen with the active wallpaper highlighted and enlarged in the center.
 3. Fixed Up Next album art black box in `Details.qml` & `FadeImage.qml`: Set explicit 96x96 `sourceSize` on `thumbImage` to prevent zero-size decoding when the upcoming card is collapsed, guarded `FadeImage` against `(0, 0)` sourceSize, and added an opacity watchdog on `status === Image.Ready`.
 -->
+
+<!-- Section 204 Caelestia to Matugen Bridge, Terminal Colors, Fastfetch & Starship Integration:
+1. Created `~/.config/caelestia/scripts/sync_matugen.py`: Bridges Caelestia's Material 3 and semantic color engine (~/.local/state/caelestia/scheme.json) into Matugen's JSON template engine. Automatically exports all palette tokens, invokes `matugen json`, and signals running Kitty instances (SIGUSR1) for live reload.
+2. Configured `theme.postHook` in `~/.config/caelestia/cli.json` and connected `schemeFile.onLoaded` in `services/Colours.qml` to trigger `sync_matugen.py` on wallpaper/scheme change and shell startup.
+3. Polished `~/.config/matugen/templates/kitty.conf`: Mapped standard and bright ANSI colors 0-15 to Caelestia's dedicated semantic color tokens (red/error, green, yellow, blue, mauve, teal, on_surface, outline_variant, sky, etc.).
+4. Refined `~/.config/matugen/templates/starship.toml`: Mapped language/tool badges (Python, Node, Rust, Zig, Go, Java, Git, Directory, duration, status) to distinct semantic palette tokens.
+5. Overhauled `~/.config/fastfetch/config.jsonc`: Replaced fragile ANSI backspace-hack boxes with a modern, beautifully aligned layout with Nerd Font icons, native terminal ANSI colors that follow the active theme, and color circle swatches (`● ● ● ● ● ● ● ●`).
+-->

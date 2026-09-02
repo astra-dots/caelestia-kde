@@ -304,7 +304,10 @@ Singleton {
         path: `${Paths.state}/scheme.json`
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: root.load(text(), false)
+        onLoaded: {
+            root.load(text(), false);
+            Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/.config/caelestia/scripts/sync_matugen.py"]);
+        }
     }
 
     Timer {
