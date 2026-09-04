@@ -1828,3 +1828,19 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * When `search.text.length === 0` and pinned apps are shown, Left and Right arrow keys continue to navigate horizontally across pinned apps.
      * When any search query is typed (`search.text.length > 0`), Left and Right arrow keys move the text cursor left and right natively, and support standard word jumping (`Ctrl+Left`/`Ctrl+Right`) and text selection (`Shift+Left`/`Shift+Right`).
 -->
+
+<!-- Section 213 Fix Desktop Switching on Boot/Launch & Optimize Caelestia Shell Startup:
+1. Fixed Virtual Desktop Switching Bug (Spotify on Desktop 5):
+   - Configured `ActivationDesktopPolicy=DoNothing` under `[Windows]` in `kwinrc`. This natively instructs KWin to never force-switch virtual desktops when an application on another virtual desktop opens or requests activation in the background.
+   - Updated Spotify's KWin window rule (`c1578f24-9df8-43e5-8276-8801f92e85a0`) in `kwinrulesrc` with `fsplevel=4` (Extreme focus stealing prevention) and `fsplevelrule=2` (Force) to permanently reject focus-stealing requests.
+   - Replaced obsolete, flawed 2-second `qdbus6` loop in `~/.local/bin/spotify-autostart.sh` with clean, direct execution (`exec /usr/bin/spotify-launcher %U >/dev/null 2>&1`).
+2. Integrated Intentional Virtual Desktop Switching on Window Selection:
+   - Updated `shell/plugin/src/Caelestia/Services/kwinactivewindowbridge.cpp`: In `focusWindow(address)`, if the window resides on another virtual desktop (`!handle->desktops().isEmpty()`), automatically invoke `KWinWorkspaceState::instance()->switchTo(firstDesktop)` so any intentional window activation in the shell (Dock icon click, Dock hover preview, Overview window click, Alt-Tab switcher) smoothly switches to that desktop.
+   - Updated `shell/modules/launcher/services/Windows.qml` and `shell/modules/launcher/items/WindowSwitcherItem.qml` so Alt-Tab and Launcher window activations route through `Windows.focusWindow()` with optimistic MRU updates and instant desktop switching.
+3. High-Performance Caelestia Shell Startup Optimization:
+   - Eliminated the 2.2-second post-login freeze by removing `~/.config/autostart/caelestiashell.desktop` (which waited for `graphical-session.target` at ~3.3s).
+   - Created native KDE Plasma systemd user unit `~/.config/systemd/user/plasma-caelestia.service` hooked to `plasma-core.target` with `Slice=session.slice`, starting Caelestia Shell concurrently with `plasma-plasmashell` at ~1.1s.
+   - Updated `~/.local/bin/caelestia-autostart.sh` to remove `-d` (`--daemonize`) so systemd directly supervises Quickshell in `session.slice`.
+   - Updated `shell/scripts/restart_shell.sh` to prefer `systemctl --user restart plasma-caelestia.service`.
+   - Updated installer `scripts/10-autostart.sh` to deploy the systemd service natively.
+-->

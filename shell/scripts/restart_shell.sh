@@ -1,4 +1,13 @@
 #!/bin/bash
+
+# Wipe stale Quickshell socket locks
+rm -rf "${XDG_RUNTIME_DIR:-/run/user/$UID}/quickshell/"*
+
+if systemctl --user is-enabled plasma-caelestia.service >/dev/null 2>&1; then
+    systemctl --user restart plasma-caelestia.service
+    exit 0
+fi
+
 /usr/bin/caelestia shell -k 2>/dev/null
 sleep 1.3
 
@@ -8,9 +17,6 @@ fi
 if pgrep -x qs > /dev/null; then
     killall -w qs 2>/dev/null
 fi
-
-# Wipe the stale Quickshell socket locks
-rm -rf "${XDG_RUNTIME_DIR:-/run/user/$UID}/quickshell/"*
 
 source /etc/profile
 [ -f ~/.profile ] && source ~/.profile

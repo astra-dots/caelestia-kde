@@ -135,6 +135,20 @@ QtObject {
             }
             history.unshift(addr);
             root.mruHistory = history;
+
+            const rawList = KWinActiveWindowBridge.windowList || [];
+            const targetWin = rawList.find(w => w && String(w.address) === addr);
+            if (targetWin && targetWin.workspace) {
+                const wsUuid = targetWin.workspace.uuid;
+                const wsId = targetWin.workspace.id;
+                if (typeof KWinWorkspaceState !== "undefined") {
+                    if (wsUuid && String(wsUuid).length > 0) {
+                        KWinWorkspaceState.switchTo(String(wsUuid));
+                    } else if (wsId && wsId > 0) {
+                        KWinWorkspaceState.setDesktop(wsId);
+                    }
+                }
+            }
         }
         KWinActiveWindowBridge.focusWindow(address);
     }

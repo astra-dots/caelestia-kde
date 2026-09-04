@@ -22,7 +22,7 @@ Item {
     property bool _skipOpenAnim: true
 
     function clicked(): void {
-        KWinActiveWindowBridge.focusWindow(root.modelData.address);
+        Windows.focusWindow(root.modelData.address);
         root.list.visibilities.launcher = false;
     }
 

@@ -170,6 +170,15 @@ void KWinActiveWindowBridge::focusWindow(const QString &address) {
     if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
         m_pendingFocusAddress = address;
         emit pendingFocusAddressChanged();
+
+        if (!handle->desktops().isEmpty()) {
+            QString firstDesktop = handle->desktops().first();
+            if (!firstDesktop.isEmpty()) {
+                if (auto wsState = KWinWorkspaceState::instance()) {
+                    wsState->switchTo(firstDesktop);
+                }
+            }
+        }
         
         // To focus and unminimize a window, we set the active state and clear the minimized state
         handle->set_state(QtWayland::org_kde_plasma_window_management::state_active, 

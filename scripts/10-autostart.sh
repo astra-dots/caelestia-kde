@@ -39,10 +39,10 @@ else
     exit 127
 fi
 
-# Caelestia Shell autostart
-# Launch the shell built by 08-build-shell.sh directly. This avoids depending
-# on the distro's caelestia-cli version or its config-directory resolution.
-echo "  Creating Caelestia Shell autostart entry..."
+# Caelestia Shell systemd service autostart
+# Launch the shell built by 08-build-shell.sh as a native Plasma core systemd service.
+# This starts concurrently with plasma-core.target (~1.1s) bypassing the 3.3s graphical-session delay.
+echo "  Creating Caelestia Shell systemd service..."
 cat > "$HOME/.local/bin/caelestia-autostart.sh" << EOF
 #!/bin/bash
 export QML2_IMPORT_PATH="\$HOME/.local/lib/qt6/qml"
@@ -55,24 +55,34 @@ export QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 # stdbuf forces line-buffered stdout/stderr; without it, glibc fully-buffers
 # output when it isn't attached to a TTY (e.g. when captured by journald via
 # systemd), so qDebug/qWarning messages can sit unflushed indefinitely.
-exec stdbuf -oL -eL "$QUICKSHELL_PATH" -d -n -p "\$HOME/.config/quickshell/caelestia/shell.qml"
+exec stdbuf -oL -eL "$QUICKSHELL_PATH" -n -p "\$HOME/.config/quickshell/caelestia/shell.qml"
 EOF
 chmod +x "$HOME/.local/bin/caelestia-autostart.sh"
 
-cat > "$AUTOSTART_DIR/caelestiashell.desktop" << EOF
-[Desktop Entry]
-Type=Application
-Name=Caelestia Shell
-Comment=Start Caelestia Shell
-Exec=$HOME/.local/bin/caelestia-autostart.sh
-Icon=quickshell
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-X-KDE-AutostartPhase=2
-X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1
+rm -f "$AUTOSTART_DIR/caelestiashell.desktop" 2>/dev/null || true
+
+cat > "$HOME/.config/systemd/user/plasma-caelestia.service" << EOF
+[Unit]
+Description=Caelestia Shell (Quickshell)
+PartOf=graphical-session.target
+After=plasma-kwin_wayland.service plasma-ksmserver.service
+Before=plasma-workspace.target xdg-desktop-autostart.target
+StartLimitIntervalSec=60s
+StartLimitBurst=3
+
+[Service]
+ExecStart=$HOME/.local/bin/caelestia-autostart.sh
+Restart=on-failure
+Slice=session.slice
+TimeoutSec=30s
+
+[Install]
+WantedBy=plasma-core.target
 EOF
-echo "  [OK]  Quickshell autostart created."
+
+systemctl --user daemon-reload
+systemctl --user enable plasma-caelestia.service 2>/dev/null || true
+echo "  [OK]  Caelestia Shell systemd service enabled."
 
 # KWin restricts privileged Wayland protocols (like zkde_screencast_unstable_v1,
 # used for live window thumbnails). For every such protocol, KWin's
