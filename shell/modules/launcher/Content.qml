@@ -253,6 +253,8 @@ Item {
                 } else if (list.showPinned && list.currentList?.moveLeft) {
                     list.currentList.moveLeft();
                     event.accepted = true;
+                } else {
+                    event.accepted = false;
                 }
             }
             Keys.onRightPressed: event => {
@@ -265,6 +267,8 @@ Item {
                 } else if (list.showPinned && list.currentList?.moveRight) {
                     list.currentList.moveRight();
                     event.accepted = true;
+                } else {
+                    event.accepted = false;
                 }
             }
 

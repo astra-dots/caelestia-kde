@@ -1820,3 +1820,11 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Added `SliderRow` for "Pixel Grid Resolution" (8x8 to 48x48) when Pixelate shader is active.
    - Refined Animate toggle subtext to match the clean holographic shine sweep aesthetic.
 -->
+
+<!-- Section 212 Launcher Search Cursor Navigation with Arrow Keys:
+1. Updated `modules/launcher/Content.qml`:
+   - Resolved arrow key swallowing in `Keys.onLeftPressed` and `Keys.onRightPressed`: In Qt Quick, `Keys.on...` signal handlers start with `event.accepted = true`. Without an explicit `else { event.accepted = false; }`, any Left or Right arrow key pressed while typing in the launcher was consumed by the signal handler without being passed to the `StyledTextField` (`TextField`).
+   - Added `else { event.accepted = false; }` fallback. Now:
+     * When `search.text.length === 0` and pinned apps are shown, Left and Right arrow keys continue to navigate horizontally across pinned apps.
+     * When any search query is typed (`search.text.length > 0`), Left and Right arrow keys move the text cursor left and right natively, and support standard word jumping (`Ctrl+Left`/`Ctrl+Right`) and text selection (`Shift+Left`/`Shift+Right`).
+-->
