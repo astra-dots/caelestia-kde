@@ -67,7 +67,7 @@ Item {
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
-    focus: hasCurrent
+    focus: hasCurrent && (currentName === "wirelesspassword" || currentName.startsWith("wirelesspassword"))
     Keys.onEscapePressed: {
         // Forward escape to password popout if active, otherwise close
         if (currentName === "wirelesspassword" && content.item) {

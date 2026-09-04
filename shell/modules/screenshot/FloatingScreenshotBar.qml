@@ -258,16 +258,32 @@ while True:
         }
     }
 
-    // Top-most hit-testing: Evaluates front-most window first
+    // Top-most hit-testing: Evaluates front-most / smaller floating window first
     function findWindowAt(x, y) {
         const list = root.activeWindows;
+        const candidates = [];
         for (let i = 0; i < list.length; i++) {
             const w = list[i];
             if (w && x >= w.x && x <= (w.x + w.width) && y >= w.y && y <= (w.y + w.height)) {
-                return w;
+                candidates.push(w);
             }
         }
-        return null;
+        if (candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0];
+
+        // When multiple windows cover (x, y) (e.g. a floating window on top of a maximized app):
+        // 1. Floating/non-maximized windows take priority over maximized/fullscreen background apps.
+        // 2. Smaller window area takes priority over larger windows (dialogs/floating windows sit on top).
+        candidates.sort((a, b) => {
+            const aMax = (a.maximized || a.fullscreen) ? 1 : 0;
+            const bMax = (b.maximized || b.fullscreen) ? 1 : 0;
+            if (aMax !== bMax) return aMax - bMax;
+            const areaA = (a.width || 0) * (a.height || 0);
+            const areaB = (b.width || 0) * (b.height || 0);
+            return areaA - areaB;
+        });
+
+        return candidates[0];
     }
 
     // Process Region Crop

@@ -166,6 +166,19 @@ Item {
         category: "Wallpapers"
     }
 
+    function cycleWallpaperFilter(backwards: bool): void {
+        const filters = ["All", "Image", "Animated", "Video"];
+        let idx = filters.indexOf(Wallpapers.currentMediaFilter);
+        if (idx === -1) idx = 0;
+        if (backwards) {
+            idx = (idx - 1 + filters.length) % filters.length;
+        } else {
+            idx = (idx + 1) % filters.length;
+        }
+        Wallpapers.currentMediaFilter = filters[idx];
+        wallpaperSettings.mediaFilter = filters[idx];
+    }
+
     Timer {
         id: keybindsTimer
 

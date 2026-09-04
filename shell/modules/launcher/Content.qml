@@ -272,12 +272,18 @@ Item {
                 if (list.showEmojis) {
                     list.currentList?.nextCategory();
                     event.accepted = true;
+                } else if (list.showWallpapers) {
+                    list.cycleWallpaperFilter(false);
+                    event.accepted = true;
                 }
             }
 
             Keys.onBacktabPressed: event => {
                 if (list.showEmojis) {
                     list.currentList?.prevCategory();
+                    event.accepted = true;
+                } else if (list.showWallpapers) {
+                    list.cycleWallpaperFilter(true);
                     event.accepted = true;
                 }
             }

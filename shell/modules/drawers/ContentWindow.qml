@@ -42,7 +42,7 @@ StyledWindow {
     // active workspace changes — hasFullscreenOn() filters by workspace, but
     // a plain function call only re-runs when its direct property deps change.
     readonly property bool actualFullscreen: (Hypr.activeWsId, Hypr.hasFullscreenOn(screen?.name ?? ""))
-    readonly property bool hasOpenOverlay: focusGrabState.active || panels.popouts.isDetached || desktopContextMenu.expanded || visibilities.overview || visibilities.launcher || visibilities.dashboard || visibilities.sidebar || visibilities.session || visibilities.utilities || visibilities.screenshot
+    readonly property bool hasOpenOverlay: focusGrabState.active || panels.popouts.isDetached || desktopContextMenu.expanded || visibilities.overview || visibilities.launcher || visibilities.session || visibilities.screenshot
     readonly property bool hasFullscreen: actualFullscreen && !hasOpenOverlay
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
@@ -77,9 +77,14 @@ StyledWindow {
 
     // Whether anything on this surface needs the keyboard. Taking it makes the
     // surface the active window; KWin does not give focus back to what had it
-    // when we stop asking, it just leaves nothing focused, so that has to be
-    // put right by hand below.
-    readonly property bool wantsKeyboard: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent || visibilities.screenshot
+    // when we stop asking, it just leaves nothing focused.
+    // Purely mouse-driven or hover-driven popouts (DockHover previews, Audio sliders,
+    // Bluetooth toggles, Calendar, TrayMenu, etc.), drawers, and notifications must
+    // NEVER steal focus from the user's active window.
+    readonly property bool dashWantsKeyboard: visibilities.dashboard && (!Config.dashboard.showOnHover || (interactions?.dashboardShortcutActive ?? false))
+    readonly property bool popoutWantsKeyboard: panels.popouts.hasCurrent && (panels.popouts.currentName === "wirelesspassword" || panels.popouts.currentName.startsWith("wirelesspassword"))
+
+    readonly property bool wantsKeyboard: visibilities.launcher || visibilities.session || visibilities.overview || dashWantsKeyboard || popoutWantsKeyboard || visibilities.screenshot
 
     // Remembered on the way in, not read on the way out: as the application
     // gives up focus KWin passes through a moment with no active window at all,
@@ -239,7 +244,7 @@ StyledWindow {
     QtObject {
         id: focusGrabState
 
-        property bool active: (visibilities.launcher && Config.launcher.enabled) || (visibilities.session && Config.session.enabled) || (visibilities.sidebar && Config.sidebar.enabled) || (!Config.dashboard.showOnHover && visibilities.dashboard && Config.dashboard.enabled) || (!Config.utilities.showOnHover && visibilities.utilities && Config.utilities.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
+        property bool active: (visibilities.launcher && Config.launcher.enabled) || (visibilities.session && Config.session.enabled) || (visibilities.sidebar && Config.sidebar.enabled) || ((!Config.dashboard.showOnHover || (interactions?.dashboardShortcutActive ?? false)) && visibilities.dashboard && Config.dashboard.enabled) || (!Config.utilities.showOnHover && visibilities.utilities && Config.utilities.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
 
         function clear() {
             visibilities.launcher = false;

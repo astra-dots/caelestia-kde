@@ -284,9 +284,6 @@ CustomMouseArea {
         if (Config.dashboard.showOnHover) {
             if (!dashboardShortcutActive) {
                 visibilities.dashboard = showDashboard;
-            } else if (showDashboard) {
-                // If hovering over dashboard area while in shortcut mode, transition to hover control
-                dashboardShortcutActive = false;
             }
         }
 

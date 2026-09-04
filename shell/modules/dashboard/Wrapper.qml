@@ -41,9 +41,31 @@ Item {
     Behavior on offsetScale {
         Anim {}
     }
+    focus: root.shouldBeActive
+
+    Keys.onLeftPressed: event => {
+        const item = content.item;
+        if (item && item.dashboardTabs && item.dashboardTabs.length > 1) {
+            root.dashState.currentTab = (root.dashState.currentTab - 1 + item.dashboardTabs.length) % item.dashboardTabs.length;
+            event.accepted = true;
+        }
+    }
+    Keys.onRightPressed: event => {
+        const item = content.item;
+        if (item && item.dashboardTabs && item.dashboardTabs.length > 1) {
+            root.dashState.currentTab = (root.dashState.currentTab + 1) % item.dashboardTabs.length;
+            event.accepted = true;
+        }
+    }
+    Keys.onEscapePressed: event => {
+        root.visibilities.dashboard = false;
+        event.accepted = true;
+    }
+
     Loader {
         id: content
 
+        focus: root.shouldBeActive
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         active: root.shouldBeActive || root.visible
@@ -51,6 +73,20 @@ Item {
             visibilities: root.visibilities
             dashState: root.dashState
             facePicker: root.facePicker
+        }
+        onLoaded: {
+            if (root.shouldBeActive && item) {
+                item.forceActiveFocus();
+            }
+        }
+    }
+
+    Connections {
+        target: root
+        function onShouldBeActiveChanged() {
+            if (root.shouldBeActive && content.item) {
+                content.item.forceActiveFocus();
+            }
         }
     }
 }

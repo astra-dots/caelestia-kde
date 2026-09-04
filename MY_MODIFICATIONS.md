@@ -1735,3 +1735,26 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 4. Refined `~/.config/matugen/templates/starship.toml`: Mapped language/tool badges (Python, Node, Rust, Zig, Go, Java, Git, Directory, duration, status) to distinct semantic palette tokens.
 5. Overhauled `~/.config/fastfetch/config.jsonc`: Replaced fragile ANSI backspace-hack boxes with a modern, beautifully aligned layout with Nerd Font icons, native terminal ANSI colors that follow the active theme, and color circle swatches (`● ● ● ● ● ● ● ●`).
 -->
+
+<!-- Section 205 Focus Management, Keyboard Navigation & Floating Window Hit-Testing Overhaul:
+1. Resolved KWin focus stealing on hover: Updated `ContentWindow.qml` and `Wrapper.qml` to prevent QuickShell drawer/popout panels and notifications from stealing active keyboard focus from open application windows on mouseover.
+2. Resolved floating window selection hit-testing over maximized apps in `FloatingScreenshotBar.qml` and `ScreenshotOverlay.qml`: Windows stacked above maximized applications are now correctly prioritized during window capture selection.
+3. Added Top Panel shortcut mode (`Win+D`) keyboard navigation:
+   - Added Left/Right arrow key tab navigation in `Content.qml` and `Wrapper.qml` across Dashboard tabs.
+   - Added Escape key dismissal and outside-click dismissal to cleanly close the panel.
+4. Added Tab key cycling for Wallpaper Switcher filter tabs (Images, Animated, Videos) in `ContentList.qml` and `Content.qml`.
+-->
+
+<!-- Section 206 Spicy Lyrics Animated Fluid Mesh Gradient Shader & Preserved Long-Standing Liquid Smear:
+1. Replaced single-pass photo blur in `gradient.frag` with authentic Spicetify Spicy Lyrics / Apple Music fluid animated mesh gradient:
+   - 5-point regional palette extraction with saturation and vibrancy boost (`vibrantPaletteColor`).
+   - 5 harmonic orbiting emitters drifting across the artwork.
+   - 2-octave simplex fluid domain warping (`snoise`).
+   - Gaussian metaball field blending with peripheral vignette.
+2. Implemented impactful `smoothing` toggle in `gradient.frag`:
+   - Toggle ON (Deep Kawase low-pass blur): Expansive $\sigma^2 = 0.56$ with broad low-frequency waves for a vast, seamless, glowing ambient wash.
+   - Toggle OFF: Compact $\sigma^2 = 0.11$ with energetic ripples for distinct, focused color orbs.
+3. Preserved long-standing Liquid Smear shader (`smear.frag` & `smear.frag.qsb`) bit-for-bit from commit `728e83b5` (4-octave recursive domain warping, Vogel spiral smudge kernel with IGN micro-jitter, and debanding dither).
+4. Updated `DashboardPanel.qml` with dynamic context-aware labels and descriptions for both effects.
+-->
+

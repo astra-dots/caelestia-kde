@@ -70,6 +70,25 @@ Item {
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
 
+    focus: true
+
+    Keys.onLeftPressed: event => {
+        if (dashboardTabs.length > 1) {
+            dashState.currentTab = (dashState.currentTab - 1 + dashboardTabs.length) % dashboardTabs.length;
+            event.accepted = true;
+        }
+    }
+    Keys.onRightPressed: event => {
+        if (dashboardTabs.length > 1) {
+            dashState.currentTab = (dashState.currentTab + 1) % dashboardTabs.length;
+            event.accepted = true;
+        }
+    }
+    Keys.onEscapePressed: event => {
+        root.visibilities.dashboard = false;
+        event.accepted = true;
+    }
+
     Tabs {
         id: tabs
 

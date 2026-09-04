@@ -344,14 +344,22 @@ PageBase {
 
         ToggleRow {
             last: true
-            visible: AlbumArtEffects.effectType === "pixelate" || AlbumArtEffects.effectType === "smear"
+            visible: true
             enabled: AlbumArtEffects.enabled
-            text: AlbumArtEffects.effectType === "smear"
-                ? qsTr("Ultra-smooth blending")
-                : qsTr("Adaptive color smoothing")
-            subtext: AlbumArtEffects.effectType === "smear"
-                ? qsTr("24-tap dense Vogel spiral with sub-perceptual micro-jitter to eliminate stippling grain")
-                : qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos")
+            text: {
+                if (AlbumArtEffects.effectType === "gradient")
+                    return qsTr("Deep Kawase low-pass blur");
+                if (AlbumArtEffects.effectType === "smear")
+                    return qsTr("Ultra-smooth blending");
+                return qsTr("Adaptive color smoothing");
+            }
+            subtext: {
+                if (AlbumArtEffects.effectType === "gradient")
+                    return qsTr("Expanded low-pass blur radius for ultra-silky, melted fluid aesthetic (Spicy Lyrics style)");
+                if (AlbumArtEffects.effectType === "smear")
+                    return qsTr("24-tap dense Vogel spiral with sub-perceptual micro-jitter to eliminate stippling grain");
+                return qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos");
+            }
             checked: AlbumArtEffects.smoothing
             onToggled: AlbumArtEffects.smoothing = checked
         }
