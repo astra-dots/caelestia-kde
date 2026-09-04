@@ -13,6 +13,7 @@ Singleton {
     // "pixelate" | "gradient" | "smear"
     property string effectType: "pixelate"
     property bool smoothing: true
+    property bool pixelAnimation: true
 
     function getShaderUrl(): string {
         if (root.effectType === "gradient") {
@@ -26,6 +27,7 @@ Singleton {
     onEnabledChanged: saveTimer.restart()
     onEffectTypeChanged: saveTimer.restart()
     onSmoothingChanged: saveTimer.restart()
+    onPixelAnimationChanged: saveTimer.restart()
 
     Timer {
         id: saveTimer
@@ -38,7 +40,8 @@ Singleton {
         const data = {
             enabled: root.enabled,
             effectType: root.effectType,
-            smoothing: root.smoothing
+            smoothing: root.smoothing,
+            pixelAnimation: root.pixelAnimation
         };
         storage.setText(JSON.stringify(data, null, 2));
     }
@@ -58,6 +61,8 @@ Singleton {
                         root.effectType = parsed.effectType;
                     if (typeof parsed.smoothing === "boolean")
                         root.smoothing = parsed.smoothing;
+                    if (typeof parsed.pixelAnimation === "boolean")
+                        root.pixelAnimation = parsed.pixelAnimation;
                 }
             } catch (e) {
                 console.error("Failed to parse album_art_effects.json:", e);
@@ -77,7 +82,8 @@ Singleton {
             return JSON.stringify({
                 enabled: root.enabled,
                 effectType: root.effectType,
-                smoothing: root.smoothing
+                smoothing: root.smoothing,
+                pixelAnimation: root.pixelAnimation
             });
         }
 
@@ -97,6 +103,11 @@ Singleton {
         function toggleSmoothing(): string {
             root.smoothing = !root.smoothing;
             return "Album art adaptive smoothing " + (root.smoothing ? "enabled" : "disabled");
+        }
+
+        function togglePixelAnimation(): string {
+            root.pixelAnimation = !root.pixelAnimation;
+            return "Album art pixel animation " + (root.pixelAnimation ? "enabled" : "disabled");
         }
     }
 }

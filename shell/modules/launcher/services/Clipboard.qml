@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Caelestia
 import Caelestia.Config
 import Caelestia.Services
@@ -26,8 +27,27 @@ QtObject {
 
     readonly property string imageCacheDir: ClipboardManager.imageCacheDir
 
+    Process {
+        id: deleteProc
+        onExited: root.reload()
+    }
+
     function reload(): void {
         ClipboardManager.reload();
+    }
+
+    function deleteEntry(clipId: int, preview: string): void {
+        const idStr = String(clipId);
+        const imgPath = root.imageCacheDir + "/" + idStr + ".png";
+        deleteProc.command = [
+            "sh", "-c",
+            "if [ \"$1\" -gt 0 ] 2>/dev/null; then printf '%s\\t%s\\n' \"$1\" \"$2\" | cliphist delete; rm -f \"$3\"; fi; if [ -n \"$2\" ]; then cliphist list | grep -F \"$2\" | cliphist delete; fi",
+            "--",
+            idStr,
+            preview,
+            imgPath
+        ];
+        deleteProc.running = true;
     }
 
     function clearHistory(): void {

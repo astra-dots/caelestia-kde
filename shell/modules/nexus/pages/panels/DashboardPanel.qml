@@ -343,7 +343,7 @@ PageBase {
         }
 
         ToggleRow {
-            last: true
+            last: AlbumArtEffects.effectType !== "pixelate"
             visible: true
             enabled: AlbumArtEffects.enabled
             text: {
@@ -362,6 +362,16 @@ PageBase {
             }
             checked: AlbumArtEffects.smoothing
             onToggled: AlbumArtEffects.smoothing = checked
+        }
+
+        ToggleRow {
+            last: true
+            visible: AlbumArtEffects.effectType === "pixelate"
+            enabled: AlbumArtEffects.enabled
+            text: qsTr("Animate pixel mosaic")
+            subtext: qsTr("Subtle fluid matrix drift and rhythmic block shimmer for a living retro aesthetic")
+            checked: AlbumArtEffects.pixelAnimation
+            onToggled: AlbumArtEffects.pixelAnimation = checked
         }
 
         // Performance widgets

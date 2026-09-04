@@ -9,6 +9,7 @@ QtObject {
 
     property var items: []
     property int selectedIndex: 0
+    property var mruHistory: []
 
     function triggerCycleNext(): void {
         if (items.length === 0) return;
@@ -22,7 +23,8 @@ QtObject {
 
     function focusSelectedWindow(): void {
         if (selectedIndex >= 0 && selectedIndex < items.length) {
-            focusWindow(items[selectedIndex].address);
+            const addr = String(items[selectedIndex].address);
+            focusWindow(addr);
         }
     }
 
@@ -30,20 +32,59 @@ QtObject {
         updateItems();
     }
 
+    function onActiveWindowChanged(): void {
+        const active = KWinActiveWindowBridge.activeWindow;
+        if (!active || !active.address) return;
+        const addr = String(active.address);
+        if (addr.length === 0) return;
+
+        // Move to head of MRU history
+        let history = (root.mruHistory || []).slice();
+        const idx = history.indexOf(addr);
+        if (idx !== -1) {
+            history.splice(idx, 1);
+        }
+        history.unshift(addr);
+        root.mruHistory = history;
+
+        updateItems();
+    }
+
     function updateItems(): void {
-        const activeAddress = KWinActiveWindowBridge.activeWindow ? KWinActiveWindowBridge.activeWindow.address : "";
-        const winList = (KWinActiveWindowBridge.windowList || []).filter(w => !(w.class && w.class.toLowerCase().includes("xwaylandvideobridge")));
+        const rawList = KWinActiveWindowBridge.windowList || [];
+        const winList = rawList.filter(w => w && w.address && !(w.class && w.class.toLowerCase().includes("xwaylandvideobridge")));
         
-        let currentItems = root.items.slice();
-        
-        // 1. Remove closed windows
-        currentItems = currentItems.filter(item => {
-            for (let i = 0; i < winList.length; i++) {
-                if (winList[i].address === item.address) return true;
+        // Map available windows by address
+        const winMap = new Map();
+        for (let i = 0; i < winList.length; i++) {
+            winMap.set(String(winList[i].address), winList[i]);
+        }
+
+        // Keep only currently existing windows in mruHistory
+        let history = (root.mruHistory || []).filter(addr => winMap.has(addr));
+
+        // If KWin currently reports an active window, ensure it is at index 0 of MRU history
+        const active = KWinActiveWindowBridge.activeWindow;
+        if (active && active.address && winMap.has(String(active.address))) {
+            const activeAddr = String(active.address);
+            const aIdx = history.indexOf(activeAddr);
+            if (aIdx !== -1) {
+                history.splice(aIdx, 1);
             }
-            return false;
-        });
-        
+            history.unshift(activeAddr);
+        }
+
+        // For any existing window not yet in mruHistory (e.g. at startup or newly opened window),
+        // append to the end of history so it has a deterministic place
+        for (let i = 0; i < winList.length; i++) {
+            const addr = String(winList[i].address);
+            if (!history.includes(addr)) {
+                history.push(addr);
+            }
+        }
+
+        root.mruHistory = history;
+
         // Helper to format
         const formatClient = (client) => {
             return {
@@ -59,40 +100,21 @@ QtObject {
             };
         };
 
-        // 2. Add new windows & update existing
-        for (let i = 0; i < winList.length; ++i) {
-            const client = winList[i];
-            let found = false;
-            for (let j = 0; j < currentItems.length; ++j) {
-                if (currentItems[j].address === client.address) {
-                    currentItems[j] = formatClient(client); // Update properties
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                currentItems.push(formatClient(client));
+        // Order items strictly by mruHistory
+        let sortedItems = [];
+        for (let i = 0; i < history.length; i++) {
+            const client = winMap.get(history[i]);
+            if (client) {
+                sortedItems.push(formatClient(client));
             }
         }
-        
-        // 3. Move active window to index 0
-        if (activeAddress) {
-            for (let i = 0; i < currentItems.length; i++) {
-                if (currentItems[i].address === activeAddress) {
-                    const activeWin = currentItems.splice(i, 1)[0];
-                    currentItems.unshift(activeWin);
-                    break;
-                }
-            }
-        }
-        
-        items = currentItems;
 
-        // A window closing (e.g. from the switcher's own close button) can leave
-        // selectedIndex pointing past the end of the shrunk array — clamp it back
-        // onto the last item rather than leaving ListView.currentIndex invalid.
-        if (root.selectedIndex >= currentItems.length)
-            root.selectedIndex = Math.max(0, currentItems.length - 1);
+        root.items = sortedItems;
+
+        // Clamp selectedIndex if out of bounds
+        if (root.selectedIndex >= sortedItems.length) {
+            root.selectedIndex = Math.max(0, sortedItems.length - 1);
+        }
     }
 
     function query(search: string): var {
@@ -103,6 +125,17 @@ QtObject {
     }
 
     function focusWindow(address: string): void {
+        const addr = String(address);
+        if (addr.length > 0) {
+            // Optimistically update MRU history immediately so rapid Alt+Tab taps never lag
+            let history = (root.mruHistory || []).slice();
+            const idx = history.indexOf(addr);
+            if (idx !== -1) {
+                history.splice(idx, 1);
+            }
+            history.unshift(addr);
+            root.mruHistory = history;
+        }
         KWinActiveWindowBridge.focusWindow(address);
     }
 
@@ -113,6 +146,6 @@ QtObject {
     Component.onCompleted: {
         updateItems();
         KWinActiveWindowBridge.onWindowListChanged.connect(updateItems);
-        KWinActiveWindowBridge.onActiveWindowChanged.connect(updateItems);
+        KWinActiveWindowBridge.onActiveWindowChanged.connect(onActiveWindowChanged);
     }
 }

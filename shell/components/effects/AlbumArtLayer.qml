@@ -31,7 +31,16 @@ ShaderEffect {
         to: 3600
         duration: 3600000
         loops: Animation.Infinite
-        running: AlbumArtEffects.enabled && (AlbumArtEffects.effectType === "gradient" || AlbumArtEffects.effectType === "smear") && root.visible
+        running: AlbumArtEffects.enabled && (
+            AlbumArtEffects.effectType === "gradient" || 
+            AlbumArtEffects.effectType === "smear" || 
+            (AlbumArtEffects.effectType === "pixelate" && AlbumArtEffects.pixelAnimation)
+        ) && root.visible
+        onRunningChanged: {
+            if (!running && AlbumArtEffects.effectType === "pixelate" && !AlbumArtEffects.pixelAnimation) {
+                root.time = 0.0;
+            }
+        }
     }
 
     fragmentShader: AlbumArtEffects.getShaderUrl()

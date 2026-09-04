@@ -182,12 +182,13 @@ Item {
 
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right
-                width: detailBtn.width + pinBtn.width + Tokens.padding.small
+                width: detailBtn.width + pinBtn.width + deleteBtn.width + Tokens.padding.small * 2
                 height: 32
 
                 readonly property bool isHovered: stateLayer.containsMouse 
                     || detailBtn.containsMouse 
                     || pinBtn.containsMouse
+                    || deleteBtn.containsMouse
 
                 opacity: isHovered || root.isExpanded ? 1.0 : 0.0
                 visible: opacity > 0
@@ -222,7 +223,8 @@ Item {
                     width: 32
                     height: 32
                     anchors.verticalCenter: parent.verticalCenter
-                    anchors.right: parent.right
+                    anchors.right: deleteBtn.left
+                    anchors.rightMargin: Tokens.padding.small
                     hoverEnabled: true
                     onClicked: {
                         if (!root.modelData)
@@ -238,6 +240,31 @@ Item {
                         text: root.isPinned ? "keep" : "keep_off"
                         fill: root.isPinned ? 1 : 0
                         color: pinBtn.containsMouse || root.isPinned ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    }
+                }
+
+                MouseArea {
+                    id: deleteBtn
+
+                    width: 32
+                    height: 32
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right
+                    hoverEnabled: true
+                    onClicked: {
+                        if (!root.modelData)
+                            return;
+                        if (root.isPinned) {
+                            Clipboard.unpin(root.modelData.pinId);
+                        } else {
+                            Clipboard.deleteEntry(root.modelData.id, root.modelData.preview);
+                        }
+                    }
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        text: "delete"
+                        color: deleteBtn.containsMouse ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                     }
                 }
             }

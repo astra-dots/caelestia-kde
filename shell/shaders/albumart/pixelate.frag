@@ -24,10 +24,21 @@ void main() {
         return;
     }
     
+    // Smooth procedural low-frequency wave drift when time is active
+    vec2 animUv = uv;
+    if (time > 0.0001) {
+        float t = time * 0.75;
+        vec2 wave = vec2(
+            sin(uv.y * 5.0 + t) * 0.5 + sin(uv.y * 2.2 - t * 0.7) * 0.5,
+            cos(uv.x * 5.0 + t * 0.9) * 0.5 + cos(uv.x * 2.2 - t * 0.6) * 0.5
+        );
+        animUv = clamp(uv + wave * (0.012 * intensity), 0.001, 0.999);
+    }
+    
     const float GRID_SIZE = 16.0;
     const float CELL_STEP = 1.0 / GRID_SIZE;
     
-    vec2 blockUv = floor(uv * GRID_SIZE) / GRID_SIZE;
+    vec2 blockUv = floor(animUv * GRID_SIZE) / GRID_SIZE;
     vec2 centerUv = blockUv + vec2(0.5 * CELL_STEP);
     
     vec4 pixelCol;
@@ -125,6 +136,12 @@ void main() {
     } else {
         // Raw crisp point-sampling (unfiltered pixelation)
         pixelCol = texture(source, clamp(centerUv, 0.001, 0.999));
+    }
+    
+    // Phosphor block luminescence shimmer when animation is active
+    if (time > 0.0001) {
+        float pulse = 0.035 * sin(blockUv.x * 12.0 + blockUv.y * 12.0 + time * 1.5);
+        pixelCol.rgb = clamp(pixelCol.rgb + vec3(pulse * intensity), 0.0, 1.0);
     }
     
     vec4 origCol = texture(source, uv);

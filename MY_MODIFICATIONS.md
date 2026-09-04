@@ -1763,4 +1763,41 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 2. Expanded baseline minimum width to 340px, ensuring even the longest date strings (e.g., "Wednesday, September 30, 2026") fit completely without right-side truncation or ellipsis.
 -->
 
+<!-- Section 208 Animated Pixel Album Art Effect:
+1. Updated `pixelate.frag` and recompiled `pixelate.frag.qsb` with Qt Shader Baker:
+   - Added harmonic procedural wave drift (`wave`) driven by `time` uniform when active.
+   - Added CRT phosphor block luminescence shimmer (`pulse`) for living retro mosaic motion.
+   - Preserved Soft-Kuwahara adaptive edge-preserving smoothing filter when `smoothing > 0.5`.
+2. Updated `AlbumArtEffects.qml`:
+   - Added `property bool pixelAnimation: true` property with persistent JSON storage.
+   - Added IPC method `togglePixelAnimation()`.
+3. Updated `AlbumArtLayer.qml`:
+   - Configured `NumberAnimation` on `time` property to run continuously when `effectType === "pixelate"` and `pixelAnimation` is true.
+   - Snaps `time` to 0.0 when animation is toggled off so the mosaic instantly stabilizes.
+4. Updated `DashboardPanel.qml`:
+   - Added dedicated `ToggleRow` for "Animate pixel mosaic" visible when Pixelate shader is selected.
+-->
+
+<!-- Section 209 Singular Clipboard Item Deletion:
+1. Updated `modules/launcher/services/Clipboard.qml`:
+   - Added `deleteEntry(clipId: int, preview: string)` method utilizing `Quickshell.Io.Process`.
+   - Executes `cliphist delete` via stdin pipe and removes cached preview thumbnail at `$XDG_RUNTIME_DIR/caelestia/clipboard/<id>.png`.
+   - Triggers `reload()` to refresh the active clipboard list immediately upon process exit.
+2. Updated `modules/launcher/items/ClipItem.qml`:
+   - Expanded `actionsContainer` width to comfortably hold three action buttons (expand, pin, delete).
+   - Added `deleteBtn` MouseArea with Material icon `"delete"` and `Colours.palette.m3error` hover highlight.
+   - Dispatches `Clipboard.unpin(modelData.pinId)` for pinned items and `Clipboard.deleteEntry(modelData.id, modelData.preview)` for normal history items.
+-->
+
+<!-- Section 210 True Alt-Tab MRU Window Switching:
+1. Resolved non-chronological window switching order in `modules/launcher/services/Windows.qml`:
+   - Implemented persistent `mruHistory` address array tracking window focus history across all activation methods (mouse clicks, dock, shortcuts, and Alt-Tab).
+   - Guarded against focus de-activation resets: When Quickshell grabs focus on launcher open (causing KWin to report empty active window), `mruHistory` stays strictly intact.
+   - `updateItems()` builds `items` sorted strictly by index in `mruHistory`.
+   - Optimistically updates `mruHistory` immediately on `focusSelectedWindow()` / `focusWindow()`, eliminating Wayland asynchronous IPC activation lag and ensuring instant back-and-forth toggling between recent windows.
+2. Verified in `modules/Shortcuts.qml`:
+   - Alt-Tab immediately selects index 1 (the window used immediately prior to the current window).
+   - Releasing Alt switches to it, exactly mimicking native KDE Plasma and Windows Alt-Tab behavior.
+-->
+
 
