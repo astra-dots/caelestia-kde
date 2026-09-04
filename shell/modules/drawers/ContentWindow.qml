@@ -60,6 +60,7 @@ StyledWindow {
     }
     readonly property real borderThickness: dynamicBorderThickness * (1 - fsTransitionProg)
     readonly property real borderRounding: Config.border.rounding * (1 - fsTransitionProg)
+    readonly property real borderRoundingTop: (Config.border.roundingTop !== undefined ? Config.border.roundingTop : 0) * (1 - fsTransitionProg)
     readonly property real shadowOpacity: 0.7 * (1 - fsTransitionProg)
     readonly property real borderLayoutThickness: hasFullscreen ? 0 : dynamicBorderThickness
     property color surfaceColour: Colours.tPalette.m3surface
@@ -360,6 +361,8 @@ StyledWindow {
                 anchors.margins: -50
                 group: overviewBlurMask
                 radius: root.borderRounding
+                radiusTop: root.borderRoundingTop
+                radiusBottom: root.borderRounding
                 borderLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
                 borderRight: Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
                 borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
@@ -413,6 +416,8 @@ StyledWindow {
             group: GlobalConfig.appearance.islands ? null : blobGroup
             visible: !GlobalConfig.appearance.islands
             radius: root.borderRounding
+            radiusTop: root.borderRoundingTop
+            radiusBottom: root.borderRounding
             borderLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
             borderRight: Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
             borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
@@ -793,15 +798,15 @@ StyledWindow {
         Region {
             x: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness)
             y: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness)
-            width: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRounding : 0
-            height: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRounding : 0
+            width: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRoundingTop : 0
+            height: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRoundingTop : 0
             intersection: Intersection.Combine
         }
         Region {
-            x: root.width - Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - root.borderRounding
+            x: root.width - Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - root.borderRoundingTop
             y: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness)
-            width: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRounding : 0
-            height: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRounding : 0
+            width: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRoundingTop : 0
+            height: (!GlobalConfig.appearance.islands && GlobalConfig.appearance.blur && GlobalConfig.appearance.blurMask) ? root.borderRoundingTop : 0
             intersection: Intersection.Combine
         }
         Region {
@@ -825,9 +830,9 @@ StyledWindow {
             blurQuality: borderBlurSettings.blurQuality
             inLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) + root.borderRounding
             inRight: root.width - Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - root.borderRounding
-            inTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) + root.borderRounding
+            inTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) + root.borderRoundingTop
             inBottom: root.height - Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) - root.borderRounding
-            rTop: !GlobalConfig.appearance.islands ? root.borderRounding : 0
+            rTop: !GlobalConfig.appearance.islands ? root.borderRoundingTop : 0
             rBottom: !GlobalConfig.appearance.islands ? root.borderRounding : 0
             rLeft: !GlobalConfig.appearance.islands ? root.borderRounding : 0
             rRight: !GlobalConfig.appearance.islands ? root.borderRounding : 0

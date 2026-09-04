@@ -252,6 +252,8 @@ void BlobShape::updatePolish() {
     // Cache inverted rect data
     m_cachedHasInverted = false;
     m_cachedInvertedRadius = 0;
+    m_cachedInvertedRadiusTop = 0;
+    m_cachedInvertedRadiusBottom = 0;
     memset(m_cachedInvertedOuter, 0, sizeof(m_cachedInvertedOuter));
     memset(m_cachedInvertedInner, 0, sizeof(m_cachedInvertedInner));
 
@@ -284,6 +286,8 @@ void BlobShape::updatePolish() {
         if (nearBorder) {
             m_cachedHasInverted = true;
             m_cachedInvertedRadius = static_cast<float>(inv->radius());
+            m_cachedInvertedRadiusTop = static_cast<float>(inv->radiusTop());
+            m_cachedInvertedRadiusBottom = static_cast<float>(inv->radiusBottom());
 
             m_cachedInvertedOuter[0] = outerCX;
             m_cachedInvertedOuter[1] = outerCY;
@@ -415,6 +419,8 @@ QSGNode* BlobShape::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
     material->m_color = m_group->color();
     material->m_hasInverted = m_cachedHasInverted ? 1 : 0;
     material->m_invertedRadius = m_cachedInvertedRadius;
+    material->m_invertedRadiusTop = m_cachedInvertedRadiusTop;
+    material->m_invertedRadiusBottom = m_cachedInvertedRadiusBottom;
     memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
     memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
 

@@ -1855,3 +1855,18 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Added `KillMode=process` to `~/.config/systemd/user/plasma-caelestia.service` so restarting Quickshell terminates only the quickshell process itself and never kills child applications (e.g. browser, editor) that share the cgroup.
 -->
 
+<!-- Section 215 Remove Top Inverted Screen Corners While Preserving Bottom Inverted Corners:
+1. Shader & Material Architecture (`blob.frag`, `blobmaterial.hpp`, `blobmaterial.cpp`):
+   - Replaced single uniform `invertedRadius` with independent `invertedRadiusTop` and `invertedRadiusBottom`.
+   - Updated `blob.frag`'s inner box SDF computation from scalar `sdRoundedBox` to `sdRoundedBox4(pixel, invertedInner.xy, invertedInner.zw, vec4(invertedRadiusTop, invertedRadiusBottom, invertedRadiusBottom, invertedRadiusTop))`. When `invertedRadiusTop == 0.0`, the top-left and top-right inner corners form exact 90-degree square corners, removing all concave/inverted arcs from the top of the screen.
+   - Updated `BlobMaterialShader::updateUniformData` to pass `m_invertedRadiusTop` (offset 116) and `m_invertedRadiusBottom` (offset 120), preserving 16-byte alignment and offset layout.
+2. C++ Shape & Config Pipeline (`blobinvertedrect.hpp`, `blobinvertedrect.cpp`, `blobshape.hpp`, `blobshape.cpp`, `borderconfig.hpp`):
+   - Added `radiusTop` and `radiusBottom` properties to `BlobInvertedRect`, defaulting to `radius` if unset.
+   - Added `roundingTop` property to `BorderConfig` in Caelestia's config model, defaulting to `0` (configurable via `shell.json` under `"border": { "roundingTop": ... }`).
+3. QML Screen Border & Blur Region (`modules/drawers/ContentWindow.qml`):
+   - Added `readonly property real borderRoundingTop: (Config.border.roundingTop !== undefined ? Config.border.roundingTop : 0) * (1 - fsTransitionProg)`.
+   - Bound `radiusTop: root.borderRoundingTop` and `radiusBottom: root.borderRounding` on both `BlobInvertedRect` instances (overview blur mask and main shell background).
+   - In `BackgroundEffect.blurRegion`, updated the two top corner square regions to use `root.borderRoundingTop` (collapsing to `0x0` area), and passed `rTop: !GlobalConfig.appearance.islands ? root.borderRoundingTop : 0` to `BlurCorners` so no blur cutout is subtracted from top corners while bottom corners retain full inverted rounding connecting to the dock.
+-->
+
+
