@@ -22,8 +22,12 @@ ColumnLayout {
         if (!model)
             return false;
         const current = GlobalConfig.launcher.favouriteApps || [];
+        const cleanModelId = (model.id || "").toLowerCase().replace(/\.desktop$/, "");
+        const cleanEntryId = (model.entry?.id || "").toLowerCase().replace(/\.desktop$/, "");
         for (let i = 0; i < current.length; i++) {
-            if (model.id === current[i] || (model.entry && model.entry.id === current[i])) {
+            const cleanCur = current[i].toLowerCase().replace(/\.desktop$/, "");
+            if (model.id === current[i] || (model.entry && model.entry.id === current[i]) ||
+                cleanModelId === cleanCur || cleanEntryId === cleanCur) {
                 return true;
             }
         }
@@ -78,9 +82,12 @@ ColumnLayout {
                     onClicked: {
                         if (isPinned) {
                             const current = GlobalConfig.launcher.favouriteApps ? [...GlobalConfig.launcher.favouriteApps] : [];
-                            let index = current.indexOf(model.id);
-                            if (index === -1 && model.entry)
-                                index = current.indexOf(model.entry.id);
+                            const cleanModelId = (model.id || "").toLowerCase().replace(/\.desktop$/, "");
+                            const cleanEntryId = (model.entry?.id || "").toLowerCase().replace(/\.desktop$/, "");
+                            let index = current.findIndex(c => {
+                                const cleanC = c.toLowerCase().replace(/\.desktop$/, "");
+                                return c === model.id || cleanC === cleanModelId || cleanC === cleanEntryId;
+                            });
                             if (index !== -1) {
                                 current.splice(index, 1);
                                 GlobalConfig.launcher.favouriteApps = current;

@@ -720,7 +720,56 @@ Item {
 
     property var persistentOrder: []
 
+    property bool _loadingDockOrder: false
+
     onModelDataArrayChanged: currentOrder = [...modelDataArray]
+
+    onPersistentOrderChanged: {
+        if (!root._loadingDockOrder && root.persistentOrder && root.persistentOrder.length > 0) {
+            dockOrderStorage.setText(JSON.stringify(root.persistentOrder, null, 2));
+        }
+    }
+
+    FileView {
+        id: dockOrderStorage
+
+        printErrors: false
+        path: `${Paths.state}/dock_order.json`
+        onLoaded: {
+            try {
+                const parsed = JSON.parse(text());
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    root._loadingDockOrder = true;
+                    root.persistentOrder = parsed;
+                    root._loadingDockOrder = false;
+                    root.rebuildModel();
+                }
+            } catch (e) {
+                console.error("Failed to parse dock_order.json:", e);
+                root._loadingDockOrder = false;
+            }
+        }
+    }
+
+    function isPinnedMatch(pid, entryOrId): bool {
+        if (!pid || !entryOrId) return false;
+        const targetId = typeof entryOrId === "string" ? entryOrId : (entryOrId.id || "");
+        if (targetId === pid) return true;
+
+        const cleanPid = pid.toLowerCase().replace(/\.desktop$/, "");
+        const cleanTarget = targetId.toLowerCase().replace(/\.desktop$/, "");
+        if (cleanPid === cleanTarget) return true;
+
+        if (Strings.testRegexList([pid], targetId)) return true;
+        if (Strings.testRegexList([pid], cleanTarget)) return true;
+
+        if (typeof entryOrId !== "string") {
+            const heuristic = DesktopEntries.heuristicLookup(cleanPid);
+            if (heuristic && heuristic.id === targetId) return true;
+        }
+
+        return false;
+    }
 
     function matchesApp(app, appClass) {
         if (!app || !appClass) return false;
@@ -747,8 +796,9 @@ Item {
         const pinnedApps = [];
         
         for (const pid of pinnedIds) {
+            let matched = false;
             for (const entry of DesktopEntries.applications.values) {
-                if (Strings.testRegexList([pid], entry.id)) {
+                if (root.isPinnedMatch(pid, entry)) {
                     if (!pinnedApps.some(a => a.id === entry.id)) {
                         pinnedApps.push({
                             id: entry.id,
@@ -760,7 +810,22 @@ Item {
                             pid: 0
                         });
                     }
+                    matched = true;
+                    break;
                 }
+            }
+            if (!matched) {
+                const cleanPid = pid.replace(/\.desktop$/, "");
+                const entry = DesktopEntries.heuristicLookup(cleanPid);
+                pinnedApps.push({
+                    id: entry ? entry.id : (pid.endsWith(".desktop") ? pid : `${pid}.desktop`),
+                    isPinned: true,
+                    entry: entry || null,
+                    toplevels: [],
+                    appClass: cleanPid,
+                    iconName: entry ? entry.id : cleanPid,
+                    pid: 0
+                });
             }
         }
 
@@ -884,7 +949,7 @@ Item {
                     nextPersistentOrder.push(app.id);
                 } else {
                     // App is not in pool (either pinned with 0 windows, or unpinned window on another workspace, or closed)
-                    let isPinnedApp = pinnedIds.some(pid => Strings.testRegexList([pid], orderId));
+                    let isPinnedApp = pinnedIds.some(pid => root.isPinnedMatch(pid, orderId));
                     if (isPinnedApp) {
                         nextPersistentOrder.push(orderId);
                     } else {

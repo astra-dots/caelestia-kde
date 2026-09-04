@@ -1941,3 +1941,24 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Dynamic Pruning:
      * When an unpinned application closes all its windows across all desktops, it is pruned from `persistentOrder`. If reopened later, it is treated as a new application and appended at the end.
 -->
+
+<!-- Section 220 Pinned App Order Persistence & Exact Matching Fix:
+1. Root Cause Diagnosed:
+   - In `modules/bar/components/Dock.qml`, pinned applications were matched using `Strings.testRegexList([pid], entry.id)`. In `Strings.qml`, when `pid` does not start with `^` and end with `$`, it fell back to exact string equality (`filter === target`).
+   - In `shell.json`, `favouriteApps` contained `["zen", "kitty", "org.kde.dolphin"]`, whereas system `DesktopEntry.id` properties are `"zen.desktop"`, `"kitty.desktop"`, and `"org.kde.dolphin.desktop"`. Because `"zen" !== "zen.desktop"`, none of the configured favorite apps matched!
+   - As a result, `pinnedApps` was empty at startup. Zen, Kitty, and Dolphin were treated as unpinned windows, so their order on boot was purely dictated by which window was focused first by KWin.
+   - When the user manually dragged them, `saveNewOrder()` only saved items where `mData.isPinned === true`, so `newFavs` was empty and never persisted the dragged order to disk.
+2. Architectural Solutions Implemented:
+   - Robust Pinned App Matching (`isPinnedMatch`):
+     * Added `isPinnedMatch(pid, entryOrId)` in `Dock.qml` supporting direct equality, base name equality (stripping `.desktop`), regex matching, and heuristic desktop entry lookup.
+     * Guaranteed that `"zen"`, `"kitty"`, and `"org.kde.dolphin"` match their respective desktop entries with 100% precision without false positives (e.g. `kitty-open.desktop`).
+     * Added fallback indexing so even if DesktopEntries is slow to populate, configured pinned apps are never dropped.
+   - Two-Layer Taskbar Disk Persistence:
+     * Layer 1: Pinned app order is persisted directly in `GlobalConfig.launcher.favouriteApps` (`~/.config/caelestia/shell.json`).
+     * Layer 2: Added `FileView` (`dockOrderStorage`) in `Dock.qml` bound to `~/.local/state/caelestia/dock_order.json`. The entire taskbar sequence (pinned and unpinned) is automatically saved on change and restored on shell startup.
+   - Popout Context Synchronization:
+     * Updated `DockContext.qml` (`isPinned` and unpin handler) to use base ID matching, ensuring right-click "Pin / Unpin" actions stay 100% in sync with the dock model.
+   - Set Initial Desired Order:
+     * Seeded `favouriteApps` in `shell.json` and `dock_order.json` to the user's requested sequence: `zen, kitty, org.kde.dolphin`.
+-->
+
