@@ -1764,9 +1764,13 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 -->
 
 <!-- Section 208 Animated Pixel Album Art Effect:
-1. Updated `pixelate.frag` and recompiled `pixelate.frag.qsb` with Qt Shader Baker:
-   - Added harmonic procedural wave drift (`wave`) driven by `time` uniform when active.
-   - Added CRT phosphor block luminescence shimmer (`pulse`) for living retro mosaic motion.
+1. Overhauled `pixelate.frag` and recompiled `pixelate.frag.qsb` with Qt Shader Baker:
+   - Locked pixel grid strictly to stationary block coordinates (`floor(uv * GRID_SIZE) / GRID_SIZE`), completely eliminating UV distortion, staircase crawling, and temporal aliasing.
+   - Implemented authentic multi-layered retro sliding overlays evaluated on pixel cell blocks:
+     * Horizontal sliding stream wave traveling sideways across columns (`time * 2.5`).
+     * Holographic diagonal luster beam sweeping across pixel cells (`time * 0.22`).
+     * Discrete chiptune glints drifting sideways cell-by-cell along rows.
+     * Subtle tactile CRT phosphor well bezel at cell borders for crisp separation without blur.
    - Preserved Soft-Kuwahara adaptive edge-preserving smoothing filter when `smoothing > 0.5`.
 2. Updated `AlbumArtEffects.qml`:
    - Added `property bool pixelAnimation: true` property with persistent JSON storage.
