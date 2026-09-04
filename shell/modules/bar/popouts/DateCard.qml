@@ -18,7 +18,12 @@ ColumnLayout {
     readonly property real scaleOffset: Math.max(0.1, masterScale * barScaleOffset)
     readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0))
 
-    width: Math.max(300 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
+    readonly property real minTimeRowWidth: (timeText?.implicitWidth ?? 0) + (24 * root.scaleOffset) + (Tokens.spacing.small * root.scaleOffset)
+    readonly property real minDateRowWidth: (dateText?.implicitWidth ?? 0) + (18 * root.scaleOffset) + (Tokens.spacing.small * root.scaleOffset)
+    readonly property real maxContentRowWidth: Math.max(minTimeRowWidth, minDateRowWidth)
+    readonly property real minContentWidth: Math.ceil(maxContentRowWidth + (Tokens.padding.large * 2 * root.scaleOffset) + (Tokens.padding.medium * root.scaleOffset))
+
+    width: Math.max(340 * scaleOffset, minContentWidth, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
     implicitWidth: width
     spacing: Tokens.spacing.small * scaleOffset
 
@@ -73,6 +78,7 @@ ColumnLayout {
                 }
 
                 StyledText {
+                    id: timeText
                     text: root.timeWithSeconds
                     font: Tokens.font.headline.builders.small.size(Tokens.font.headline.small.pointSize * root.fontScale * 1.05).weight(Font.Medium).build()
                     color: Colours.palette.m3primary
@@ -101,6 +107,7 @@ ColumnLayout {
                 }
 
                 StyledText {
+                    id: dateText
                     text: root.dateString
                     font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
                     color: Colours.palette.m3onSurface

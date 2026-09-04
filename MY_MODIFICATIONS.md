@@ -1758,3 +1758,9 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
 4. Updated `DashboardPanel.qml` with dynamic context-aware labels and descriptions for both effects.
 -->
 
+<!-- Section 207 Date & Time Taskbar Popout Dynamic Auto-Fit Width:
+1. Updated `DateCard.qml`: Replaced hardcoded 300px fixed width with dynamic `minContentWidth` calculation based on `dateText` and `timeText` natural metrics (`implicitWidth`).
+2. Expanded baseline minimum width to 340px, ensuring even the longest date strings (e.g., "Wednesday, September 30, 2026") fit completely without right-side truncation or ellipsis.
+-->
+
+
