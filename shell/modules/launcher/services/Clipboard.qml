@@ -27,7 +27,7 @@ QtObject {
 
     readonly property string imageCacheDir: ClipboardManager.imageCacheDir
 
-    Process {
+    property Process deleteProc: Process {
         id: deleteProc
         onExited: root.reload()
     }
