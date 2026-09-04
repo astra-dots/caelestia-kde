@@ -1962,3 +1962,23 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Seeded `favouriteApps` in `shell.json` and `dock_order.json` to the user's requested sequence: `zen, kitty, org.kde.dolphin`.
 -->
 
+<!-- Section 221 Disable SDDM Clockwork Rapid Dial Spinning & White Flash Animation:
+1. Investigation & Identification:
+   - Active SDDM Theme: `clockwork` (configured in `/etc/sddm.conf.d/kde_settings.conf` and `/etc/sddm.conf.d/theme.conf`).
+   - Upstream Repository: `Darkkal44/qylock` (specifically the Orbital - Clockwork theme variant).
+2. Animation Mechanics Diagnosed in `Main.qml`:
+   - When the user submits their password, `startLoginSequence()` checks `if (root.enableWindup)`.
+   - If `enableWindup` is `true`:
+     * `windupAnim` triggers a 1600ms animation on `windupOffset` from 0 to 150000, causing the second and minute dials (`smoothSecAngle` and `smoothMinAngle`) to spin wildly.
+     * `jitterX`, `jitterY`, and `sparkIntensity` animate mechanical vibration and flying spark particles.
+     * `boomTriggerTimer` (1450ms) fires `boomSequence`, scaling the UI to 35x and fading in a full-screen white flash overlay (`Rectangle { color: root.blastColor; opacity: root.boomOpacity }`).
+     * `doLogin()` is delayed until `boomSequence.onFinished`.
+   - If `enableWindup` is `false`:
+     * `startLoginSequence()` directly calls `doLogin()` immediately.
+     * Dial rotation, vibration jitter, spark particles, and white flash explosion are completely bypassed.
+3. Fix Applied:
+   - Updated `enableWindup=false` in `~/.local/share/sddm-themes/clockwork/theme.conf`.
+   - System theme config at `/usr/share/sddm/themes/clockwork/theme.conf` requires `enableWindup=false`.
+-->
+
+
