@@ -2003,5 +2003,19 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Synchronized to `~/.config/quickshell/caelestia/services/Audio.qml` and restarted shell.
 -->
 
-
-
+<!-- Section 223 Speaker Status Icon Dedicated Wheel Volume & Middle-Click Media Toggle:
+1. Requirements & Intent:
+   - Volume adjustment via mouse wheel should happen ONLY and ONLY while hovering over the speaker icon in the taskbar status icons element.
+   - Removed the old generic behaviour where scrolling anywhere on the left half of the entire bar adjusted volume, and scrolling on the right half adjusted screen brightness.
+   - Middle clicking while hovering over the speaker icon should pause / play/pause the active media player (MPRIS / Spotify).
+2. Architectural Solutions Implemented:
+   - `shell/modules/bar/components/StatusIcons.qml`:
+     * Updated delegate `dragArea` with `acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton`.
+     * Added `onWheel` on `dragArea`: if `itemName === "audio"`, scrolling up (`wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0`) calls `Audio.incrementVolume()`, and scrolling down calls `Audio.decrementVolume()`, accepting the event. For other icons, passes the event through.
+     * Added `onClicked` middle click handler: if `mouse.button === Qt.MiddleButton && itemName === "audio"`, toggles media playback via `Players.active?.togglePlaying()` or pauses via `Players.active?.pause()`, falling back to `Players.playPause()`.
+   - `shell/modules/bar/Bar.qml`:
+     * In `handleWheel(pos, angleDelta)`, replaced the whole-bar `pos < screen.width / 2` volume check and the `pos >= screen.width / 2` brightness check with targeted `ch?.id === "statusIcons"` detection.
+     * Resolves the icon under cursor (`items.childAt(localX, localY)`) and only triggers volume adjustment if `icon.name === "audio"`.
+     * Scrolling over blank bar space or other status icons no longer alters volume or brightness.
+   - Synchronized to `~/.config/quickshell/caelestia/` and verified clean shell reload.
+-->

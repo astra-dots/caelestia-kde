@@ -283,17 +283,20 @@ Item {
                 if (angleDelta.y < 0 || activeId > 1)
                     Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
             }
-        } else if ((isHorizontal ? pos < screen.width / 2 : pos < screen.height / 2) && Config.bar.scrollActions.volume) {
-            if (angleDelta.y > 0)
-                Audio.incrementVolume();
-            else if (angleDelta.y < 0)
-                Audio.decrementVolume();
-        } else if (Config.bar.scrollActions.brightness) {
-            const monitor = Brightness.getMonitorForScreen(screen);
-            if (angleDelta.y > 0)
-                monitor.setBrightness(monitor.brightness + GlobalConfig.services.brightnessIncrement);
-            else if (angleDelta.y < 0)
-                monitor.setBrightness(monitor.brightness - GlobalConfig.services.brightnessIncrement);
+        } else if (ch?.id === "statusIcons") {
+            const statusIcons = ch.item as StatusIcons;
+            if (statusIcons) {
+                const items = statusIcons.items;
+                const localX = isHorizontal ? items.mapFromItem(null, pos, 0).x : items.width / 2;
+                const localY = isHorizontal ? items.height / 2 : items.mapFromItem(null, 0, pos).y;
+                let icon = items.childAt(localX, localY);
+                if (icon?.name === "audio" || (icon?.parent && icon.parent.name === "audio")) {
+                    if (angleDelta.y > 0 || angleDelta.x > 0)
+                        Audio.incrementVolume();
+                    else if (angleDelta.y < 0 || angleDelta.x < 0)
+                        Audio.decrementVolume();
+                }
+            }
         }
     }
 

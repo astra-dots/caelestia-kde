@@ -290,7 +290,19 @@ StyledRect {
                         drag.target: held ? dragItem : null
                         drag.axis: root.isHorizontal ? Drag.XAxis : Drag.YAxis
                         cursorShape: Qt.PointingHandCursor
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+                        onWheel: wheel => {
+                            if (itemName === "audio") {
+                                if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0)
+                                    Audio.incrementVolume();
+                                else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0)
+                                    Audio.decrementVolume();
+                                wheel.accepted = true;
+                            } else {
+                                wheel.accepted = false;
+                            }
+                        }
                     
                         onPressed: mouse => {
                             console.log("StatusIcons Drag onPressed");
@@ -323,6 +335,19 @@ StyledRect {
                         }
                         onClicked: mouse => {
                             console.log("StatusIcons Drag onClicked");
+                            if (mouse.button === Qt.MiddleButton) {
+                                if (itemName === "audio") {
+                                    if (Players.active?.canTogglePlaying)
+                                        Players.active.togglePlaying();
+                                    else if (Players.active?.isPlaying && Players.active?.canPause)
+                                        Players.active.pause();
+                                    else if (Players.active?.canPlay)
+                                        Players.active.play();
+                                    else
+                                        Players.playPause();
+                                }
+                                return;
+                            }
                             if (itemName === "notifications") {
                                 if (mouse.button === Qt.RightButton) {
                                     Notifs.dnd = !Notifs.dnd;
