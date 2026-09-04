@@ -12,8 +12,17 @@ Singleton {
     property bool enabled: true
     // "pixelate" | "gradient" | "smear"
     property string effectType: "pixelate"
-    property bool smoothing: true
+    property bool pixelSmoothing: true
+    property bool gradientBlur: true
+    property bool smearSmoothing: true
+    property real pixelGridSize: 16
     property bool pixelAnimation: true
+
+    readonly property bool smoothing: {
+        if (root.effectType === "gradient") return root.gradientBlur;
+        if (root.effectType === "smear") return root.smearSmoothing;
+        return root.pixelSmoothing;
+    }
 
     function getShaderUrl(): string {
         if (root.effectType === "gradient") {
@@ -26,7 +35,10 @@ Singleton {
 
     onEnabledChanged: saveTimer.restart()
     onEffectTypeChanged: saveTimer.restart()
-    onSmoothingChanged: saveTimer.restart()
+    onPixelSmoothingChanged: saveTimer.restart()
+    onGradientBlurChanged: saveTimer.restart()
+    onSmearSmoothingChanged: saveTimer.restart()
+    onPixelGridSizeChanged: saveTimer.restart()
     onPixelAnimationChanged: saveTimer.restart()
 
     Timer {
@@ -40,8 +52,12 @@ Singleton {
         const data = {
             enabled: root.enabled,
             effectType: root.effectType,
-            smoothing: root.smoothing,
-            pixelAnimation: root.pixelAnimation
+            pixelSmoothing: root.pixelSmoothing,
+            gradientBlur: root.gradientBlur,
+            smearSmoothing: root.smearSmoothing,
+            pixelGridSize: root.pixelGridSize,
+            pixelAnimation: root.pixelAnimation,
+            smoothing: root.smoothing
         };
         storage.setText(JSON.stringify(data, null, 2));
     }
@@ -59,8 +75,20 @@ Singleton {
                         root.enabled = parsed.enabled;
                     if (typeof parsed.effectType === "string" && ["pixelate", "gradient", "smear"].includes(parsed.effectType))
                         root.effectType = parsed.effectType;
-                    if (typeof parsed.smoothing === "boolean")
-                        root.smoothing = parsed.smoothing;
+                    if (typeof parsed.pixelSmoothing === "boolean")
+                        root.pixelSmoothing = parsed.pixelSmoothing;
+                    else if (typeof parsed.smoothing === "boolean")
+                        root.pixelSmoothing = parsed.smoothing;
+                    if (typeof parsed.gradientBlur === "boolean")
+                        root.gradientBlur = parsed.gradientBlur;
+                    else if (typeof parsed.smoothing === "boolean")
+                        root.gradientBlur = parsed.smoothing;
+                    if (typeof parsed.smearSmoothing === "boolean")
+                        root.smearSmoothing = parsed.smearSmoothing;
+                    else if (typeof parsed.smoothing === "boolean")
+                        root.smearSmoothing = parsed.smoothing;
+                    if (typeof parsed.pixelGridSize === "number" && parsed.pixelGridSize >= 4 && parsed.pixelGridSize <= 64)
+                        root.pixelGridSize = parsed.pixelGridSize;
                     if (typeof parsed.pixelAnimation === "boolean")
                         root.pixelAnimation = parsed.pixelAnimation;
                 }
@@ -83,6 +111,10 @@ Singleton {
                 enabled: root.enabled,
                 effectType: root.effectType,
                 smoothing: root.smoothing,
+                pixelSmoothing: root.pixelSmoothing,
+                gradientBlur: root.gradientBlur,
+                smearSmoothing: root.smearSmoothing,
+                pixelGridSize: root.pixelGridSize,
                 pixelAnimation: root.pixelAnimation
             });
         }
@@ -95,14 +127,30 @@ Singleton {
             return "Invalid effect type. Choose: pixelate, gradient, smear";
         }
 
+        function setGridSize(size: real): string {
+            if (size >= 4 && size <= 64) {
+                root.pixelGridSize = Math.round(size);
+                return "Album art pixel grid size set to " + root.pixelGridSize;
+            }
+            return "Invalid grid size. Must be between 4 and 64";
+        }
+
         function toggle(): string {
             root.enabled = !root.enabled;
             return "Album art effect " + (root.enabled ? "enabled" : "disabled");
         }
 
         function toggleSmoothing(): string {
-            root.smoothing = !root.smoothing;
-            return "Album art adaptive smoothing " + (root.smoothing ? "enabled" : "disabled");
+            if (root.effectType === "gradient") {
+                root.gradientBlur = !root.gradientBlur;
+                return "Album art deep Kawase blur " + (root.gradientBlur ? "enabled" : "disabled");
+            } else if (root.effectType === "smear") {
+                root.smearSmoothing = !root.smearSmoothing;
+                return "Album art ultra-smooth blending " + (root.smearSmoothing ? "enabled" : "disabled");
+            } else {
+                root.pixelSmoothing = !root.pixelSmoothing;
+                return "Album art adaptive color smoothing " + (root.pixelSmoothing ? "enabled" : "disabled");
+            }
         }
 
         function togglePixelAnimation(): string {

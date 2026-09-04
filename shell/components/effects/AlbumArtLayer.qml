@@ -17,6 +17,7 @@ ShaderEffect {
     property real itemHeight: root.height
     property real time: 0.0
     property real smoothing: AlbumArtEffects.smoothing ? 1.0 : 0.0
+    property real gridSize: AlbumArtEffects.pixelGridSize
 
     Behavior on intensity {
         Anim {

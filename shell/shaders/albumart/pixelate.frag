@@ -11,6 +11,7 @@ layout(std140, binding = 0) uniform buf {
     float itemHeight;
     float time;
     float smoothing;
+    float gridSize;
 };
 
 layout(binding = 1) uniform sampler2D source;
@@ -24,12 +25,12 @@ void main() {
         return;
     }
     
-    const float GRID_SIZE = 16.0;
-    const float CELL_STEP = 1.0 / GRID_SIZE;
+    float g = (gridSize >= 4.0) ? floor(gridSize) : 16.0;
+    float cellStep = 1.0 / g;
     
     // Rigid, stationary pixel block coordinate - eliminates sub-pixel crawling and aliasing
-    vec2 blockUv = floor(uv * GRID_SIZE) / GRID_SIZE;
-    vec2 centerUv = blockUv + vec2(0.5 * CELL_STEP);
+    vec2 blockUv = floor(uv * g) / g;
+    vec2 centerUv = blockUv + vec2(0.5 * cellStep);
     
     vec4 pixelCol;
     
@@ -47,8 +48,8 @@ void main() {
             s[k] = vec3(0.0);
         }
         
-        const float R = 1.0 * CELL_STEP;
-        const float S_STEP = R * 0.5;
+        float R = 1.0 * cellStep;
+        float S_STEP = R * 0.5;
         
         // Q0: Top-Left (-x, -y)
         for (int i = -2; i <= 0; i++) {
@@ -128,39 +129,16 @@ void main() {
         pixelCol = texture(source, clamp(centerUv, 0.001, 0.999));
     }
     
-    // Dynamic sliding retro overlays when animation is enabled
+    // Dynamic clean holographic shine sweep across pixel cells when animation is enabled
+    // Note: NO cell borders / bezels, NO random noise/speckles/glints - only clean diagonal shine sweep
     if (time > 0.0001) {
-        float rowId = floor(blockUv.y * GRID_SIZE);
-
-        // 1. Horizontal Sliding Stream Wave (travels sideways across columns)
-        float slideX = (blockUv.x * GRID_SIZE) - time * 2.5 + sin(rowId * 0.75) * 1.5;
-        float wave = 0.5 + 0.5 * sin(slideX * 0.55);
-        float wavePulse = pow(wave, 3.5) * 0.18;
-
-        // 2. Holographic Diagonal Luster Beam (sweeps left to right across pixel cells)
-        float sweepT = fract(time * 0.22);
-        float sweepPos = sweepT * 1.7 - 0.35;
+        float sweepT = fract(time * 0.20);
+        float sweepPos = sweepT * 1.8 - 0.4;
         float beamDist = abs((blockUv.x + blockUv.y * 0.35) - sweepPos);
-        float shine = smoothstep(0.11, 0.0, beamDist) * 0.35;
-
-        // 3. Discrete Chiptune Glints (pixel cells drifting sideways)
-        vec2 driftCell = floor(vec2(blockUv.x * GRID_SIZE - time * 1.8, rowId));
-        float cellHash = fract(sin(dot(driftCell, vec2(127.1, 311.7))) * 43758.5453);
-        float glint = 0.0;
-        if (cellHash > 0.88) {
-            float phase = time * 4.5 + cellHash * 6.28;
-            glint = pow(max(0.0, sin(phase)), 6.0) * 0.30;
-        }
-
-        // 4. Subtle Tactile CRT Phosphor Well (crisp block separation, no sub-pixel blur)
-        vec2 cellLocal = fract(uv * GRID_SIZE);
-        float edgeDist = min(min(cellLocal.x, 1.0 - cellLocal.x), min(cellLocal.y, 1.0 - cellLocal.y));
-        float cellBezel = smoothstep(0.0, 0.07, edgeDist) * 0.08 + 0.92;
-
-        // Composite the sliding overlays with color dodge / luminance boost
-        vec3 overlayLight = (vec3(wavePulse) + vec3(shine) + vec3(glint)) * intensity;
-        pixelCol.rgb = pixelCol.rgb + overlayLight * (pixelCol.rgb + vec3(0.45));
-        pixelCol.rgb = clamp(pixelCol.rgb * cellBezel, 0.0, 1.0);
+        float coreBeam = smoothstep(0.08, 0.0, beamDist) * 0.32;
+        float softBeam = smoothstep(0.18, 0.0, beamDist) * 0.14;
+        float shine = coreBeam + softBeam;
+        pixelCol.rgb = clamp(pixelCol.rgb + vec3(shine * intensity) * (pixelCol.rgb + vec3(0.35)), 0.0, 1.0);
     }
     
     vec4 origCol = texture(source, uv);

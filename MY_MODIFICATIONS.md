@@ -1803,5 +1803,20 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Alt-Tab immediately selects index 1 (the window used immediately prior to the current window).
    - Releasing Alt switches to it, exactly mimicking native KDE Plasma and Windows Alt-Tab behavior.
 -->
-
-
+<!-- Section 211 Pixel Shader Refinements, Dynamic Grid Size Slider & Independent Effect Toggles:
+1. Refined `pixelate.frag` and recompiled `pixelate.frag.qsb`:
+   - Removed pixel block borders/bezels (`cellBezel`), eliminating all dark lines and seams between cells.
+   - Removed random speckles, glints, and noise waves; preserved exclusively the clean, sleek holographic luster shine stripe sweeping left-to-right across the pixel matrix.
+   - Added `float gridSize;` to `buf` uniform block, dynamically calculating grid step and scaling Soft-Kuwahara sampling offsets accordingly.
+2. Updated `AlbumArtEffects.qml`:
+   - Separated shared `smoothing` into independent properties: `pixelSmoothing`, `gradientBlur`, and `smearSmoothing`.
+   - Preserved `smoothing` dynamic getter for shader binding and legacy backward compatibility.
+   - Added `property real pixelGridSize: 16` and IPC helper `setGridSize(size)`.
+   - Updated JSON persistence and IPC handler to maintain separate toggle states across shader style switches.
+3. Updated `AlbumArtLayer.qml`:
+   - Bound `gridSize: AlbumArtEffects.pixelGridSize` to feed dynamic block resolution to `pixelate.frag.qsb`.
+4. Updated `DashboardPanel.qml`:
+   - Connected the smoothing/blur ToggleRow to the active effect's independent property (`pixelSmoothing`, `gradientBlur`, or `smearSmoothing`).
+   - Added `SliderRow` for "Pixel Grid Resolution" (8x8 to 48x48) when Pixelate shader is active.
+   - Refined Animate toggle subtext to match the clean holographic shine sweep aesthetic.
+-->

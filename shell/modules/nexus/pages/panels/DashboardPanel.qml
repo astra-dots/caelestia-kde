@@ -360,8 +360,35 @@ PageBase {
                     return qsTr("24-tap dense Vogel spiral with sub-perceptual micro-jitter to eliminate stippling grain");
                 return qsTr("Pre-smooth multi-tap color integration and bilateral filter to prevent noisy pixels on complex photos");
             }
-            checked: AlbumArtEffects.smoothing
-            onToggled: AlbumArtEffects.smoothing = checked
+            checked: {
+                if (AlbumArtEffects.effectType === "gradient")
+                    return AlbumArtEffects.gradientBlur;
+                if (AlbumArtEffects.effectType === "smear")
+                    return AlbumArtEffects.smearSmoothing;
+                return AlbumArtEffects.pixelSmoothing;
+            }
+            onToggled: {
+                if (AlbumArtEffects.effectType === "gradient")
+                    AlbumArtEffects.gradientBlur = checked;
+                else if (AlbumArtEffects.effectType === "smear")
+                    AlbumArtEffects.smearSmoothing = checked;
+                else
+                    AlbumArtEffects.pixelSmoothing = checked;
+            }
+        }
+
+        SliderRow {
+            visible: AlbumArtEffects.effectType === "pixelate"
+            enabled: AlbumArtEffects.enabled
+            label: qsTr("Pixel Grid Resolution")
+            subtext: qsTr("Number of pixel blocks across each axis")
+            valueLabel: `${AlbumArtEffects.pixelGridSize}x${AlbumArtEffects.pixelGridSize}`
+            value: (AlbumArtEffects.pixelGridSize - 8) / 40
+            onMoved: v => {
+                const g = Math.round((8 + v * 40) / 2) * 2;
+                AlbumArtEffects.pixelGridSize = Math.max(8, Math.min(48, g));
+            }
+            Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
         }
 
         ToggleRow {
@@ -369,7 +396,7 @@ PageBase {
             visible: AlbumArtEffects.effectType === "pixelate"
             enabled: AlbumArtEffects.enabled
             text: qsTr("Animate pixel mosaic")
-            subtext: qsTr("Subtle fluid matrix drift and rhythmic block shimmer for a living retro aesthetic")
+            subtext: qsTr("Subtle holographic luster sweep across pixel cells")
             checked: AlbumArtEffects.pixelAnimation
             onToggled: AlbumArtEffects.pixelAnimation = checked
         }
