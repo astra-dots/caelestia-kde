@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Wipe stale Quickshell socket locks
+# Wipe stale Quickshell socket locks and orphan bridge servers
 rm -rf "${XDG_RUNTIME_DIR:-/run/user/$UID}/quickshell/"*
+pkill -f "spotify_bridge.py" 2>/dev/null || true
 
 if systemctl --user is-enabled plasma-caelestia.service >/dev/null 2>&1; then
     systemctl --user restart plasma-caelestia.service

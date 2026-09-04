@@ -27,7 +27,7 @@ Singleton {
 
     Timer {
         id: debounceTimer
-        interval: 350
+        interval: 1000
         onTriggered: root.isDebouncing = false
     }
 
@@ -69,10 +69,18 @@ Singleton {
                 const line = data.trim();
                 if (line.startsWith("READY:")) {
                     root.isConnected = true;
+                    Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/state"]);
                 } else if (line.startsWith("STATE:")) {
                     try {
                         const state = JSON.parse(line.substring(6));
-                        root.isLiked = Boolean(state.isLiked);
+                        const isNewTrack = state.uri && state.uri !== root.currentTrackUri;
+                        if (isNewTrack) {
+                            root.isDebouncing = false;
+                            debounceTimer.stop();
+                            root.isLiked = Boolean(state.isLiked);
+                        } else if (!root.isDebouncing) {
+                            root.isLiked = Boolean(state.isLiked);
+                        }
                         root.currentTrackUri = state.uri || "";
                         root.upcomingTrack = state.upcoming || null;
                     } catch (e) {}

@@ -1879,3 +1879,30 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - In `BlurCorners`, updated `inBottom: root.height - Math.max(...) - root.borderRoundingBottom` and `rBottom: !GlobalConfig.appearance.islands ? root.borderRoundingBottom : 0` so no blur cutout or concave arc is subtracted at the bottom.
    - Result: The taskbar's upper-left and upper-right corners meeting the workspace/screen are now clean straight 90-degree corners with no inverted arc fillets curving into the desktop, and when the taskbar is hidden, the bottom-left and bottom-right corners of the screen are completely flat and square, without impacting any other feature, widget, or island styling across the desktop.
 -->
+
+<!-- Section 217 Spotify Heart & Liked Songs End-to-End Reliability and Synchronization Overhaul:
+1. Architectural Root Causes Diagnosed:
+   - Orphan Bridge Process & Socket Blocking: When Quickshell was restarted via systemd or scripts, `KillMode=process` left child `spotify_bridge.py` running in the background holding port 8999. Newly spawned instances failed with `[Errno 98] Address already in use`. The orphan bridge held a dead stdout pipe that threw `BrokenPipeError` on any state update, breaking HTTP requests and completely severing communication with Quickshell.
+   - Modern Spotify DOM Mutation Traps: In modern Spotify (1.2.96+), `button[data-testid="add-button"]` behaves differently when a track is liked vs unliked. While clicking it when unliked adds the track, clicking it when already liked opens a "Save to playlist" dropdown modal rather than unliking the song. Synthesizing DOM clicks therefore failed to remove songs from Liked Songs.
+   - Unprotected Interval Poll Overwriting: `caelestia-bridge.js` executed `setInterval(() => sendState(false), 1000)` unconditionally. During the 200–500ms window while Spotify's backend mutation was in flight, this interval read the stale un-mutated state and sent it to Quickshell, reverting the optimistic UI toggle.
+   - Duplicate Injected Bridge Event Loops: Without a singleton guard, multiple Spicetify evaluations caused concurrent `pollCommands()` loops to race against each other, consuming single toggle events unpredictably.
+   - Quickshell Debounce Ignored on Incoming State: `SpotifyService.qml` lacked track change discrimination inside its input parser, allowing incoming stale states within the debounce window to revert the heart button.
+2. Comprehensive End-to-End Fixes Applied:
+   - Python Bridge (`spotify_bridge.py`):
+     * Added `kill_stale_bridges()` to automatically kill any lingering bridge processes before attempting socket binding.
+     * Added a 5-attempt retry loop with backoff for binding port 8999.
+     * Replaced raw `sys.stdout.flush()` with `emit_state()` catching `BrokenPipeError` and `IOError`.
+     * Cleaned up logging to single-line format with automatic 200KB log rotation to prevent disk bloat.
+   - Shell Restart Scripts (`restart_shell.sh`):
+     * Added `pkill -f "spotify_bridge.py"` before restarting `plasma-caelestia.service` to ensure clean process handoff.
+   - Spicetify Extension (`caelestia-bridge.js`):
+     * Added `window.__caelestia_bridge_active` singleton guard to prevent duplicate long-polling loops.
+     * Switched heart querying to multi-tier detection prioritizing `Spicetify.Platform.LibraryAPI.containsSync(uri)` and `aria-checked` attributes.
+     * Switched heart toggling to direct API calls (`Spicetify.Platform.LibraryAPI.add` / `LibraryAPI.remove` and `Spicetify.Player.setHeart()`), completely eliminating the broken DOM click modal behavior.
+     * Added `if (isToggling && !force) return;` guard to `sendState` to prevent premature stale interval state pushes.
+     * Added `LibraryAPI.getEvents().addListener("update_item")` listener for instantaneous bidirectional synchronization whenever the user interacts with the Spotify desktop window directly.
+   - Quickshell Service (`SpotifyService.qml`):
+     * Extended debounce timer to 1000ms.
+     * Added `isNewTrack` awareness: allows immediate updates when a new song starts, while firmly protecting the toggled state during the mutation window.
+     * Triggers `/state` query upon receiving `READY:8999` to ensure immediate synchronization upon shell startup.
+-->

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Caelestia <-> Spicetify Multi-Threaded Local IPC Bridge Server
+Robust, self-healing, with orphan cleanup and broken-pipe protection.
 """
 
 import sys
@@ -10,13 +11,51 @@ import time
 import queue
 import threading
 import urllib.parse
+import subprocess
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 PORT = 8999
+LOG_FILE = "/tmp/spotify_bridge.log"
 pending_commands = []
 active_waiters = []
 lock = threading.Lock()
 current_state = {"isLiked": False, "uri": ""}
+
+
+def log_debug(msg):
+    try:
+        # Cap log size to 200KB
+        if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) > 200000:
+            with open(LOG_FILE, "w") as f:
+                f.write(f"[{time.strftime('%X')}] Log rotated\n")
+        with open(LOG_FILE, "a") as f:
+            f.write(f"[{time.strftime('%X')}] {msg}\n")
+    except Exception:
+        pass
+
+
+def kill_stale_bridges():
+    current_pid = os.getpid()
+    try:
+        res = subprocess.run(["pgrep", "-f", "spotify_bridge.py"], capture_output=True, text=True)
+        for line in res.stdout.strip().splitlines():
+            try:
+                pid = int(line.strip())
+                if pid != current_pid:
+                    os.kill(pid, 9)
+            except Exception:
+                pass
+        time.sleep(0.1)
+    except Exception:
+        pass
+
+
+def emit_state(state):
+    try:
+        sys.stdout.write(f"STATE:{json.dumps(state)}\n")
+        sys.stdout.flush()
+    except (BrokenPipeError, IOError, Exception):
+        pass
 
 
 def queue_command(cmd):
@@ -29,31 +68,29 @@ def queue_command(cmd):
 
 class BridgeHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        try:
-            with open("/tmp/spotify_bridge.log", "a") as f:
-                f.write(f"[{time.strftime('%X')}] {self.command} {self.path}\n")
-        except Exception:
-            pass
+        # Override to suppress default console spam and use log_debug
+        pass
 
     def end_headers_cors(self, status=200, content_type="application/json"):
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "*")
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-        self.end_headers()
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "*")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.end_headers()
+        except Exception:
+            pass
 
     def do_OPTIONS(self):
         self.end_headers_cors(200)
-        self.wfile.write(b"")
-
-    def do_GET(self):
         try:
-            with open("/tmp/spotify_bridge.log", "a") as f:
-                f.write(f"[{time.strftime('%X')}] GET {self.path[:120]}\n")
+            self.wfile.write(b"")
         except Exception:
             pass
+
+    def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
@@ -74,11 +111,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 current_state["isLiked"] = params.get("liked", ["false"])[0].lower() == "true"
                 current_state["uri"] = params.get("uri", [""])[0]
 
-            sys.stdout.write(f"STATE:{json.dumps(current_state)}\n")
-            sys.stdout.flush()
+            log_debug(f"GET /state -> isLiked={current_state.get('isLiked')} uri={current_state.get('uri')}")
+            emit_state(current_state)
 
             self.end_headers_cors(200)
-            self.wfile.write(json.dumps(current_state).encode("utf-8"))
+            try:
+                self.wfile.write(json.dumps(current_state).encode("utf-8"))
+            except Exception:
+                pass
 
         elif path == "/poll":
             cmd = None
@@ -100,24 +140,39 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         cmd = pending_commands.pop(0)
 
             self.end_headers_cors(200)
-            if cmd:
-                self.wfile.write(json.dumps(cmd).encode("utf-8"))
-            else:
-                self.wfile.write(b'{"action":"none"}')
+            try:
+                if cmd:
+                    log_debug(f"POLL dispatched: {cmd}")
+                    self.wfile.write(json.dumps(cmd).encode("utf-8"))
+                else:
+                    self.wfile.write(b'{"action":"none"}')
+            except Exception:
+                pass
 
         elif path == "/toggle":
+            log_debug("GET /toggle received")
             queue_command({"action": "toggleHeart"})
             self.end_headers_cors(200)
-            self.wfile.write(b'{"status":"queued"}')
+            try:
+                self.wfile.write(b'{"status":"queued"}')
+            except Exception:
+                pass
 
         elif path == "/skip":
+            log_debug("GET /skip received")
             queue_command({"action": "skipNext"})
             self.end_headers_cors(200)
-            self.wfile.write(b'{"status":"queued"}')
+            try:
+                self.wfile.write(b'{"status":"queued"}')
+            except Exception:
+                pass
 
         else:
             self.end_headers_cors(404)
-            self.wfile.write(b'{"error":"not_found"}')
+            try:
+                self.wfile.write(b'{"error":"not_found"}')
+            except Exception:
+                pass
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -133,27 +188,41 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if "upcoming" in data:
                     current_state["upcoming"] = data["upcoming"]
 
-                sys.stdout.write(f"STATE:{json.dumps(current_state)}\n")
-                sys.stdout.flush()
-            except Exception as e:
+                log_debug(f"POST /state -> isLiked={current_state.get('isLiked')} uri={current_state.get('uri')}")
+                emit_state(current_state)
+            except Exception:
                 pass
 
             self.end_headers_cors(200)
-            self.wfile.write(b'{"status":"ok"}')
+            try:
+                self.wfile.write(b'{"status":"ok"}')
+            except Exception:
+                pass
 
         elif parsed.path == "/toggle":
+            log_debug("POST /toggle received")
             queue_command({"action": "toggleHeart"})
             self.end_headers_cors(200)
-            self.wfile.write(b'{"status":"queued"}')
+            try:
+                self.wfile.write(b'{"status":"queued"}')
+            except Exception:
+                pass
 
         elif parsed.path == "/skip":
+            log_debug("POST /skip received")
             queue_command({"action": "skipNext"})
             self.end_headers_cors(200)
-            self.wfile.write(b'{"status":"queued"}')
+            try:
+                self.wfile.write(b'{"status":"queued"}')
+            except Exception:
+                pass
 
         else:
             self.end_headers_cors(404)
-            self.wfile.write(b'{"error":"not_found"}')
+            try:
+                self.wfile.write(b'{"error":"not_found"}')
+            except Exception:
+                pass
 
 
 def stdin_reader():
@@ -166,14 +235,31 @@ def stdin_reader():
 
 
 def main():
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), BridgeHandler)
-    server.allow_reuse_address = True
+    kill_stale_bridges()
+
+    server = None
+    for attempt in range(5):
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", PORT), BridgeHandler)
+            server.allow_reuse_address = True
+            break
+        except OSError:
+            kill_stale_bridges()
+            time.sleep(0.3)
+
+    if not server:
+        log_debug(f"Failed to bind port {PORT} after retries")
+        sys.exit(1)
 
     t = threading.Thread(target=stdin_reader, daemon=True)
     t.start()
 
-    sys.stdout.write(f"READY:{PORT}\n")
-    sys.stdout.flush()
+    log_debug(f"Server ready on port {PORT}")
+    try:
+        sys.stdout.write(f"READY:{PORT}\n")
+        sys.stdout.flush()
+    except Exception:
+        pass
 
     try:
         server.serve_forever()
@@ -185,3 +271,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
