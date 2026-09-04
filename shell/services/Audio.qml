@@ -168,23 +168,32 @@ Singleton {
     }
 
     function refreshNodes(): void {
-        const newSinks = [];
-        const newSources = [];
+        const sinkMap = {};
+        const sourceMap = {};
         const newStreams = [];
 
         for (const node of Pipewire.nodes.values) {
             if (!node.isStream) {
-                if (node.isSink)
-                    newSinks.push(node);
-                else if (node.audio)
-                    newSources.push(node);
+                if (node.isSink) {
+                    const key = node.name || node.description || String(node.id);
+                    const existing = sinkMap[key];
+                    if (!existing || node.id === root.sink?.id || (existing.id !== root.sink?.id && node.id > existing.id)) {
+                        sinkMap[key] = node;
+                    }
+                } else if (node.audio) {
+                    const key = node.name || node.description || String(node.id);
+                    const existing = sourceMap[key];
+                    if (!existing || node.id === root.source?.id || (existing.id !== root.source?.id && node.id > existing.id)) {
+                        sourceMap[key] = node;
+                    }
+                }
             } else if (node.audio) {
                 newStreams.push(node);
             }
         }
 
-        root.sinks = newSinks;
-        root.sources = newSources;
+        root.sinks = Object.values(sinkMap);
+        root.sources = Object.values(sourceMap);
         root.streams = newStreams;
     }
 

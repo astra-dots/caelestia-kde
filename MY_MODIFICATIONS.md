@@ -1981,4 +1981,27 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - System theme config at `/usr/share/sddm/themes/clockwork/theme.conf` requires `enableWindup=false`.
 -->
 
+<!-- Section 222 Fix Duplicate / Multiplying Audio Output Devices (WirePlumber & Caelestia Shell):
+1. Root Cause Diagnosed:
+   - System/Driver Layer (WirePlumber 0.5 & AMDGPU ALSA):
+     * The AMD Navi GPU exposes multiple HDMI/DP PCM endpoints on `alsa_card.pci-0000_03_00.1`.
+     * In `/usr/share/wireplumber/scripts/monitors/alsa.lua`, `api.alsa.split-enable = true` is enabled by default. WirePlumber split the card into split loopbacks configured with `["node.linger"] = true`.
+     * Whenever a screen video capture node or screencast stream initialized or terminated (e.g. Spectacle, KWin Wayland window previews for the taskbar via ScreencastManager, or display DP link power save), WirePlumber's event dispatcher aborted an async hook:
+       `wp-event-dispatcher: <WpAsyncEventHook:...> failed: failed to activate item: Object activation aborted: a transition failed`
+     * Because the transition aborted and `node.linger = true` was set, WirePlumber dropped its reference without telling PipeWire to destroy the node, creating a new node while leaving the previous one as an active ghost sink in PipeWire.
+     * Over time, ghost nodes accumulated monotonically (e.g. 9 copies before logout, 2 copies after re-login).
+   - Shell/UI Layer (Caelestia `shell/services/Audio.qml`):
+     * In `refreshNodes()`, Caelestia iterated `Pipewire.nodes.values` and pushed every sink directly into `root.sinks` without hardware deduplication.
+     * The quick settings audio popout (`Audio.qml`) rendered a radio button for every single node in `root.sinks`, visibly mirroring the duplicate ghost sinks.
+2. Two-Tier Solution Implemented:
+   - Tier 1: WirePlumber Split-Enable Disabled ([~/.config/wireplumber/wireplumber.conf.d/50-alsa-config.conf]):
+     * Added SPA-JSON rule for `device.name = "~alsa_card.*"` setting `api.alsa.split-enable = false`.
+     * WirePlumber now uses clean, native ALSA ACP device card management without leaking lingering loopback nodes on transition aborts.
+   - Tier 2: Resilient UI Deduplication in Caelestia Shell ([shell/services/Audio.qml]):
+     * Updated `refreshNodes()` to deduplicate sinks and sources by unique device identifier (`node.name || node.description || String(node.id)`).
+     * Guaranteed that if duplicate nodes exist in PipeWire, the currently active/default sink is strictly preserved, with fallbacks choosing the latest valid node ID.
+     * Synchronized to `~/.config/quickshell/caelestia/services/Audio.qml` and restarted shell.
+-->
+
+
 
