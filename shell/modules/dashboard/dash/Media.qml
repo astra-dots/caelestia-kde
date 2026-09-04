@@ -180,9 +180,6 @@ Item {
             if (root.visibilities) {
                 root.visibilities.dashboard = false;
             }
-            if (typeof KWinWorkspaceState !== "undefined") {
-                KWinWorkspaceState.setDesktop(2);
-            }
             Quickshell.execDetached(["gtk-launch", "spotify-launcher"]);
         }
     }

@@ -1834,13 +1834,24 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Configured `ActivationDesktopPolicy=DoNothing` under `[Windows]` in `kwinrc`. This natively instructs KWin to never force-switch virtual desktops when an application on another virtual desktop opens or requests activation in the background.
    - Updated Spotify's KWin window rule (`c1578f24-9df8-43e5-8276-8801f92e85a0`) in `kwinrulesrc` with `fsplevel=4` (Extreme focus stealing prevention) and `fsplevelrule=2` (Force) to permanently reject focus-stealing requests.
    - Replaced obsolete, flawed 2-second `qdbus6` loop in `~/.local/bin/spotify-autostart.sh` with clean, direct execution (`exec /usr/bin/spotify-launcher %U >/dev/null 2>&1`).
-2. Integrated Intentional Virtual Desktop Switching on Window Selection:
-   - Updated `shell/plugin/src/Caelestia/Services/kwinactivewindowbridge.cpp`: In `focusWindow(address)`, if the window resides on another virtual desktop (`!handle->desktops().isEmpty()`), automatically invoke `KWinWorkspaceState::instance()->switchTo(firstDesktop)` so any intentional window activation in the shell (Dock icon click, Dock hover preview, Overview window click, Alt-Tab switcher) smoothly switches to that desktop.
-   - Updated `shell/modules/launcher/services/Windows.qml` and `shell/modules/launcher/items/WindowSwitcherItem.qml` so Alt-Tab and Launcher window activations route through `Windows.focusWindow()` with optimistic MRU updates and instant desktop switching.
-3. High-Performance Caelestia Shell Startup Optimization:
+2. High-Performance Caelestia Shell Startup Optimization:
    - Eliminated the 2.2-second post-login freeze by removing `~/.config/autostart/caelestiashell.desktop` (which waited for `graphical-session.target` at ~3.3s).
    - Created native KDE Plasma systemd user unit `~/.config/systemd/user/plasma-caelestia.service` hooked to `plasma-core.target` with `Slice=session.slice`, starting Caelestia Shell concurrently with `plasma-plasmashell` at ~1.1s.
    - Updated `~/.local/bin/caelestia-autostart.sh` to remove `-d` (`--daemonize`) so systemd directly supervises Quickshell in `session.slice`.
    - Updated `shell/scripts/restart_shell.sh` to prefer `systemctl --user restart plasma-caelestia.service`.
    - Updated installer `scripts/10-autostart.sh` to deploy the systemd service natively.
 -->
+
+<!-- Section 214 Decouple Focus Restoration from Workspace Switching, Fix Media Button & Protect User Session:
+1. Decoupled Desktop Switching from Low-Level Window Focus Restoration:
+   - Reverted `KWinWorkspaceState::instance()->switchTo(firstDesktop)` inside C++ `KWinActiveWindowBridge::focusWindow(address)`.
+   - Root cause: Quickshell's `ContentWindow.qml` (and drawer focus handlers) calls `focusWindow(addr)` upon initialization (2–3 seconds after login) to restore keyboard focus to the active window (Spotify). Having workspace switching inside C++ low-level focus restoration caused the unwanted delayed switch to Desktop 5.
+   - Intentional desktop switching is now strictly handled at user-interaction UI entry points:
+     * `Windows.focusWindow(address)` in `modules/launcher/services/Windows.qml` (for Alt-Tab and Launcher).
+     * `focusDockWindow(addr, toplevel)` in `modules/bar/components/Dock.qml` (for clicking or cycling dock icons).
+2. Cleaned Up Dashboard "Open Spotify" Button:
+   - Removed hardcoded `KWinWorkspaceState.setDesktop(2);` from `modules/dashboard/Media.qml` and `modules/dashboard/dash/Media.qml`. Clicking "Open Spotify" now cleanly launches `spotify-launcher` on Desktop 5 without changing desktops.
+3. Protected User Session on Quickshell Restarts:
+   - Added `KillMode=process` to `~/.config/systemd/user/plasma-caelestia.service` so restarting Quickshell terminates only the quickshell process itself and never kills child applications (e.g. browser, editor) that share the cgroup.
+-->
+

@@ -439,21 +439,13 @@ Item {
                                             }
                                         } else {
                                             Logger.log("Dock debug: Single window, NOT focused. Focusing.");
-                                            if (isKWin) {
-                                                KWinActiveWindowBridge.focusWindow(addr);
-                                            } else {
-                                                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
-                                            }
+                                            focusDockWindow(addr, modelData.toplevels[0]);
                                         }
                                     } else {
                                         let nextIdx = activeIdx !== -1 ? (activeIdx + 1) % modelData.toplevels.length : 0;
                                         let addr = String(modelData.toplevels[nextIdx].address);
                                         Logger.log("Dock debug: Multiple windows. Cycling to index", nextIdx);
-                                        if (isKWin) {
-                                            KWinActiveWindowBridge.focusWindow(addr);
-                                        } else {
-                                            Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
-                                        }
+                                        focusDockWindow(addr, modelData.toplevels[nextIdx]);
                                     }
                                 } else if (modelData.entry) {
                                     // Mark as launching
@@ -645,6 +637,39 @@ Item {
             bar.popouts.currentCenter = absoluteCenter;
             bar.popouts.dockModel = modelDataArray[index];
             bar.popouts.hasCurrent = true;
+        }
+    }
+
+    function focusDockWindow(addr, toplevel): void {
+        const isKWin = (typeof KWinActiveWindowBridge !== "undefined" && KWinActiveWindowBridge.windowList);
+        if (isKWin) {
+            if (typeof KWinWorkspaceState !== "undefined") {
+                let targetWsUuid = "";
+                let targetWsId = -1;
+
+                if (toplevel && toplevel.workspace) {
+                    targetWsUuid = toplevel.workspace.uuid || "";
+                    targetWsId = toplevel.workspace.id ?? toplevel.workspace.index;
+                }
+
+                if (!targetWsUuid && (!targetWsId || targetWsId <= 0)) {
+                    const rawList = KWinActiveWindowBridge.windowList || [];
+                    const found = rawList.find(w => w && String(w.address) === String(addr));
+                    if (found && found.workspace) {
+                        targetWsUuid = found.workspace.uuid || "";
+                        targetWsId = found.workspace.id ?? found.workspace.index;
+                    }
+                }
+
+                if (targetWsUuid && String(targetWsUuid).length > 0) {
+                    KWinWorkspaceState.switchTo(String(targetWsUuid));
+                } else if (targetWsId && targetWsId > 0 && targetWsId !== KWinWorkspaceState.activeId) {
+                    KWinWorkspaceState.setDesktop(targetWsId);
+                }
+            }
+            KWinActiveWindowBridge.focusWindow(addr);
+        } else {
+            Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
         }
     }
 
@@ -936,20 +961,12 @@ Item {
                         KWinActiveWindowBridge.minimizeWindow(addr);
                     }
                 } else {
-                    if (isKWin) {
-                        KWinActiveWindowBridge.focusWindow(addr);
-                    } else {
-                        Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
-                    }
+                    focusDockWindow(addr, modelData.toplevels[0]);
                 }
             } else {
                 let nextIdx = activeIdx !== -1 ? (activeIdx + 1) % modelData.toplevels.length : 0;
                 let addr = String(modelData.toplevels[nextIdx].address);
-                if (isKWin) {
-                    KWinActiveWindowBridge.focusWindow(addr);
-                } else {
-                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${addr}" })` : `focuswindow address:0x${addr}`);
-                }
+                focusDockWindow(addr, modelData.toplevels[nextIdx]);
             }
         } else if (modelData.entry) {
             let newLaunching = Object.assign({}, root.launchingApps);
