@@ -2039,3 +2039,18 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Synchronized to `~/.config/quickshell/caelestia/` and verified clean visual transitions via live screenshots.
 -->
 
+<!-- Section 225 Subtle Analog Micro-Grain Texture for Album Art Pixel Effect:
+1. Requirements & Intent:
+   - Introduce a very subtle, minute analog film grain texture across the pixelated album artwork in the media card and dashboard.
+   - The grain must feel delicate and authentic (micro-grain operating at native item resolution), rather than noisy, chunky, or flickering.
+2. Shader Engineering ([shell/shaders/albumart/pixelate.frag]):
+   - Implemented high-frequency pseudo-random hash with triangular distribution (`(hash1 + hash2) - 1.0`) spanning `[-1.0, 1.0]`. Triangular distribution eliminates extreme outliers and produces an ultra-smooth, velvety film texture.
+   - Grounded noise coordinates in native item dimensions (`grainCoord = uv * vec2(max(itemWidth, 1.0), max(itemHeight, 1.0))`), ensuring consistent physical pixel resolution across display scalings.
+   - Implemented luma-weighted curve (`clamp(4.0 * lum * (1.0 - lum), 0.35, 1.0)`): preserves pure specular highlights and deep shadow contrast while texturing midtones.
+   - Multiplied by minute amplitude (`0.028 * lumaCurve`) for gentle ±2.8% tonal variation.
+   - Bound to `intensity`: smoothly dissolves alongside the pixel blocks on hover reveal to present crystal-clear original album art.
+3. Compilation & Deployment:
+   - Compiled with Qt Shader Baker: `/usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o shell/shaders/albumart/pixelate.frag.qsb shell/shaders/albumart/pixelate.frag`.
+   - Synchronized `pixelate.frag` and `pixelate.frag.qsb` to `~/.config/quickshell/caelestia/shaders/albumart/`.
+   - Verified active rendering via dashboard screenshots (`dashboard_grain.png`, `crop_grain.png`, `crop_grain_zoomed.png`).
+-->

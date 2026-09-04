@@ -17,6 +17,13 @@ layout(std140, binding = 0) uniform buf {
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D maskSource;
 
+// High-frequency pseudo-random hash for fine micro-grain
+float hash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
 void main() {
     vec2 uv = qt_TexCoord0;
     float maskA = texture(maskSource, uv).a;
@@ -140,6 +147,13 @@ void main() {
         float shine = coreBeam + softBeam;
         pixelCol.rgb = clamp(pixelCol.rgb + vec3(shine * intensity) * (pixelCol.rgb + vec3(0.35)), 0.0, 1.0);
     }
+    
+    // Very subtle, minute analog film micro-grain texture across pixel cells
+    vec2 grainCoord = uv * vec2(max(itemWidth, 1.0), max(itemHeight, 1.0));
+    float grain = (hash(grainCoord) + hash(grainCoord + vec2(37.71, 89.23))) - 1.0;
+    float lum = dot(pixelCol.rgb, vec3(0.299, 0.587, 0.114));
+    float lumaCurve = clamp(4.0 * lum * (1.0 - lum), 0.35, 1.0);
+    pixelCol.rgb = clamp(pixelCol.rgb + vec3(grain * (0.028 * lumaCurve)), 0.0, 1.0);
     
     vec4 origCol = texture(source, uv);
     vec4 result = mix(origCol, pixelCol, clamp(intensity, 0.0, 1.0));
