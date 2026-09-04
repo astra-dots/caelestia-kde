@@ -407,6 +407,9 @@ Item {
                         }
                         
                         onClicked: mouse => {
+                            if (root.bar?.visibilities?.launcher) {
+                                root.bar.visibilities.launcher = false;
+                            }
                             if (mouse.button === Qt.LeftButton) {
                                 if (modelData.isPinned) {
                                     bounceAnim.start();

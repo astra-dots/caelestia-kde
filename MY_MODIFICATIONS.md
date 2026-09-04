@@ -2019,3 +2019,23 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Scrolling over blank bar space or other status icons no longer alters volume or brightness.
    - Synchronized to `~/.config/quickshell/caelestia/` and verified clean shell reload.
 -->
+
+<!-- Section 224 Show Taskbar Alongside Launcher on Windows Key When Hidden:
+1. Requirements & Intent:
+   - When the taskbar is hidden (e.g. autohide mode or dodging a maximized/overlapping window), pressing the Windows key (Meta) should show BOTH the taskbar and the launcher simultaneously.
+   - Closing the launcher (via Windows key toggle, Escape key, or backdrop click) should smoothly return the taskbar to its hidden state.
+   - Clicking an application icon in the dock while the launcher is open should activate/focus the app and immediately dismiss the launcher.
+2. Architectural Solutions Implemented:
+   - `shell/modules/bar/BarWrapper.qml`:
+     * Updated `shouldBeVisible` to include `visibilities.launcher`:
+       `readonly property bool shouldBeVisible: !fullscreen && !disabled && !visibilities.overview && (keptOpen || visibilities.bar || isHovered || visibilities.launcher)`
+     * When the Windows key is pressed, `visibilities.launcher` activates. The bar transitions to `"visible"` and animates `implicitHeight` to `contentWidth`.
+     * In `Panels.qml`, `anchors.bottomMargin` tracks `bar.implicitHeight`, elevating `Launcher.Wrapper` directly above the taskbar in synchronized animation.
+     * When the launcher closes, `visibilities.launcher` drops to `false`, causing the bar to animate back out if it was previously dodging or hidden.
+   - `shell/modules/bar/components/Dock.qml`:
+     * In `onClicked: mouse => { ... }`, added check:
+       `if (root.bar?.visibilities?.launcher) root.bar.visibilities.launcher = false;`
+     * Clicking any app icon in the taskbar cleanly dismisses the launcher.
+   - Synchronized to `~/.config/quickshell/caelestia/` and verified clean visual transitions via live screenshots.
+-->
+
