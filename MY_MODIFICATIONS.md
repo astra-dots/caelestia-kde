@@ -1922,3 +1922,22 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Added a full-coverage background `CustomMouseArea` with `acceptedButtons: Qt.NoButton` across `Tabs.qml` so wheel events anywhere on the tab bar area (margins, indicator, separator) trigger smooth cyclic navigation without intercepting mouse clicks.
    - Updated `components/controls/CustomMouseArea.qml` to accumulate both vertical (`angleDelta.y`) and horizontal (`angleDelta.x`) wheel events with threshold resets, enabling trackpad gestures and tilt wheels to scroll tabs seamlessly.
 -->
+
+<!-- Section 219 Taskbar App Placement Order (New Apps Appended at the End):
+1. Root Cause Diagnosed:
+   - In `modules/bar/components/Dock.qml`, `rebuildModel()` originally populated `apps` by pushing all pinned apps first, and then immediately pushing any unpinned window encountered while iterating `root._toplevels`.
+   - In KWin (Wayland), `root._toplevels` places the active / most recently focused window at index 0.
+   - When a user launched any new application, the newly opened window immediately gained focus, causing it to be processed first among unpinned windows. As a result, it was placed directly after the pinned applications (`apps.push(unpinnedApp)` right after pinned apps), shoving older running applications to the right.
+   - Additionally, whenever any unpinned application gained focus or changed state, `_toplevels` reordered, and drag-and-drop rearrangements of unpinned items were discarded because `saveNewOrder()` only persisted `newFavs` (pinned items).
+2. Architectural Solutions Implemented:
+   - Persistent Taskbar Order (`property var persistentOrder: []`):
+     * Added a persistent order tracking state on `Dock.qml` that remembers the established visual sequence of application IDs.
+     * Updated `saveNewOrder()` to save all item IDs into `root.persistentOrder` on drag drop, while retaining IDs from other workspaces, fully preserving custom user drag rearrangements.
+   - Four-Stage Model Assembly in `rebuildModel()`:
+     1. Stage 1 (Window & Pool Collection): Separated collection of pinned applications and unpinned applications on the current workspace. Tracked `allOpenClasses` across all workspaces to prevent premature pruning during virtual desktop switching.
+     2. Stage 2 (Persistent Order Matching): Iterated through `root.persistentOrder` using case-insensitive desktop ID and WM_CLASS matching (`takeApp(orderId)`). Established and previously opened applications retain their exact existing positions regardless of window focus changes.
+     3. Stage 3 (Pinned App Insertion): Any newly pinned applications not yet in `persistentOrder` are placed before unpinned apps.
+     4. Stage 4 (End Placement for Brand New Apps): Any new, unpinned applications opening for the first time are appended at the very end of `apps` (`while (pool.length > 0) apps.push(newApp)`), exactly matching the behavior of KDE Plasma and Windows taskbars.
+   - Dynamic Pruning:
+     * When an unpinned application closes all its windows across all desktops, it is pruned from `persistentOrder`. If reopened later, it is treated as a new application and appended at the end.
+-->

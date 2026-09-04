@@ -125,6 +125,7 @@ Item {
     function saveNewOrder(): void {
         const newArr = [];
         const newFavs = [];
+        const newOrderIds = [];
         
         for (let i = 0; i < root.currentOrder.length; ++i) {
             const mData = root.currentOrder[i];
@@ -134,7 +135,19 @@ Item {
                 newFavs.push(mData.id);
             }
             newArr.push(mData);
+            newOrderIds.push(mData.id);
         }
+        
+        // Update persistentOrder with the user's dragged order, preserving apps on other workspaces
+        if (root.persistentOrder && root.persistentOrder.length > 0) {
+            for (let k = 0; k < root.persistentOrder.length; ++k) {
+                const oldId = root.persistentOrder[k];
+                if (!newOrderIds.includes(oldId)) {
+                    newOrderIds.push(oldId);
+                }
+            }
+        }
+        root.persistentOrder = newOrderIds;
         
         // Only update if arrays are different length or different order
         const currentFavs = GlobalConfig.launcher.favouriteApps || [];
@@ -705,19 +718,39 @@ Item {
 
     property var currentOrder: []
 
+    property var persistentOrder: []
+
     onModelDataArrayChanged: currentOrder = [...modelDataArray]
+
+    function matchesApp(app, appClass) {
+        if (!app || !appClass) return false;
+        const isToplevelSteamGame = appClass.toLowerCase().startsWith("steam_app_");
+        if (isToplevelSteamGame) {
+            return app.appClass && app.appClass.toLowerCase() === appClass.toLowerCase();
+        }
+        const isAppSteamGame = (app.id && app.id.toLowerCase().startsWith("steam_app_")) || 
+                               (app.appClass && app.appClass.toLowerCase().startsWith("steam_app_"));
+        if (isAppSteamGame) return false;
+
+        const baseId = app.id ? app.id.toLowerCase().replace(".desktop", "") : "";
+        const targetClass = appClass.toLowerCase();
+        return (app.appClass && app.appClass.toLowerCase() === targetClass) ||
+               (app.id && app.id.toLowerCase().includes(targetClass)) ||
+               (baseId.length > 0 && targetClass.includes(baseId));
+    }
 
     function rebuildModel(): void {
         if (root.isDragging) return;
-        const apps = [];
 
+        // 1. Build pinned apps list in configured order
         const pinnedIds = GlobalConfig.launcher.favouriteApps || [];
+        const pinnedApps = [];
         
         for (const pid of pinnedIds) {
             for (const entry of DesktopEntries.applications.values) {
                 if (Strings.testRegexList([pid], entry.id)) {
-                    if (!apps.some(a => a.id === entry.id)) {
-                        apps.push({
+                    if (!pinnedApps.some(a => a.id === entry.id)) {
+                        pinnedApps.push({
                             id: entry.id,
                             isPinned: true,
                             entry: entry,
@@ -730,83 +763,173 @@ Item {
                 }
             }
         }
-        
+
+        // 2. Track open window classes across all workspaces & collect unpinned apps on current workspace
+        const allOpenClasses = new Set();
+        const unpinnedApps = [];
+
         for (const toplevel of root._toplevels) {
             const ipc = toplevel;
             if (!ipc) continue;
             const appClass = ipc.class || ipc.initialClass;
             if (!appClass) continue;
-            
             if (appClass.toLowerCase().includes("xwaylandvideobridge")) continue;
-            if (!root.isWindowOnCurrentWorkspace(toplevel)) continue;
-            
-            let found = false;
-            for (const app of apps) {
-                const isToplevelSteamGame = appClass.toLowerCase().startsWith("steam_app_");
-                
-                if (isToplevelSteamGame) {
-                    if (app.appClass.toLowerCase() === appClass.toLowerCase()) {
-                        app.toplevels.push(toplevel);
-                        found = true;
-                        break;
-                    }
-                } else {
-                    const isAppSteamGame = app.id.toLowerCase().startsWith("steam_app_") || app.appClass.toLowerCase().startsWith("steam_app_");
-                    if (isAppSteamGame) continue;
 
-                    const baseId = app.id.toLowerCase().replace(".desktop", "");
-                    if (app.appClass.toLowerCase() === appClass.toLowerCase() || 
-                        app.id.toLowerCase().includes(appClass.toLowerCase()) || 
-                        appClass.toLowerCase().includes(baseId)) {
+            allOpenClasses.add(appClass.toLowerCase());
+
+            // Check if window matches any pinned app
+            let matchedPinned = false;
+            for (const app of pinnedApps) {
+                if (root.matchesApp(app, appClass)) {
+                    if (root.isWindowOnCurrentWorkspace(toplevel)) {
                         app.toplevels.push(toplevel);
-                        found = true;
-                        break;
                     }
+                    matchedPinned = true;
+                    break;
                 }
             }
-            
-            if (!found) {
-                const isToplevelSteamGame = appClass.toLowerCase().startsWith("steam_app_");
-                let entry = null;
-                let iconName = appClass;
-                
-                if (isToplevelSteamGame) {
-                    const appId = appClass.substring(10);
-                    iconName = `steam_icon_${appId}`;
-                    entry = DesktopEntries.applications.values.find(e => e.id.toLowerCase() === `steam_app_${appId}.desktop` || e.id.toLowerCase() === `steam-${appId}.desktop`) || null;
-                } else {
-                    entry = DesktopEntries.heuristicLookup(appClass) || null;
-                    if (!entry) {
-                        entry = DesktopEntries.applications.values.find(e => {
-                            const eBase = e.id.toLowerCase().replace(".desktop", "");
-                            return e.id.toLowerCase().includes(appClass.toLowerCase()) || appClass.toLowerCase().includes(eBase);
-                        }) || null;
-                    }
-                    if (entry)
-                        iconName = entry.id;
-                    else
-                        iconName = appClass.toLowerCase().split(/[^a-z0-9]/)[0] || appClass;
+            if (matchedPinned) continue;
+
+            // Only show unpinned windows on current workspace in the dock
+            if (!root.isWindowOnCurrentWorkspace(toplevel)) continue;
+
+            // Check if window matches an already discovered unpinned app on this workspace
+            let matchedUnpinned = false;
+            for (const app of unpinnedApps) {
+                if (root.matchesApp(app, appClass)) {
+                    app.toplevels.push(toplevel);
+                    matchedUnpinned = true;
+                    break;
                 }
+            }
+            if (matchedUnpinned) continue;
 
-                // No desktop entry — pull the icon straight from the window
-                // (_NET_WM_ICON), keyed on the pid: appClass is not unique for
-                // these (every unmapped Proton title is "steam_app_default").
-                const pid = ipc.pid || 0;
-                if (!entry)
-                    WinIcons.request(appClass, ipc.title || "", pid, ipc.address ? String(ipc.address) : "");
+            // New unpinned app discovered on current workspace
+            const isToplevelSteamGame = appClass.toLowerCase().startsWith("steam_app_");
+            let entry = null;
+            let iconName = appClass;
+            
+            if (isToplevelSteamGame) {
+                const appId = appClass.substring(10);
+                iconName = `steam_icon_${appId}`;
+                entry = DesktopEntries.applications.values.find(e => e.id.toLowerCase() === `steam_app_${appId}.desktop` || e.id.toLowerCase() === `steam-${appId}.desktop`) || null;
+            } else {
+                entry = DesktopEntries.heuristicLookup(appClass) || null;
+                if (!entry) {
+                    entry = DesktopEntries.applications.values.find(e => {
+                        const eBase = e.id.toLowerCase().replace(".desktop", "");
+                        return e.id.toLowerCase().includes(appClass.toLowerCase()) || appClass.toLowerCase().includes(eBase);
+                    }) || null;
+                }
+                if (entry)
+                    iconName = entry.id;
+                else
+                    iconName = appClass.toLowerCase().split(/[^a-z0-9]/)[0] || appClass;
+            }
 
-                apps.push({
-                    id: appClass,
-                    isPinned: false,
-                    entry: entry,
-                    toplevels: [toplevel],
-                    appClass: appClass,
-                    iconName: iconName,
-                    pid: pid
-                });
+            const pid = ipc.pid || 0;
+            if (!entry)
+                WinIcons.request(appClass, ipc.title || "", pid, ipc.address ? String(ipc.address) : "");
+
+            unpinnedApps.push({
+                id: appClass,
+                isPinned: false,
+                entry: entry,
+                toplevels: [toplevel],
+                appClass: appClass,
+                iconName: iconName,
+                pid: pid
+            });
+        }
+
+        // 3. Assemble pool of all current apps to display on this workspace
+        let pool = [...pinnedApps, ...unpinnedApps];
+
+        function takeApp(orderId) {
+            if (!orderId) return null;
+            const target = orderId.toLowerCase();
+            const targetBase = target.replace(".desktop", "");
+
+            // Exact match on id
+            let idx = pool.findIndex(a => a.id === orderId);
+            if (idx !== -1) {
+                return pool.splice(idx, 1)[0];
+            }
+
+            // Case-insensitive match on id, appClass, or entry.id
+            idx = pool.findIndex(a => {
+                const aId = (a.id || "").toLowerCase();
+                const aCls = (a.appClass || "").toLowerCase();
+                const aEntry = (a.entry?.id || "").toLowerCase();
+                return aId === target || aCls === target || aEntry === target ||
+                       aId.replace(".desktop", "") === targetBase;
+            });
+            if (idx !== -1) {
+                return pool.splice(idx, 1)[0];
+            }
+
+            return null;
+        }
+
+        // 4. Build final ordered apps list:
+        const apps = [];
+        const nextPersistentOrder = [];
+
+        // Step 4a: Place apps that are in persistentOrder (retains established & dragged order)
+        if (root.persistentOrder && root.persistentOrder.length > 0) {
+            for (const orderId of root.persistentOrder) {
+                const app = takeApp(orderId);
+                if (app) {
+                    apps.push(app);
+                    nextPersistentOrder.push(app.id);
+                } else {
+                    // App is not in pool (either pinned with 0 windows, or unpinned window on another workspace, or closed)
+                    let isPinnedApp = pinnedIds.some(pid => Strings.testRegexList([pid], orderId));
+                    if (isPinnedApp) {
+                        nextPersistentOrder.push(orderId);
+                    } else {
+                        const orderCls = orderId.toLowerCase().replace(".desktop", "");
+                        let stillOpen = false;
+                        for (const openCls of allOpenClasses) {
+                            if (openCls === orderCls || openCls.includes(orderCls) || orderCls.includes(openCls)) {
+                                stillOpen = true;
+                                break;
+                            }
+                        }
+                        if (stillOpen) {
+                            nextPersistentOrder.push(orderId);
+                        }
+                    }
+                }
             }
         }
-        
+
+        // Step 4b: Place any newly pinned apps not yet in persistentOrder
+        // Insert them before unpinned apps
+        let firstUnpinnedIdx = apps.findIndex(a => !a.isPinned);
+        if (firstUnpinnedIdx === -1) firstUnpinnedIdx = apps.length;
+
+        for (let i = 0; i < pool.length; ) {
+            if (pool[i].isPinned) {
+                const pinnedApp = pool.splice(i, 1)[0];
+                apps.splice(firstUnpinnedIdx, 0, pinnedApp);
+                nextPersistentOrder.splice(firstUnpinnedIdx, 0, pinnedApp.id);
+                firstUnpinnedIdx++;
+            } else {
+                i++;
+            }
+        }
+
+        // Step 4c: Append any NEW UNPINNED apps at the VERY END!
+        while (pool.length > 0) {
+            const newApp = pool.shift();
+            apps.push(newApp);
+            nextPersistentOrder.push(newApp.id);
+        }
+
+        root.persistentOrder = nextPersistentOrder;
+
+        // 5. Clear launching state for apps that now have windows
         let newLaunching = Object.assign({}, root.launchingApps);
         let launchingChanged = false;
 
@@ -827,6 +950,7 @@ Item {
             root.launchingApps = newLaunching;
         }
 
+        // 6. Synchronize dockModel with apps list
         let changed = false;
         if (apps.length !== dockModel.count) {
             changed = true;
@@ -874,6 +998,7 @@ Item {
             }
         }
         
+        Logger.log("Dock: rebuilt apps order:", apps.map(a => a.id).join(", "));
         root.modelDataArray = apps;
         root.modelUpdateTrigger += 1;
     }
