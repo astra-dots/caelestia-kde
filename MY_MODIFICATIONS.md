@@ -1869,4 +1869,13 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - In `BackgroundEffect.blurRegion`, updated the two top corner square regions to use `root.borderRoundingTop` (collapsing to `0x0` area), and passed `rTop: !GlobalConfig.appearance.islands ? root.borderRoundingTop : 0` to `BlurCorners` so no blur cutout is subtracted from top corners while bottom corners retain full inverted rounding connecting to the dock.
 -->
 
-
+<!-- Section 216 Remove Taskbar Upper and Screen Bottom Inverted Arc Corners:
+1. Config Model (`borderconfig.hpp`):
+   - Added `CONFIG_PROPERTY(int, roundingBottom, 0)` to `BorderConfig` in Caelestia's config model, defaulting to `0` (configurable via `shell.json` under `"border": { "roundingBottom": ... }`).
+2. QML Screen Border & Blur Region (`modules/drawers/ContentWindow.qml`):
+   - Added `readonly property real borderRoundingBottom: (Config.border.roundingBottom !== undefined ? Config.border.roundingBottom : 0) * (1 - fsTransitionProg)`.
+   - Updated both `BlobInvertedRect` instances (overview blur mask and main shell background) to bind `radiusBottom: root.borderRoundingBottom` (setting it to 0).
+   - In `BackgroundEffect.blurRegion`, updated the two bottom corner square regions to use `root.borderRoundingBottom` (collapsing to `0x0` area).
+   - In `BlurCorners`, updated `inBottom: root.height - Math.max(...) - root.borderRoundingBottom` and `rBottom: !GlobalConfig.appearance.islands ? root.borderRoundingBottom : 0` so no blur cutout or concave arc is subtracted at the bottom.
+   - Result: The taskbar's upper-left and upper-right corners meeting the workspace/screen are now clean straight 90-degree corners with no inverted arc fillets curving into the desktop, and when the taskbar is hidden, the bottom-left and bottom-right corners of the screen are completely flat and square, without impacting any other feature, widget, or island styling across the desktop.
+-->
