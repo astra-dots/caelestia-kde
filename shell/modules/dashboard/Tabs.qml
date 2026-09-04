@@ -20,6 +20,28 @@ Item {
 
     implicitHeight: bar.implicitHeight + bar.anchors.topMargin + indicator.implicitHeight + indicator.anchors.topMargin + separator.implicitHeight
 
+    function handleWheel(event: WheelEvent): void {
+        if (bar.count <= 1)
+            return;
+
+        const deltaY = event.angleDelta.y;
+        const deltaX = event.angleDelta.x;
+
+        if (deltaY < 0 || deltaX < 0)
+            root.dashState.currentTab = (root.dashState.currentTab + 1) % bar.count;
+        else if (deltaY > 0 || deltaX > 0)
+            root.dashState.currentTab = (root.dashState.currentTab - 1 + bar.count) % bar.count;
+    }
+
+    CustomMouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
+
+        function onWheel(event: WheelEvent): void {
+            root.handleWheel(event);
+        }
+    }
+
     TabBar {
         id: bar
 
@@ -125,10 +147,7 @@ Item {
             id: mouse
 
             function onWheel(event: WheelEvent): void {
-                if (event.angleDelta.y < 0)
-                    root.dashState.currentTab = Math.min(root.dashState.currentTab + 1, bar.count - 1);
-                else if (event.angleDelta.y > 0)
-                    root.dashState.currentTab = Math.max(root.dashState.currentTab - 1, 0);
+                root.handleWheel(event);
             }
 
             implicitWidth: Math.max(icon.width, label.width)

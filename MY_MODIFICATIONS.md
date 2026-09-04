@@ -1906,3 +1906,19 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Added `isNewTrack` awareness: allows immediate updates when a new song starts, while firmly protecting the toggled state during the mutation window.
      * Triggers `/state` query upon receiving `READY:8999` to ensure immediate synchronization upon shell startup.
 -->
+
+<!-- Section 218 Top Panel / Dashboard Tab Bar Mouse Wheel Scrolling Wraparound:
+1. Architectural Cause Diagnosed:
+   - In `modules/dashboard/Tabs.qml`, mouse wheel scrolling was clamped using:
+     `root.dashState.currentTab = Math.min(root.dashState.currentTab + 1, bar.count - 1)` (scrolling right) and
+     `root.dashState.currentTab = Math.max(root.dashState.currentTab - 1, 0)` (scrolling left).
+   - When the user scrolled left at the leftmost tab (index 0), it stopped at 0 instead of wrapping around to the rightmost tab, and vice versa when scrolling right at the last tab.
+   - In contrast, keyboard navigation (`Wrapper.qml` and `Content.qml` on Win+D) uses cyclic modular arithmetic:
+     `(currentTab - 1 + count) % count` and `(currentTab + 1) % count`.
+2. Solutions Implemented:
+   - Updated `modules/dashboard/Tabs.qml` with a central `handleWheel(event)` function using cyclic modulo wraparound matching arrow key navigation:
+     * Scrolling down / right (`deltaY < 0 || deltaX < 0`): `(root.dashState.currentTab + 1) % bar.count`.
+     * Scrolling up / left (`deltaY > 0 || deltaX > 0`): `(root.dashState.currentTab - 1 + bar.count) % bar.count`.
+   - Added a full-coverage background `CustomMouseArea` with `acceptedButtons: Qt.NoButton` across `Tabs.qml` so wheel events anywhere on the tab bar area (margins, indicator, separator) trigger smooth cyclic navigation without intercepting mouse clicks.
+   - Updated `components/controls/CustomMouseArea.qml` to accumulate both vertical (`angleDelta.y`) and horizontal (`angleDelta.x`) wheel events with threshold resets, enabling trackpad gestures and tilt wheels to scroll tabs seamlessly.
+-->
