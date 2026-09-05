@@ -2072,3 +2072,18 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Updated `Keys.onTabPressed` and `Keys.onBacktabPressed` when `list.showWallpapers` to call `list.cycleWallpaperTab(false)` and `list.cycleWallpaperTab(true)`.
    - Synchronized to `~/.config/quickshell/caelestia/modules/launcher/` and verified with live screenshot (`wallpaper_switcher_after.png`).
 -->
+
+<!-- Section 227 Remove Up/Down Arrow Key Navigation from Wallpaper Switcher:
+1. Requirements & Intent:
+   - Remove Up and Down arrow key navigation in the launcher wallpaper switcher now that category cycling is handled cleanly via Tab / Shift+Tab.
+   - Ensure pressing Up/Down in the wallpaper switcher cleanly consumes the event without falling through to generic list index manipulation or disrupting the search input.
+2. Changes Implemented:
+   - `shell/modules/launcher/Content.qml`:
+     * Updated `Keys.onUpPressed`: changed `else if (list.showWallpapers)` block from cycling `currentWallpaperTab` to simply `event.accepted = true;`.
+     * Updated `Keys.onDownPressed`: changed `else if (list.showWallpapers)` block from cycling `currentWallpaperTab` to simply `event.accepted = true;`.
+     * Retained `Keys.onTabPressed` and `Keys.onBacktabPressed` for switching category tabs (`Main`, `Mac`, `Misc`).
+     * Retained `Keys.onLeftPressed` and `Keys.onRightPressed` for navigating the wallpaper card carousel horizontally.
+   - Synchronized to `~/.config/quickshell/caelestia/modules/launcher/Content.qml` and restarted `plasma-caelestia.service`.
+   - Verified active rendering via screenshot (`wallpaper_switcher_keys_updated.png`).
+-->
+

@@ -218,11 +218,6 @@ Item {
                     list.currentList?.moveUp();
                     event.accepted = true;
                 } else if (list.showWallpapers) {
-                    let idx = list.wallpaperTabs.findIndex(t => t.id === list.currentWallpaperTab);
-                    if (idx !== -1 && list.wallpaperTabs.length > 0) {
-                        idx = (idx - 1 + list.wallpaperTabs.length) % list.wallpaperTabs.length;
-                        list.currentWallpaperTab = list.wallpaperTabs[idx].id;
-                    }
                     event.accepted = true;
                 } else {
                     list.currentList?.decrementCurrentIndex();
@@ -233,11 +228,6 @@ Item {
                     list.currentList?.moveDown();
                     event.accepted = true;
                 } else if (list.showWallpapers) {
-                    let idx = list.wallpaperTabs.findIndex(t => t.id === list.currentWallpaperTab);
-                    if (idx !== -1 && list.wallpaperTabs.length > 0) {
-                        idx = (idx + 1) % list.wallpaperTabs.length;
-                        list.currentWallpaperTab = list.wallpaperTabs[idx].id;
-                    }
                     event.accepted = true;
                 } else {
                     list.currentList?.incrementCurrentIndex();
