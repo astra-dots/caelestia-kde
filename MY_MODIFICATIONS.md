@@ -2211,7 +2211,29 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Intro crash fix: Removed `highlightRangeMode: ListView.StrictlyEnforceRange` (which looped indefinitely trying to enforce range on non-existent index `-1`) and set `highlightRangeMode: ListView.NoHighlightRange`. Intro lines (`currentIndex < 0`) cleanly position at top (`ListView.Beginning`). Added optional chaining (`lyricItem?.isCurrent ?? false`, `lyricItem?.isLineActive ?? false`) across delegates to prevent null reference errors during item recycling.
    - Synchronized all modified files to `~/.config/quickshell/caelestia/modules/dashboard/media/LyricList.qml`.
    - Verified service stability under `plasma-caelestia.service` with zero crashes and clean logs.
+<!-- Section 233 Small Background Lyrics Extraction, Disk Cache Preservation, and QML Delegate Rendering:
+1. Requirements & Intent:
+   - Fix small background/duet lyrics not showing up at all in the Caelestia media panel.
+   - Support both lines with lead vocals + background vocals (e.g. Lil Nas X - INDUSTRY BABY line 35, Chaleya) and lines containing ONLY background vocals (e.g. track intros with producer tags like line 0).
+   - Prevent Spicetify bridge POST requests from stripping or overwriting rich background vocal data cached from TTML disk storage.
+   - Ensure background syllables each receive accurate, distinct timestamps rather than inheriting the line's coarse timestamps.
+2. Changes Implemented:
+   - `shell/scripts/caelestia-bridge.js`:
+     * Updated `tryGetSpicyLyrics()`: Replaced `if (!lead) continue;` with a check ensuring items containing `item.Background` (even without lead vocals or syllables) are extracted into `lines`.
+     * Ensured `background` array containing each background line with text, start time, end time, and syllable array is always attached to each line object.
+     * Synchronized extension to `~/.config/spicetify/Extensions/caelestia-bridge.js` and `~/.local/share/spotify-launcher/install/usr/share/spotify/Apps/xpui/extensions/caelestia-bridge.js`.
+   - `shell/scripts/spotify_bridge.py`:
+     * Fixed background syllable timing bug in `find_spicy_lyrics_on_disk()`: Each background syllable now reads `s_obj.get("StartTime")` and `s_obj.get("EndTime")` instead of `bgItem.get(...)`.
+     * Added disk cache preservation to `do_POST`: When `/lyrics` is posted by Spotify, if the payload contains fewer background lines than disk cache (`post_bg_count < disk_bg_count`), disk cache lyrics are automatically retained.
+     * Enhanced `GET /lyrics` to dynamically pull rich background lyrics from disk cache whenever available for the current or requested track URI.
+   - `shell/modules/dashboard/media/LyricList.qml`:
+     * Updated `sourceComponent` selector: `sourceComponent: (lyricItem.hasSyllables || lyricItem.hasBackground) ? syllableFlowComponent : simpleLineComponent`. Lines containing background vocals now automatically load `syllableFlowComponent` for full syllable wipe and horizontal flow.
+     * Handled standalone background lines: Wrapped lead flow with `visible: (lyricItem?.hasSyllables ?? false)` and added `plainLeadText` fallback so lines with background vocals (and optionally plain lead text or no lead text) display cleanly without `. . .` placeholders.
+     * Included background line durations in `lineEndTime` calculation (`end = Math.max(end, bg.endTime)`), ensuring parent lines and background vocals remain active and correctly unhighlight on completion.
+     * Bound `height: implicitHeight` on `flowWrapper`, `bgLineItem`, and `bgWordItem` so Qt Quick `Column` and `Flow` positioners compute proper container dimensions.
+   - Verified live in Caelestia Media Panel with both standalone background vocals (line 0 producer tag) and duet vocals (line 35) with horizontal flow, progressive syllable wipe, and clean unhighlighting.
 -->
+
 
 
 
