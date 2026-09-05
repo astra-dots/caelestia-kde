@@ -25,6 +25,35 @@ Singleton {
     property bool isConnected: false
     property bool isDebouncing: false
 
+    property var spicyLyrics: null
+    readonly property bool hasSpicyLyrics: Boolean(root.isSpotify && root.spicyLyrics && root.spicyLyrics.lines && root.spicyLyrics.lines.length > 0)
+    readonly property string syncType: root.spicyLyrics?.type ?? "None"
+    readonly property var lyricLines: root.spicyLyrics?.lines ?? []
+
+    function indexForTime(timeSeconds: real): int {
+        if (!root.hasSpicyLyrics || root.lyricLines.length === 0) return -1;
+        const lines = root.lyricLines;
+        let low = 0;
+        let high = lines.length - 1;
+        let ans = -1;
+
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            if (lines[mid].startTime <= timeSeconds) {
+                ans = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return ans;
+    }
+
+    function timeForIndex(index: int): real {
+        if (!root.hasSpicyLyrics || index < 0 || index >= root.lyricLines.length) return -1;
+        return root.lyricLines[index].startTime ?? -1;
+    }
+
     Timer {
         id: debounceTimer
         interval: 1000
@@ -70,6 +99,18 @@ Singleton {
                 if (line.startsWith("READY:")) {
                     root.isConnected = true;
                     Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/state"]);
+                    Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics"]);
+                } else if (line.startsWith("LYRICS:")) {
+                    try {
+                        const lyricsData = JSON.parse(line.substring(7));
+                        if (lyricsData && lyricsData.lines && lyricsData.lines.length > 0) {
+                            root.spicyLyrics = lyricsData;
+                        } else {
+                            root.spicyLyrics = null;
+                        }
+                    } catch (e) {
+                        root.spicyLyrics = null;
+                    }
                 } else if (line.startsWith("STATE:")) {
                     try {
                         const state = JSON.parse(line.substring(6));
@@ -78,6 +119,9 @@ Singleton {
                             root.isDebouncing = false;
                             debounceTimer.stop();
                             root.isLiked = Boolean(state.isLiked);
+                            if (root.spicyLyrics && root.spicyLyrics.uri !== state.uri) {
+                                root.spicyLyrics = null;
+                            }
                         } else if (!root.isDebouncing) {
                             root.isLiked = Boolean(state.isLiked);
                         }

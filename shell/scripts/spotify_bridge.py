@@ -20,6 +20,7 @@ pending_commands = []
 active_waiters = []
 lock = threading.Lock()
 current_state = {"isLiked": False, "uri": ""}
+current_lyrics = {}
 
 
 def log_debug(msg):
@@ -53,6 +54,14 @@ def kill_stale_bridges():
 def emit_state(state):
     try:
         sys.stdout.write(f"STATE:{json.dumps(state)}\n")
+        sys.stdout.flush()
+    except (BrokenPipeError, IOError, Exception):
+        pass
+
+
+def emit_lyrics(lyrics):
+    try:
+        sys.stdout.write(f"LYRICS:{json.dumps(lyrics)}\n")
         sys.stdout.flush()
     except (BrokenPipeError, IOError, Exception):
         pass
@@ -120,6 +129,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+        elif path == "/lyrics":
+            log_debug("GET /lyrics requested")
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(json.dumps(current_lyrics).encode("utf-8"))
+            except Exception:
+                pass
+
         elif path == "/poll":
             cmd = None
             event = None
@@ -167,6 +184,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+        elif path == "/refresh" or path == "/reload":
+            log_debug("GET /refresh received")
+            queue_command({"action": "reloadLyrics"})
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(b'{"status":"queued"}')
+            except Exception:
+                pass
+
         else:
             self.end_headers_cors(404)
             try:
@@ -193,6 +219,37 @@ class BridgeHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(b'{"status":"ok"}')
+            except Exception:
+                pass
+
+        elif parsed.path == "/lyrics":
+            global current_lyrics
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length).decode("utf-8")
+                data = json.loads(body)
+                current_lyrics = data
+                log_debug(f"POST /lyrics -> uri={data.get('uri')} type={data.get('type')} lines={len(data.get('lines', []))}")
+                emit_lyrics(current_lyrics)
+            except Exception as e:
+                log_debug(f"POST /lyrics error: {e}")
+
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(b'{"status":"ok"}')
+            except Exception:
+                pass
+
+        elif parsed.path == "/debug":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                msg = self.rfile.read(length).decode("utf-8")
+                log_debug(f"[BRIDGE_JS] {msg}")
+            except Exception:
+                pass
             self.end_headers_cors(200)
             try:
                 self.wfile.write(b'{"status":"ok"}')

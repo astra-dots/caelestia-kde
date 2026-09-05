@@ -18,6 +18,23 @@ Item {
     property bool flag
     property list<string> lyricList: Lyrics.lyrics
 
+    readonly property bool useSpicy: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics
+    readonly property bool hasLyrics: useSpicy || Lyrics.hasLyrics
+
+    onVisibleChanged: {
+        if (!visible) {
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.isReady = false;
+            }
+        } else {
+            Qt.callLater(() => {
+                if (typeof lyrics !== "undefined" && lyrics && lyrics.height > 100) {
+                    lyrics.jumpToCurrent(true);
+                }
+            });
+        }
+    }
+
     function reloadTrack() {
         if (typeof lyrics !== "undefined" && lyrics) {
             lyrics.isReady = false;
@@ -71,9 +88,9 @@ Item {
 
     state: {
         flag; // For some reason it doesn't update sometimes, so use this to force an update
-        if (Lyrics.hasLyrics)
+        if (root.hasLyrics)
             return "hasLyrics";
-        if (Lyrics.loading)
+        if (Lyrics.loading && !root.useSpicy)
             return "loading";
         return "noLyrics";
     }
@@ -187,6 +204,18 @@ Item {
         target: Lyrics
     }
 
+    Connections {
+        function onSpicyLyricsChanged() {
+            root.flag = !root.flag;
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.isReady = false;
+                Qt.callLater(() => lyrics.jumpToCurrent(true));
+            }
+        }
+
+        target: SpotifyService
+    }
+
     Loader {
         id: loadingIndicator
 
@@ -257,7 +286,7 @@ Item {
     Timer {
         id: syncTimer
         running: Players.active?.isPlaying ?? false
-        interval: 100
+        interval: 60
         repeat: true
         triggeredOnStart: true
         onTriggered: {
@@ -280,37 +309,58 @@ Item {
         displayMarginBeginning: anchors.topMargin
         displayMarginEnd: anchors.bottomMargin
 
-        model: root.lyricList
+        model: root.useSpicy ? SpotifyService.lyricLines : root.lyricList
 
-        function jumpToCurrent() {
+        Timer {
+            id: settleTimer
+            interval: 60
+            onTriggered: {
+                if (lyrics.currentIndex >= 0 && lyrics.count > 0 && lyrics.height > 100) {
+                    lyrics.positionViewAtIndex(lyrics.currentIndex, ListView.Center);
+                    lyrics.isReady = true;
+                }
+            }
+        }
+
+        function jumpToCurrent(forceInstant = false) {
             if (currentIndex >= 0 && count > 0 && height > 0) {
-                positionViewAtIndex(currentIndex, ListView.Center);
-                if (!isReady) {
-                    Qt.callLater(() => {
-                        positionViewAtIndex(currentIndex, ListView.Center);
-                        isReady = true;
-                    });
+                if (forceInstant || !isReady) {
+                    isReady = false;
+                    positionViewAtIndex(currentIndex, ListView.Center);
+                    settleTimer.restart();
+                } else {
+                    positionViewAtIndex(currentIndex, ListView.Center);
                 }
             }
         }
 
         onCountChanged: {
-            if (!isReady) jumpToCurrent();
+            jumpToCurrent(true);
         }
         onHeightChanged: {
-            if (!isReady && height > 0) jumpToCurrent();
+            if (height > 100) {
+                if (!isReady) {
+                    jumpToCurrent(true);
+                } else {
+                    positionViewAtIndex(currentIndex, ListView.Center);
+                }
+            }
         }
         onModelChanged: {
             isReady = false;
-            Qt.callLater(() => jumpToCurrent());
+            Qt.callLater(() => jumpToCurrent(true));
         }
 
         Component.onCompleted: {
             currentIndex = Qt.binding(() => {
-                model; // Force update when lyrics change
-                return Lyrics.indexForTime(Players.active?.position ?? 0);
+                lyrics.model; // Force update when lyrics change
+                const pos = Players.active?.position ?? 0;
+                if (root.useSpicy) {
+                    return SpotifyService.indexForTime(pos);
+                }
+                return Lyrics.indexForTime(pos);
             });
-            jumpToCurrent();
+            jumpToCurrent(true);
         }
 
         Timer {
@@ -333,7 +383,7 @@ Item {
             userScrollTimer.restart();
         }
 
-        highlightRangeMode: userScrolling ? ListView.NoHighlightRange : ListView.ApplyRange
+        highlightRangeMode: userScrolling ? ListView.NoHighlightRange : ListView.StrictlyEnforceRange
         highlightMoveDuration: isReady ? Tokens.anim.durations.large : 0
         highlightMoveVelocity: -1
         preferredHighlightBegin: (height - (currentItem?.implicitHeight ?? 0)) / 2
@@ -345,15 +395,20 @@ Item {
         delegate: Item {
             id: lyricItem
 
-            required property string modelData
+            required property var modelData
             required property int index
 
             readonly property bool isCurrent: ListView.isCurrentItem
             property real effectScale: isCurrent ? 1 : 0
 
+            readonly property string lineText: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
+            readonly property var syllables: (typeof modelData === "object" && modelData?.syllables) ? modelData.syllables : []
+            readonly property bool hasSyllables: syllables.length > 0
+            readonly property real lineStartTime: (typeof modelData === "object" && modelData?.startTime !== undefined) ? modelData.startTime : -1
+
             width: lyrics.width
             implicitWidth: lyrics.width
-            implicitHeight: lyricText.implicitHeight + (Tokens.padding.extraSmall * 2)
+            implicitHeight: Math.max(contentLoader.implicitHeight, 24) + (Tokens.padding.extraSmall * 2)
 
             Behavior on effectScale {
                 Anim {
@@ -361,8 +416,8 @@ Item {
                 }
             }
 
-            StyledText {
-                id: lyricText
+            Loader {
+                id: contentLoader
 
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -370,23 +425,113 @@ Item {
                 anchors.leftMargin: Tokens.padding.medium
                 anchors.rightMargin: Tokens.padding.medium
 
-                text: lyricItem.modelData || ". . ."
-                horizontalAlignment: Text.AlignLeft
-                color: lyricItem.isCurrent
-                    ? Colours.palette.m3primary
-                    : mouse.containsMouse
-                        ? Colours.palette.m3onSurface
-                        : Colours.palette.m3outline
-                font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                sourceComponent: lyricItem.hasSyllables ? syllableFlowComponent : simpleLineComponent
+            }
 
-                layer.enabled: lyricItem.effectScale > 0
-                layer.effect: MultiEffect {
-                    shadowEnabled: true
-                    shadowColor: Colours.palette.m3primary
-                    shadowOpacity: 0.6 * lyricItem.effectScale
-                    shadowBlur: 0.5 * lyricItem.effectScale
-                    blur: 0.0
+            Component {
+                id: simpleLineComponent
+
+                StyledText {
+                    id: lyricText
+
+                    width: contentLoader.width
+                    text: lyricItem.lineText || ". . ."
+                    horizontalAlignment: Text.AlignLeft
+                    color: lyricItem.isCurrent
+                        ? Colours.palette.m3primary
+                        : mouse.containsMouse
+                            ? Colours.palette.m3onSurface
+                            : Colours.palette.m3outline
+                    font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+
+                    layer.enabled: lyricItem.effectScale > 0
+                    layer.effect: MultiEffect {
+                        shadowEnabled: true
+                        shadowColor: Colours.palette.m3primary
+                        shadowOpacity: 0.6 * lyricItem.effectScale
+                        shadowBlur: 0.5 * lyricItem.effectScale
+                        blur: 0.0
+                    }
+                }
+            }
+
+            Component {
+                id: syllableFlowComponent
+
+                Flow {
+                    id: flowLayout
+
+                    width: contentLoader.width
+                    spacing: 0
+
+                    Repeater {
+                        model: lyricItem.syllables
+
+                        delegate: Item {
+                            id: wordItem
+
+                            required property var modelData
+                            required property int index
+
+                            readonly property string wText: modelData.text || ""
+                            readonly property real wStart: Number(modelData.startTime) || 0
+                            readonly property real wEnd: Number(modelData.endTime) || (wStart + 0.4)
+
+                            readonly property real currentPos: Players.active?.position ?? 0
+                            readonly property bool isWordPast: lyricItem.isCurrent && currentPos >= wEnd
+                            readonly property bool isWordActive: lyricItem.isCurrent && currentPos >= wStart && currentPos < wEnd
+
+                            implicitWidth: wordText.implicitWidth
+                            implicitHeight: wordText.implicitHeight
+
+                            StyledText {
+                                id: wordText
+
+                                anchors.centerIn: parent
+                                text: wordItem.wText
+                                font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+
+                                color: {
+                                    if (!lyricItem.isCurrent) {
+                                        return mouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline;
+                                    }
+                                    if (wordItem.isWordActive || wordItem.isWordPast) {
+                                        return Colours.palette.m3primary;
+                                    }
+                                    return Qt.alpha(Colours.palette.m3onSurface, 0.4);
+                                }
+
+                                scale: wordItem.isWordActive ? 1.05 : 1.0
+                                Behavior on scale {
+                                    Anim {
+                                        duration: 100
+                                        easing.type: Easing.OutQuad
+                                    }
+                                }
+
+                                layer.enabled: wordItem.isWordActive
+                                layer.effect: MultiEffect {
+                                    shadowEnabled: true
+                                    shadowColor: Colours.palette.m3primary
+                                    shadowOpacity: 0.8
+                                    shadowBlur: 0.6
+                                    blur: 0.0
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    const p = Players.active;
+                                    if (p && wordItem.wStart >= 0) {
+                                        p.position = wordItem.wStart;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -396,12 +541,17 @@ Item {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 hoverEnabled: true
+                z: -1
                 onClicked: {
                     const p = Players.active;
                     if (p) {
-                        const time = Lyrics.timeForIndex(lyricItem.index);
-                        if (time >= 0) {
-                            p.position = time;
+                        if (root.useSpicy && lyricItem.lineStartTime >= 0) {
+                            p.position = lyricItem.lineStartTime;
+                        } else {
+                            const time = Lyrics.timeForIndex(lyricItem.index);
+                            if (time >= 0) {
+                                p.position = time;
+                            }
                         }
                     }
                 }

@@ -2110,5 +2110,34 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Recompiled `libcaelestia-services.so` and synchronized all QML files to `~/.config/quickshell/caelestia/`.
    - Verified active layout and instant centering via screenshots (`lyrics_centered_and_fixed.png`, `lyrics_second_open.png`).
 -->
-
+<!-- Section 229 Spicetify Spicy Lyrics Extension Integration (Word/Syllable Karaoke Sync) & Drawer Open Centering Fix:
+1. Requirements & Intent:
+   - Provide rich, word-synced and syllable-level karaoke lyrics in Caelestia Media Panel by bridging directly to Spicetify's Spicy Lyrics extension (`Spikerko/spicy-lyrics`).
+   - Permanently eliminate any residual top-to-middle slide on opening the dashboard/media drawer.
+   - Retain seamless fallback to standard Caelestia `Lyrics` service for non-Spotify players or songs without syllable sync.
+   - Enable word-level and line-level click-to-seek.
+2. Changes Implemented:
+   - `~/.config/spicetify/Extensions/caelestia-bridge.js` (and `shell/scripts/caelestia-bridge.js`):
+     * Implemented `tryGetSpicyLyrics(uri)` connecting directly to Spotify's CacheStorage (`"SpicyLyrics_LyricsStore_g1"`).
+     * Extracts syllable array with `StartTime`, `EndTime`, and `Text`, normalizing timestamps to seconds.
+     * Dispatches parsed lyrics JSON to local bridge via `POST http://127.0.0.1:8999/lyrics`.
+     * Added script hot-reload lifecycle versioning (`window.__caelestia_bridge_version`) to cleanly abort stale poll loops on Spicetify reloads.
+     * Added `/debug` endpoint logging to `/tmp/spotify_bridge.log`.
+   - `shell/scripts/spotify_bridge.py`:
+     * Added `/lyrics` GET and POST routes, maintaining `current_lyrics` in memory.
+     * Added `emit_lyrics(current_lyrics)` to stream `LYRICS:<json>` over stdout to Quickshell with broken pipe protection.
+     * Added `/refresh` route to queue `reloadLyrics` commands on demand.
+   - `shell/services/SpotifyService.qml`:
+     * Added `spicyLyrics`, `hasSpicyLyrics`, `syncType`, and `lyricLines` properties.
+     * Implemented binary search `indexForTime(timeSeconds)` for O(log N) line lookup and `timeForIndex(index)`.
+     * Added `LYRICS:` stdout parser and track URI change handling.
+   - `shell/modules/dashboard/media/LyricList.qml`:
+     * Switched `highlightRangeMode` to `userScrolling ? ListView.NoHighlightRange : ListView.StrictlyEnforceRange` to permanently fix list centering on drawer expansion.
+     * Implemented 0ms instant snapping (`jumpToCurrent(true)`) with a 60ms `settleTimer` when drawer height expands (`height > 100`), on visibility change, and on model updates.
+     * Built progressive word/syllable karaoke delegate: active syllable scales 1.05x with primary shadow glow; past words remain solid `m3primary`; upcoming words display translucent `Qt.alpha(m3onSurface, 0.4)`.
+     * Added word-level click-to-seek directly to syllable `startTime`, as well as line-level fallback.
+     * Increased `syncTimer` frequency to 60ms for smooth 16+ fps word tracking.
+   - Synchronized all files to `~/.config/quickshell/caelestia/` and `~/.config/spicetify/Extensions/`.
+   - Verified live with syllable-synced track: instantaneous centered placement upon opening and progressive word karaoke illumination.
+-->
 
