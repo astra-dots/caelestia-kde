@@ -314,6 +314,14 @@ Item {
 
         model: root.useSpicy ? SpotifyService.lyricLines : root.lyricList
 
+        NumberAnimation {
+            id: scrollAnim
+            target: lyrics
+            property: "contentY"
+            duration: Tokens.anim.durations.large
+            easing.type: Easing.OutCubic
+        }
+
         Timer {
             id: settleTimer
             interval: 60
@@ -329,41 +337,76 @@ Item {
             }
         }
 
-        function jumpToCurrent(forceInstant = false) {
-            if (count > 0 && height > 0) {
-                const targetIdx = Math.max(0, currentIndex);
-                if (forceInstant || !isReady) {
-                    isReady = false;
-                    positionViewAtIndex(targetIdx, currentIndex >= 0 ? ListView.Center : ListView.Beginning);
-                    settleTimer.restart();
-                } else if (currentIndex >= 0) {
+        function scrollToCurrent(instant = false) {
+            if (count === 0 || height <= 0) return;
+
+            if (currentIndex < 0) {
+                if (instant || !isReady) {
+                    scrollAnim.stop();
+                    positionViewAtIndex(0, ListView.Beginning);
+                } else if (!userScrolling) {
+                    scrollAnim.stop();
+                    scrollAnim.to = 0;
+                    scrollAnim.start();
+                }
+                return;
+            }
+
+            if (instant || !isReady) {
+                scrollAnim.stop();
+                positionViewAtIndex(currentIndex, ListView.Center);
+                return;
+            }
+
+            if (userScrolling) return;
+
+            Qt.callLater(() => {
+                if (currentItem && !userScrolling) {
+                    const itemCenter = currentItem.y + (currentItem.height / 2);
+                    const maxScroll = Math.max(0, lyrics.contentHeight - lyrics.height);
+                    const targetY = Math.max(0, Math.min(itemCenter - (lyrics.height / 2), maxScroll));
+                    if (Math.abs(lyrics.contentY - targetY) > lyrics.height * 2.5) {
+                        positionViewAtIndex(currentIndex, ListView.Center);
+                    } else {
+                        scrollAnim.stop();
+                        scrollAnim.to = targetY;
+                        scrollAnim.start();
+                    }
+                } else if (!currentItem && currentIndex >= 0) {
                     positionViewAtIndex(currentIndex, ListView.Center);
                 }
-            }
+            });
+        }
+
+        function jumpToCurrent(forceInstant = false) {
+            scrollToCurrent(forceInstant);
         }
 
         onCountChanged: {
-            jumpToCurrent(true);
+            scrollToCurrent(true);
         }
         onHeightChanged: {
             if (height > 100) {
                 if (!isReady) {
-                    jumpToCurrent(true);
-                } else if (currentIndex >= 0) {
-                    positionViewAtIndex(currentIndex, ListView.Center);
+                    scrollToCurrent(true);
+                    settleTimer.restart();
                 }
             }
         }
         onModelChanged: {
             isReady = false;
-            Qt.callLater(() => jumpToCurrent(true));
+            Qt.callLater(() => {
+                scrollToCurrent(true);
+                settleTimer.restart();
+            });
         }
         onCurrentIndexChanged: {
             if (count > 0 && height > 0) {
                 if (!isReady) {
-                    jumpToCurrent(true);
-                } else if (currentIndex >= 0) {
-                    positionViewAtIndex(currentIndex, ListView.Center);
+                    scrollToCurrent(true);
+                    settleTimer.restart();
+                } else {
+                    scrollToCurrent(false);
                 }
             }
         }
@@ -377,7 +420,7 @@ Item {
                 const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
                 return Lyrics.indexForTime(pos);
             });
-            jumpToCurrent(true);
+            scrollToCurrent(true);
         }
 
         Timer {
@@ -385,13 +428,12 @@ Item {
             interval: 3500
             onTriggered: {
                 lyrics.userScrolling = false;
-                if (lyrics.currentIndex >= 0 && lyrics.count > 0) {
-                    lyrics.positionViewAtIndex(lyrics.currentIndex, ListView.Center);
-                }
+                lyrics.scrollToCurrent(false);
             }
         }
 
         onMovementStarted: {
+            scrollAnim.stop();
             userScrolling = true;
             userScrollTimer.stop();
         }
@@ -400,11 +442,7 @@ Item {
             userScrollTimer.restart();
         }
 
-        highlightRangeMode: userScrolling ? ListView.NoHighlightRange : ListView.StrictlyEnforceRange
-        highlightMoveDuration: isReady ? Tokens.anim.durations.large : 0
-        highlightMoveVelocity: -1
-        preferredHighlightBegin: (height - 48) / 2
-        preferredHighlightEnd: (height + 48) / 2
+        highlightRangeMode: ListView.NoHighlightRange
 
         spacing: Tokens.spacing.extraSmall
         opacity: 0
@@ -417,12 +455,31 @@ Item {
             required property int index
 
             readonly property bool isCurrent: ListView.isCurrentItem
-            property real effectScale: isCurrent ? 1 : 0
+            readonly property real currentPos: root.useSpicy
+                ? SpotifyService.effectivePosition
+                : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
 
             readonly property string lineText: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
             readonly property var syllables: (typeof modelData === "object" && modelData?.syllables) ? modelData.syllables : []
             readonly property bool hasSyllables: syllables.length > 0
-            readonly property real lineStartTime: (typeof modelData === "object" && modelData?.startTime !== undefined) ? modelData.startTime : -1
+            readonly property real lineStartTime: (typeof modelData === "object" && modelData?.startTime !== undefined) ? Number(modelData.startTime) : -1
+            readonly property real lineEndTime: {
+                let end = -1;
+                if (typeof modelData === "object" && modelData?.endTime !== undefined && Number(modelData.endTime) > 0) {
+                    end = Number(modelData.endTime);
+                }
+                if (syllables.length > 0) {
+                    const last = syllables[syllables.length - 1];
+                    if (last && last.endTime !== undefined && Number(last.endTime) > 0) {
+                        end = Math.max(end, Number(last.endTime));
+                    }
+                }
+                return end;
+            }
+
+            readonly property bool isLineActive: isCurrent && currentPos >= lineStartTime && (lineEndTime <= 0 || currentPos < lineEndTime)
+            property real effectScale: isLineActive ? 1 : 0
+
             readonly property var backgroundLines: (typeof modelData === "object" && modelData?.background) ? modelData.background : []
             readonly property bool hasBackground: backgroundLines.length > 0
 
@@ -461,7 +518,7 @@ Item {
                         width: parent.width
                         text: lyricItem.lineText || ". . ."
                         horizontalAlignment: Text.AlignLeft
-                        color: lyricItem.isCurrent
+                        color: lyricItem.isLineActive
                             ? Colours.palette.m3primary
                             : mouse.containsMouse
                                 ? Colours.palette.m3onSurface
@@ -487,7 +544,7 @@ Item {
                             width: parent.width
                             text: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
                             font: Tokens.font.body.small
-                            color: lyricItem.isCurrent ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.7)
+                            color: lyricItem.isLineActive ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.7)
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         }
                     }
@@ -524,11 +581,11 @@ Item {
 
                                 visible: false
                                 text: " "
-                                font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                font: (lyricItem?.isCurrent ?? false) ? Tokens.font.title.small : Tokens.font.body.medium
                             }
 
                             Repeater {
-                                model: lyricItem.syllables
+                                model: lyricItem?.syllables ?? []
 
                                 delegate: Item {
                                     id: wordItem
@@ -544,14 +601,12 @@ Item {
                                     readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
                                     readonly property string displayText: rawText.trim()
 
-                                    readonly property real currentPos: root.useSpicy
-                                        ? SpotifyService.effectivePosition
-                                        : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
+                                    readonly property real currentPos: lyricItem?.currentPos ?? 0
 
-                                    readonly property bool isWordPast: lyricItem.isCurrent && currentPos >= wEnd
-                                    readonly property bool isWordActive: lyricItem.isCurrent && currentPos >= wStart && currentPos < wEnd
+                                    readonly property bool isWordPast: (lyricItem?.isLineActive ?? false) && currentPos >= wEnd
+                                    readonly property bool isWordActive: (lyricItem?.isLineActive ?? false) && currentPos >= wStart && currentPos < wEnd
                                     readonly property real fillProgress: {
-                                        if (!lyricItem.isCurrent || currentPos < wStart) return 0.0;
+                                        if (!(lyricItem?.isLineActive ?? false) || currentPos < wStart) return 0.0;
                                         if (currentPos >= wEnd) return 1.0;
                                         const dur = Math.max(0.04, wEnd - wStart);
                                         return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
@@ -566,10 +621,10 @@ Item {
                                         anchors.left: parent.left
                                         anchors.top: parent.top
                                         text: wordItem.displayText
-                                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                        font: (lyricItem?.isCurrent ?? false) ? Tokens.font.title.small : Tokens.font.body.medium
 
                                         color: {
-                                            if (!lyricItem.isCurrent) {
+                                            if (!(lyricItem?.isLineActive ?? false)) {
                                                 return wordMouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline;
                                             }
                                             if (wordItem.isWordPast) {
@@ -590,7 +645,7 @@ Item {
                                         anchors.bottom: parent.bottom
                                         clip: true
                                         width: Math.min(baseText.implicitWidth, Math.round(baseText.implicitWidth * wordItem.fillProgress))
-                                        visible: lyricItem.isCurrent && width > 0
+                                        visible: (lyricItem?.isLineActive ?? false) && width > 0
 
                                         StyledText {
                                             id: activeText
@@ -600,7 +655,7 @@ Item {
                                             width: baseText.implicitWidth
                                             height: baseText.implicitHeight
                                             text: wordItem.displayText
-                                            font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                            font: (lyricItem?.isCurrent ?? false) ? Tokens.font.title.small : Tokens.font.body.medium
                                             color: Colours.palette.m3primary
 
                                             layer.enabled: wordItem.isWordActive
@@ -640,12 +695,12 @@ Item {
                             }
                         }
 
-                        // 2. Background Vocals (Small Lyrics in soft capsule)
+                        // 2. Background Vocals (Small Lyrics flowing horizontally)
                         Repeater {
-                            model: lyricItem.backgroundLines
+                            model: lyricItem?.backgroundLines ?? []
 
-                            delegate: Rectangle {
-                                id: bgCapsule
+                            delegate: Item {
+                                id: bgLineItem
 
                                 required property var modelData
                                 required property int index
@@ -654,14 +709,25 @@ Item {
                                 readonly property bool bgHasSyllables: bgSyllables.length > 0
                                 readonly property string bgText: modelData?.text ?? ""
                                 readonly property real bgStart: Number(modelData?.startTime) || -1
-                                readonly property real bgEnd: Number(modelData?.endTime) || -1
+                                readonly property real bgEnd: {
+                                    let end = -1;
+                                    if (modelData?.endTime !== undefined && Number(modelData.endTime) > 0) {
+                                        end = Number(modelData.endTime);
+                                    }
+                                    if (bgSyllables.length > 0) {
+                                        const last = bgSyllables[bgSyllables.length - 1];
+                                        if (last && last.endTime !== undefined && Number(last.endTime) > 0) {
+                                            end = Math.max(end, Number(last.endTime));
+                                        }
+                                    }
+                                    return end;
+                                }
 
-                                width: Math.min(mainColumn.width, bgFlow.implicitWidth + (Tokens.padding.small * 2))
-                                implicitWidth: width
-                                implicitHeight: bgFlow.implicitHeight + (Tokens.padding.extraSmall * 2)
+                                readonly property bool isBgLineActive: (lyricItem?.isCurrent ?? false) && (lyricItem?.currentPos ?? 0) >= bgStart && (bgEnd <= 0 || (lyricItem?.currentPos ?? 0) < bgEnd)
 
-                                radius: Tokens.rounding.small
-                                color: lyricItem.isCurrent ? Qt.alpha(Colours.palette.m3surfaceContainerHigh, 0.45) : "transparent"
+                                width: mainColumn.width
+                                implicitWidth: mainColumn.width
+                                implicitHeight: bgFlow.implicitHeight
 
                                 StyledText {
                                     id: bgSpaceMetric
@@ -676,12 +742,12 @@ Item {
 
                                     anchors.left: parent.left
                                     anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.margins: Tokens.padding.extraSmall
                                     spacing: 0
 
                                     Repeater {
-                                        model: bgCapsule.bgHasSyllables ? bgCapsule.bgSyllables : [ { "text": bgCapsule.bgText, "startTime": bgCapsule.bgStart, "endTime": bgCapsule.bgEnd, "isPartOfWord": false } ]
+                                        model: bgLineItem.bgHasSyllables
+                                            ? bgLineItem.bgSyllables
+                                            : [ { "text": bgLineItem.bgText, "startTime": bgLineItem.bgStart, "endTime": bgLineItem.bgEnd, "isPartOfWord": false } ]
 
                                         delegate: Item {
                                             id: bgWordItem
@@ -697,17 +763,13 @@ Item {
                                             readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
                                             readonly property string displayText: rawText.trim()
 
-                                            readonly property real currentPos: root.useSpicy
-                                                ? SpotifyService.effectivePosition
-                                                : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
-
-                                            readonly property bool isWordPast: currentPos >= wEnd
-                                            readonly property bool isWordActive: currentPos >= wStart && currentPos < wEnd
+                                            readonly property bool isWordPast: (bgLineItem?.isBgLineActive ?? false) && (lyricItem?.currentPos ?? 0) >= wEnd
+                                            readonly property bool isWordActive: (bgLineItem?.isBgLineActive ?? false) && (lyricItem?.currentPos ?? 0) >= wStart && (lyricItem?.currentPos ?? 0) < wEnd
                                             readonly property real fillProgress: {
-                                                if (currentPos < wStart) return 0.0;
-                                                if (currentPos >= wEnd) return 1.0;
+                                                if (!(bgLineItem?.isBgLineActive ?? false) || (lyricItem?.currentPos ?? 0) < wStart) return 0.0;
+                                                if ((lyricItem?.currentPos ?? 0) >= wEnd) return 1.0;
                                                 const dur = Math.max(0.04, wEnd - wStart);
-                                                return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
+                                                return Math.min(1.0, Math.max(0.0, ((lyricItem?.currentPos ?? 0) - wStart) / dur));
                                             }
 
                                             implicitWidth: bgBaseText.implicitWidth + (needsSpace ? bgSpaceMetric.implicitWidth : 0)
@@ -722,7 +784,7 @@ Item {
                                                 font: Tokens.font.body.small
 
                                                 color: {
-                                                    if (!lyricItem.isCurrent) {
+                                                    if (!(bgLineItem?.isBgLineActive ?? false)) {
                                                         return bgWordMouse.containsMouse ? Colours.palette.m3onSurface : Qt.alpha(Colours.palette.m3outline, 0.7);
                                                     }
                                                     if (bgWordItem.isWordPast) {
@@ -743,7 +805,7 @@ Item {
                                                 anchors.bottom: parent.bottom
                                                 clip: true
                                                 width: Math.min(bgBaseText.implicitWidth, Math.round(bgBaseText.implicitWidth * bgWordItem.fillProgress))
-                                                visible: width > 0
+                                                visible: (bgLineItem?.isBgLineActive ?? false) && width > 0
 
                                                 StyledText {
                                                     anchors.left: parent.left
@@ -762,6 +824,15 @@ Item {
                                                         shadowBlur: 0.5
                                                         blur: 0.0
                                                     }
+                                                }
+                                            }
+
+                                            scale: bgWordItem.isWordActive ? 1.04 : 1.0
+                                            transformOrigin: Item.Left
+                                            Behavior on scale {
+                                                Anim {
+                                                    duration: 80
+                                                    easing.type: Easing.OutQuad
                                                 }
                                             }
 

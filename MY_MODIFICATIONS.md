@@ -2197,6 +2197,21 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Synchronized all modified files to `~/.config/quickshell/caelestia/` and `~/.config/spicetify/Extensions/`.
    - Verified live with high-resolution screenshot captures demonstrating background vocal rendering, intro cold-open rendering, and accurate lockstep sync.
 -->
+<!-- Section 232 Line-End Unhighlighting, Smooth Animated Scrolling, Horizontal Background Lyrics, and Crash Elimination:
+1. Requirements & Intent:
+   - Line unhighlighting on completion: When all words in a line are sung, unhighlight the line immediately instead of keeping it lit until the next line starts.
+   - Smooth animated scrolling: Replace abrupt line-jumping with fluid, easing-driven viewport animation (`Easing.OutCubic` over `Tokens.anim.durations.large`).
+   - Horizontal small lyrics: Fix background vocals rendering vertically word-by-word; allow them to flow horizontally directly below the lead lyrics in `Tokens.font.body.small`.
+   - Intro crash elimination: Fix Quickshell SIGSEGV crash (8.2 GB allocation in 237ms) occurring when opening the media panel during track intros before the first lyric starts.
+2. Changes Implemented:
+   - `shell/modules/dashboard/media/LyricList.qml`:
+     * Line unhighlighting: Defined `lineEndTime = Math.max(modelData.endTime, lastSyllable.endTime)` and `isLineActive = isCurrent && currentPos >= lineStartTime && (lineEndTime <= 0 || currentPos < lineEndTime)`. In both syllable and simple line delegates, active words and glow illuminate during `isLineActive`; as soon as `currentPos >= lineEndTime`, the line cleanly unhighlights to `m3outline`, the drop-shadow glow fades to 0, and words return to inactive state.
+     * Smooth animated scrolling: Added `NumberAnimation { id: scrollAnim; target: lyrics; property: "contentY"; duration: Tokens.anim.durations.large; easing.type: Easing.OutCubic }`. Implemented `scrollToCurrent(instant)`: calculates exact vertical center offset of `currentItem` and animates `contentY` smoothly on index changes. Large seeks (>2.5 screens) and cold drawer opens snap instantly via `positionViewAtIndex(index, Center)`.
+     * Horizontal background lyrics: Removed the 16px-clamped `Rectangle` (`bgCapsule`) and bound background line delegates directly to `width: mainColumn.width` with full-width `Flow`. Syllables flow horizontally across the line with proper word spacing, progressive wipe, isolated hover, and click-to-seek.
+     * Intro crash fix: Removed `highlightRangeMode: ListView.StrictlyEnforceRange` (which looped indefinitely trying to enforce range on non-existent index `-1`) and set `highlightRangeMode: ListView.NoHighlightRange`. Intro lines (`currentIndex < 0`) cleanly position at top (`ListView.Beginning`). Added optional chaining (`lyricItem?.isCurrent ?? false`, `lyricItem?.isLineActive ?? false`) across delegates to prevent null reference errors during item recycling.
+   - Synchronized all modified files to `~/.config/quickshell/caelestia/modules/dashboard/media/LyricList.qml`.
+   - Verified service stability under `plasma-caelestia.service` with zero crashes and clean logs.
+-->
 
 
 
