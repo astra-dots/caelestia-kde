@@ -1,6 +1,7 @@
 import "../../../components/controls"
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import Caelestia.Blobs
 import Caelestia.Config
 import Caelestia.Services
@@ -12,6 +13,58 @@ Item {
 
     property bool open
     readonly property real padding: Tokens.padding.large
+
+    property bool spotifyAvailable: false
+    property string spotifyThemeMode: "song"
+
+    Process {
+        id: fetchThemeModeProc
+        command: ["curl", "-s", "http://127.0.0.1:8999/theme-mode"]
+        stdout: StdioCollector {
+            id: themeModeStdout
+        }
+        onExited: {
+            try {
+                const data = JSON.parse(themeModeStdout.text);
+                if (data && data.mode) {
+                    root.spotifyAvailable = true;
+                    root.spotifyThemeMode = data.mode;
+                }
+            } catch (e) {}
+        }
+    }
+
+    Process {
+        id: setThemeModeProc
+        stdout: StdioCollector {}
+        onExited: {
+            fetchThemeModeProc.running = true;
+        }
+    }
+
+    function toggleSpotifyTheme() {
+        const nextMode = (root.spotifyThemeMode === "system") ? "song" : "system";
+        root.spotifyThemeMode = nextMode;
+        setThemeModeProc.command = ["curl", "-s", "-X", "POST", "-H", "Content-Type: application/json", "-d", JSON.stringify({ mode: nextMode }), "http://127.0.0.1:8999/theme-mode"];
+        setThemeModeProc.running = true;
+    }
+
+    Component.onCompleted: {
+        fetchThemeModeProc.running = true;
+    }
+
+    onOpenChanged: {
+        if (root.open) {
+            fetchThemeModeProc.running = true;
+        }
+    }
+
+    Timer {
+        interval: 2500
+        running: root.open
+        repeat: true
+        onTriggered: fetchThemeModeProc.running = true
+    }
 
     implicitWidth: btn.implicitWidth * 0.9
     implicitHeight: btn.implicitHeight * 0.9
@@ -202,6 +255,25 @@ Item {
                         icon: "add"
                         type: IconButton.Text
                         onClicked: Lyrics.offset += 50
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
+                    visible: root.spotifyAvailable
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: qsTr("Theme: %1").arg(root.spotifyThemeMode === "system" ? qsTr("System Colors") : qsTr("Song Colors"))
+                        color: Colours.palette.m3onSurfaceVariant
+                        animate: true
+                    }
+
+                    IconButton {
+                        icon: root.spotifyThemeMode === "system" ? "palette" : "music_note"
+                        type: IconButton.Text
+                        onClicked: root.toggleSpotifyTheme()
                     }
                 }
             }

@@ -461,17 +461,361 @@
         attempt(0);
     }
 
-    async function handleCommand(cmd) {
-        if (!cmd) return;
-        if (cmd.action === "eval") {
+    // ==========================================
+    // Caelestia Dynamic Theme Manager
+    // ==========================================
+    let currentThemeMode = localStorage.getItem("caelestia:theme_mode") || "song";
+    let activeScheme = null;
+    let topbarThemeBtn = null;
+    let contextMenuItem = null;
+    let caelestiaGradCanvas = null;
+
+    const SVG_SONG_THEME = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>`;
+    const SVG_SYSTEM_THEME = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
+
+    function hexToRgb(hex) {
+        if (!hex) return "0,0,0";
+        let c = hex.replace("#", "").trim();
+        if (c.length === 3) c = c.split("").map(x => x + x).join("");
+        if (c.length !== 6) return "0,0,0";
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        return `${r},${g},${b}`;
+    }
+
+    function createCaelestiaGradientCanvas(scheme) {
+        if (!scheme) return null;
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+
+        const primary = scheme.primary || "#afc8eb";
+        const primaryContainer = scheme.primaryContainer || "#3c5472";
+        const secondary = scheme.secondary || "#bbc7db";
+        const tertiary = scheme.tertiary || "#e1d8ff";
+        const surfaceContainer = scheme.surfaceContainer || "#161a1f";
+
+        // Multi-stop liquid gradient matching Caelestia Material You
+        const grad = ctx.createLinearGradient(0, 0, 512, 512);
+        grad.addColorStop(0.0, primary);
+        grad.addColorStop(0.32, primaryContainer);
+        grad.addColorStop(0.62, tertiary);
+        grad.addColorStop(0.82, secondary);
+        grad.addColorStop(1.0, surfaceContainer);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Soft radial highlight in upper right
+        const rad = ctx.createRadialGradient(420, 90, 10, 420, 90, 320);
+        rad.addColorStop(0, primary);
+        rad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = rad;
+        ctx.fillRect(0, 0, 512, 512);
+
+        return canvas;
+    }
+
+    function installKawarpShaderHook() {
+        if (window._caelestiaShaderHookInstalled) return;
+        window._caelestiaShaderHookInstalled = true;
+
+        const origTexImage2D = WebGLRenderingContext.prototype.texImage2D;
+        WebGLRenderingContext.prototype.texImage2D = function(...args) {
+            const canvas = this.canvas;
+            if (canvas && canvas.classList && canvas.classList.contains("spicy-dynamic-bg")) {
+                canvas._kawarpGL = this;
+                if (currentThemeMode === "system" && caelestiaGradCanvas) {
+                    if (args.length === 6) {
+                        args[5] = caelestiaGradCanvas;
+                    }
+                }
+            }
+            return origTexImage2D.apply(this, args);
+        };
+    }
+
+    function applySystemTheme(scheme) {
+        if (!scheme) return;
+        activeScheme = scheme;
+        caelestiaGradCanvas = createCaelestiaGradientCanvas(scheme);
+
+        let styleEl = document.getElementById("caelestia-system-theme");
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "caelestia-system-theme";
+            document.head.appendChild(styleEl);
+        }
+
+        const p = scheme.primary || "#afc8eb";
+        const onP = scheme.onPrimary || "#29425f";
+        const pC = scheme.primaryContainer || "#3c5472";
+        const onPC = scheme.onPrimaryContainer || "#d3e5ff";
+        const s = scheme.secondary || "#bbc7db";
+        const onS = scheme.onSecondary || "#354151";
+        const sC = scheme.secondaryContainer || "#303c4c";
+        const onSC = scheme.onSecondaryContainer || "#b4c0d4";
+        const t = scheme.tertiary || "#e1d8ff";
+        const onT = scheme.onTertiary || "#504972";
+        const tC = scheme.tertiaryContainer || "#d3c8f9";
+        const onTC = scheme.onTertiaryContainer || "#484068";
+        const err = scheme.error || "#fa746f";
+        const surf = scheme.surface || "#0c0e12";
+        const surfLow = scheme.surfaceContainerLow || "#101418";
+        const surfC = scheme.surfaceContainer || "#161a1f";
+        const surfHigh = scheme.surfaceContainerHigh || "#1c2026";
+        const surfHighest = scheme.surfaceContainerHighest || "#21262d";
+        const bg = scheme.background || "#0c0e12";
+        const onBg = scheme.onBackground || "#e1e5ef";
+        const onSurf = scheme.onSurface || "#e1e5ef";
+        const surfVar = scheme.surfaceVariant || "#21262d";
+        const onSurfVar = scheme.onSurfaceVariant || "#a7abb4";
+        const outline = scheme.outline || "#71767e";
+        const outlineVar = scheme.outlineVariant || "#434850";
+
+        styleEl.textContent = `
+            :root {
+                --clr-primary: ${p} !important;
+                --clr-primary-rgb: ${hexToRgb(p)} !important;
+                --clr-on-primary: ${onP} !important;
+                --clr-on-primary-rgb: ${hexToRgb(onP)} !important;
+                --clr-primary-container: ${pC} !important;
+                --clr-primary-container-rgb: ${hexToRgb(pC)} !important;
+                --clr-on-primary-container: ${onPC} !important;
+                --clr-on-primary-container-rgb: ${hexToRgb(onPC)} !important;
+                --clr-secondary: ${s} !important;
+                --clr-secondary-rgb: ${hexToRgb(s)} !important;
+                --clr-on-secondary: ${onS} !important;
+                --clr-on-secondary-rgb: ${hexToRgb(onS)} !important;
+                --clr-secondary-container: ${sC} !important;
+                --clr-secondary-container-rgb: ${hexToRgb(sC)} !important;
+                --clr-on-secondary-container: ${onSC} !important;
+                --clr-on-secondary-container-rgb: ${hexToRgb(onSC)} !important;
+                --clr-tertiary: ${t} !important;
+                --clr-tertiary-rgb: ${hexToRgb(t)} !important;
+                --clr-on-tertiary: ${onT} !important;
+                --clr-on-tertiary-rgb: ${hexToRgb(onT)} !important;
+                --clr-tertiary-container: ${tC} !important;
+                --clr-tertiary-container-rgb: ${hexToRgb(tC)} !important;
+                --clr-on-tertiary-container: ${onTC} !important;
+                --clr-on-tertiary-container-rgb: ${hexToRgb(onTC)} !important;
+                --clr-error: ${err} !important;
+                --clr-error-rgb: ${hexToRgb(err)} !important;
+                --clr-surface: ${surf} !important;
+                --clr-surface-rgb: ${hexToRgb(surf)} !important;
+                --clr-surface-1: ${surfLow} !important;
+                --clr-surface-1-rgb: ${hexToRgb(surfLow)} !important;
+                --clr-surface-2: ${surfC} !important;
+                --clr-surface-2-rgb: ${hexToRgb(surfC)} !important;
+                --clr-surface-3: ${surfHigh} !important;
+                --clr-surface-3-rgb: ${hexToRgb(surfHigh)} !important;
+                --clr-surface-4: ${surfHighest} !important;
+                --clr-surface-4-rgb: ${hexToRgb(surfHighest)} !important;
+                --clr-background: ${bg} !important;
+                --clr-background-rgb: ${hexToRgb(bg)} !important;
+                --clr-on-background: ${onBg} !important;
+                --clr-on-background-rgb: ${hexToRgb(onBg)} !important;
+                --clr-on-surface: ${onSurf} !important;
+                --clr-on-surface-rgb: ${hexToRgb(onSurf)} !important;
+                --clr-surface-variant: ${surfVar} !important;
+                --clr-surface-variant-rgb: ${hexToRgb(surfVar)} !important;
+                --clr-on-surface-variant: ${onSurfVar} !important;
+                --clr-on-surface-variant-rgb: ${hexToRgb(onSurfVar)} !important;
+                --clr-outline: ${outline} !important;
+                --clr-outline-rgb: ${hexToRgb(outline)} !important;
+                --clr-outline-variant: ${outlineVar} !important;
+                --clr-outline-variant-rgb: ${hexToRgb(outlineVar)} !important;
+
+                --spice-text: ${onSurf} !important;
+                --spice-subtext: ${onSurfVar} !important;
+                --spice-main: ${surfC} !important;
+                --spice-sidebar: ${surf} !important;
+                --spice-card: ${surfHigh} !important;
+                --spice-player: ${sC} !important;
+                --spice-main-elevated: ${surfHigh} !important;
+                --spice-highlight-elevated: ${surfHighest} !important;
+                --spice-selected-row: ${onSurf} !important;
+                --spice-button: ${p} !important;
+                --spice-button-active: ${p} !important;
+                --spice-button-disabled: ${outline} !important;
+                --spice-tab-active: ${surfHigh} !important;
+                --spice-notification: ${outline} !important;
+                --spice-notification-error: ${err} !important;
+            }
+
+            html.caelestia-system-mode .lucid-bg .bg.static,
+            html.caelestia-system-mode .lucid-bg .bg.animated {
+                opacity: 0 !important;
+                visibility: hidden !important;
+            }
+            html.caelestia-system-mode .lucid-bg {
+                background: radial-gradient(ellipse at 50% -20%, ${surfHigh} 0%, ${surfC} 45%, ${surf} 100%) !important;
+            }
+            html.caelestia-system-mode .lucid-bg .bg-wrapper {
+                background: transparent !important;
+            }
+            #caelestia-topbar-theme-btn svg {
+                color: ${p} !important;
+            }
+        `;
+
+        document.documentElement.classList.add("caelestia-system-mode");
+    }
+
+    function removeSystemTheme() {
+        const styleEl = document.getElementById("caelestia-system-theme");
+        if (styleEl) styleEl.remove();
+        document.documentElement.classList.remove("caelestia-system-mode");
+    }
+
+    function refreshBackgrounds() {
+        document.querySelectorAll(".spicy-dynamic-bg").forEach(el => {
+            el.removeAttribute("data-cover-id");
+        });
+
+        // Trigger a gentle skip/seek cycle or event so Spicy Lyrics re-evaluates
+        if (Spicetify.Player && Spicetify.Player.dispatchEvent) {
+            Spicetify.Player.dispatchEvent({ type: "songchange", data: Spicetify.Player.data });
+        }
+    }
+
+    function updateTopbarButton() {
+        const isSystem = (currentThemeMode === "system");
+        const tooltip = isSystem
+            ? "Theme: System Colors (Click for Song Colors)"
+            : "Theme: Song Colors (Click for System Colors)";
+        const icon = isSystem ? SVG_SYSTEM_THEME : SVG_SONG_THEME;
+
+        if (topbarThemeBtn) {
+            topbarThemeBtn.label = tooltip;
+            topbarThemeBtn.icon = icon;
+            if (topbarThemeBtn.element) {
+                topbarThemeBtn.element.setAttribute("title", tooltip);
+            }
+            if (topbarThemeBtn.tippy) {
+                topbarThemeBtn.tippy.setContent(tooltip);
+            }
+        }
+        if (contextMenuItem) {
+            contextMenuItem.name = isSystem
+                ? "Theme: System Colors (Switch to Song)"
+                : "Theme: Song Colors (Switch to System)";
+        }
+    }
+
+    function setThemeMode(mode, scheme, notifyBridge = true) {
+        if (mode !== "song" && mode !== "system") return;
+        currentThemeMode = mode;
+        try {
+            localStorage.setItem("caelestia:theme_mode", mode);
+        } catch (e) {}
+
+        if (scheme) {
+            activeScheme = scheme;
+        }
+
+        if (currentThemeMode === "system") {
+            if (!activeScheme) {
+                fetch("http://127.0.0.1:8999/scheme")
+                    .then(r => r.json())
+                    .then(s => {
+                        applySystemTheme(s);
+                        refreshBackgrounds();
+                        updateTopbarButton();
+                    }).catch(() => {});
+            } else {
+                applySystemTheme(activeScheme);
+                refreshBackgrounds();
+            }
+        } else {
+            removeSystemTheme();
+            refreshBackgrounds();
+        }
+
+        updateTopbarButton();
+
+        if (notifyBridge) {
+            fetch("http://127.0.0.1:8999/theme-mode", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode: currentThemeMode })
+            }).catch(() => {});
+        }
+    }
+
+    function toggleThemeMode() {
+        const nextMode = (currentThemeMode === "system") ? "song" : "system";
+        setThemeMode(nextMode, activeScheme, true);
+    }
+
+    function initThemeControls() {
+        installKawarpShaderHook();
+
+        // Create Spicetify Topbar Button
+        if (Spicetify.Topbar && typeof Spicetify.Topbar.Button === "function") {
             try {
-                Promise.resolve(eval(cmd.code)).then(res => {
-                    logToBridge("EVAL_RESULT: " + (typeof res === "string" ? res : JSON.stringify(res)));
+                topbarThemeBtn = new Spicetify.Topbar.Button(
+                    currentThemeMode === "system" ? "Theme: System Colors" : "Theme: Song Colors",
+                    currentThemeMode === "system" ? SVG_SYSTEM_THEME : SVG_SONG_THEME,
+                    () => toggleThemeMode()
+                );
+                if (topbarThemeBtn.element) {
+                    topbarThemeBtn.element.id = "caelestia-topbar-theme-btn";
+                }
+            } catch (e) {}
+        }
+
+        // Create Spicetify Menu Item
+        if (Spicetify.Menu && typeof Spicetify.Menu.Item === "function") {
+            try {
+                contextMenuItem = new Spicetify.Menu.Item(
+                    currentThemeMode === "system" ? "Theme: System Colors (Switch to Song)" : "Theme: Song Colors (Switch to System)",
+                    false,
+                    () => toggleThemeMode()
+                );
+                contextMenuItem.register();
+            } catch (e) {}
+        }
+
+        updateTopbarButton();
+
+        // Initial sync with bridge
+        fetch("http://127.0.0.1:8999/theme-mode")
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.scheme) {
+                    activeScheme = data.scheme;
+                    caelestiaGradCanvas = createCaelestiaGradientCanvas(data.scheme);
+                }
+                const preferredMode = data?.mode || currentThemeMode;
+                setThemeMode(preferredMode, data?.scheme, false);
+            }).catch(() => {
+                if (currentThemeMode === "system") {
+                    setThemeMode("system", null, false);
+                }
+            });
+    }
+
+    async function handleCommand(cmd) {
+        if (!cmd || !cmd.action || cmd.action === "none") return;
+        if (cmd.action === "eval" && cmd.code) {
+            try {
+                const res = (0, eval)(cmd.code);
+                Promise.resolve(res).then(val => {
+                    if (val !== undefined) logToBridge("EVAL_RES: " + JSON.stringify(val));
                 }).catch(err => {
                     logToBridge("EVAL_PROMISE_ERR: " + err.message);
                 });
             } catch (e) {
                 logToBridge("EVAL_ERR: " + e.message);
+            }
+            return;
+        }
+        if (cmd.action === "setThemeMode") {
+            if (cmd.mode) {
+                setThemeMode(cmd.mode, cmd.scheme, false);
             }
             return;
         }
@@ -533,6 +877,7 @@
         logToBridge("Bridge initialized v" + currentVersion);
         sendState(true);
         syncLyricsForCurrentTrack(true);
+        initThemeControls();
         while (window.__caelestia_bridge_version === currentVersion) {
             try {
                 const res = await fetch("http://127.0.0.1:8999/poll", { cache: "no-store", mode: "cors" });

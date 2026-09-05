@@ -12,6 +12,7 @@ import queue
 import threading
 import urllib.parse
 import subprocess
+import re
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 PORT = 8999
@@ -22,6 +23,63 @@ lock = threading.Lock()
 current_state = {"isLiked": False, "uri": ""}
 current_lyrics = {}
 LYRICS_CACHE_FILE = "/tmp/caelestia_spotify_lyrics.json"
+THEME_FILE = "/tmp/caelestia_spotify_theme.json"
+current_theme_mode = "song"
+cached_scheme = {}
+last_scheme_check = 0
+
+
+def load_cached_theme_mode():
+    global current_theme_mode
+    if os.path.exists(THEME_FILE):
+        try:
+            with open(THEME_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if "mode" in data:
+                    current_theme_mode = data["mode"]
+        except Exception as e:
+            log_debug(f"Error loading theme mode: {e}")
+
+
+def save_cached_theme_mode():
+    try:
+        with open(THEME_FILE, "w", encoding="utf-8") as f:
+            json.dump({"mode": current_theme_mode}, f)
+    except Exception as e:
+        log_debug(f"Error saving theme mode: {e}")
+
+
+def get_caelestia_scheme():
+    global cached_scheme, last_scheme_check
+    now = time.time()
+    if cached_scheme and (now - last_scheme_check < 2.0):
+        return cached_scheme
+
+    colors = {}
+    try:
+        out = subprocess.check_output(["caelestia", "scheme", "get"], text=True, timeout=2)
+        in_colors = False
+        ansi_regex = re.compile(r'\x1b\[[0-9;]*m')
+        for line in out.splitlines():
+            line_clean = ansi_regex.sub('', line)
+            if "Colours:" in line_clean:
+                in_colors = True
+                continue
+            if in_colors:
+                parts = line_clean.strip().split(":")
+                if len(parts) == 2:
+                    k = parts[0].strip()
+                    v = parts[1].strip()
+                    if v:
+                        if not v.startswith("#"):
+                            v = "#" + v
+                        colors[k] = v
+        if colors:
+            cached_scheme = colors
+            last_scheme_check = now
+    except Exception as e:
+        log_debug(f"Error fetching caelestia scheme: {e}")
+    return cached_scheme or colors
 
 
 def load_cached_lyrics():
@@ -349,6 +407,24 @@ class BridgeHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+        elif path == "/scheme":
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(json.dumps(get_caelestia_scheme()).encode("utf-8"))
+            except Exception:
+                pass
+
+        elif path == "/theme-mode":
+            self.end_headers_cors(200)
+            try:
+                payload = {
+                    "mode": current_theme_mode,
+                    "scheme": get_caelestia_scheme()
+                }
+                self.wfile.write(json.dumps(payload).encode("utf-8"))
+            except Exception:
+                pass
+
         else:
             self.end_headers_cors(404)
             try:
@@ -454,6 +530,28 @@ class BridgeHandler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+        elif parsed.path == "/theme-mode":
+            global current_theme_mode
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length).decode("utf-8")
+                data = json.loads(body)
+                if "mode" in data:
+                    new_mode = "system" if data["mode"] == "system" else "song"
+                    current_theme_mode = new_mode
+                    save_cached_theme_mode()
+                    scheme = get_caelestia_scheme()
+                    log_debug(f"POST /theme-mode -> mode set to {current_theme_mode}")
+                    queue_command({"action": "setThemeMode", "mode": current_theme_mode, "scheme": scheme})
+            except Exception as e:
+                log_debug(f"POST /theme-mode error: {e}")
+
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(json.dumps({"status": "ok", "mode": current_theme_mode}).encode("utf-8"))
+            except Exception:
+                pass
+
         else:
             self.end_headers_cors(404)
             try:
@@ -498,6 +596,7 @@ def main():
     except Exception:
         pass
 
+    load_cached_theme_mode()
     load_cached_lyrics()
 
     try:
