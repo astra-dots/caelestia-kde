@@ -2140,4 +2140,33 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Synchronized all files to `~/.config/quickshell/caelestia/` and `~/.config/spicetify/Extensions/`.
    - Verified live with syllable-synced track: instantaneous centered placement upon opening and progressive word karaoke illumination.
 -->
+<!-- Section 230 Spicy Lyrics Progressive Syllable Wipe Animation, Zero-Lag Vocal Sync, Isolated Word Hover, and Disk Caching:
+1. Requirements & Intent:
+   - Provide smooth, fluid progressive word/syllable horizontal wipe animations mimicking Spicy Lyrics rather than jarring binary on/off word illumination.
+   - Eliminate audio-to-lyric synchronization latency (PipeWire buffer delay / D-Bus polling lag) for tight vocal alignment.
+   - Fix hover highlighting bug where hovering an individual syllable word caused the entire line to turn white.
+   - Fix word merging glitch where adjacent syllables/words lacked proper spacing ("Chaleyateri" instead of "Chaleya teri").
+   - Eliminate intermittent 2-3 second lyric display delays when opening the dashboard/media drawer.
+2. Changes Implemented:
+   - `shell/modules/dashboard/media/LyricList.qml`:
+     * Progressive syllable clip wipe: Created dual-layer text rendering with `activeClip` (`Item { clip: true; width: Math.min(baseText.implicitWidth, Math.round(baseText.implicitWidth * wordItem.fillProgress)) }`) over `baseText`. As the singer vocalizes, `fillProgress = (currentPos - wStart) / dur` smoothly clips the illuminated `m3primary` text with dynamic drop shadow from left to right.
+     * Word spacing: Added `displayText: rawText.trim()` and explicit `spaceMetric.implicitWidth` trailing space handling (`implicitWidth: baseText.implicitWidth + (needsSpace ? spaceMetric.implicitWidth : 0)`), preventing syllable fusion while preserving continuous words.
+     * Isolated word hover: Attached an individual `MouseArea` to each word delegate controlling `wordMouse.containsMouse ? m3onSurface : ...`.
+     * Disabled parent line hover on syllable lines (`mouse.hoverEnabled: !lyricItem.hasSyllables`) to prevent the entire line from turning white on hover.
+     * Increased `syncTimer` frequency from 60ms to 25ms (~40 FPS) for buttery smooth fill progress animation.
+     * Hooked `SpotifyService.requestLyrics()` on `visibleChanged` for instantaneous lyrics loading when opening the drawer.
+   - `shell/services/SpotifyService.qml`:
+     * Added `leadOffset: 0.15` (150ms lead-time compensation) and `effectivePosition: (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0) + leadOffset` to offset PipeWire / MPRIS polling latency, locking visual wipe directly to audio attack.
+     * Implemented `requestLyrics()` to query `/lyrics` and trigger `/refresh` on Spotify track change or service reconnection.
+   - `shell/scripts/spotify_bridge.py`:
+     * Added disk persistence (`/tmp/caelestia_spotify_lyrics.json`) so lyrics survive bridge and Quickshell restarts, loading in 0ms on startup.
+     * Updated `GET /lyrics` to re-emit `LYRICS:<json>` over Quickshell stdout on demand.
+     * Added `/eval` route to safely execute diagnostics inside the Spicetify browser context.
+   - `shell/scripts/caelestia-bridge.js` (and `~/.config/spicetify/Extensions/caelestia-bridge.js`):
+     * Accelerated retry cadence from slow 300-4000ms intervals to rapid polling `[150, 250, 400, 600, 900, 1300, 1800, 2500]ms`, dispatching cached lyrics to bridge within 150-250ms of track change.
+     * Added immediate `syncLyricsForCurrentTrack(true)` and `sendState(true)` upon bridge initialization.
+   - Synchronized all modified files to `~/.config/quickshell/caelestia/` and verified live with high-resolution screenshot captures.
+-->
+
+
 

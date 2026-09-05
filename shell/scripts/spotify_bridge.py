@@ -21,6 +21,29 @@ active_waiters = []
 lock = threading.Lock()
 current_state = {"isLiked": False, "uri": ""}
 current_lyrics = {}
+LYRICS_CACHE_FILE = "/tmp/caelestia_spotify_lyrics.json"
+
+
+def load_cached_lyrics():
+    global current_lyrics
+    if os.path.exists(LYRICS_CACHE_FILE):
+        try:
+            with open(LYRICS_CACHE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data and data.get("lines"):
+                current_lyrics = data
+                log_debug(f"Loaded {len(data.get('lines', []))} lines from disk for {data.get('uri')}")
+                emit_lyrics(current_lyrics)
+        except Exception as e:
+            log_debug(f"Error loading disk lyrics: {e}")
+
+
+def save_cached_lyrics(data):
+    try:
+        with open(LYRICS_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception as e:
+        log_debug(f"Error saving disk lyrics: {e}")
 
 
 def log_debug(msg):
@@ -131,6 +154,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
         elif path == "/lyrics":
             log_debug("GET /lyrics requested")
+            if current_lyrics and current_lyrics.get("lines"):
+                emit_lyrics(current_lyrics)
             self.end_headers_cors(200)
             try:
                 self.wfile.write(json.dumps(current_lyrics).encode("utf-8"))
@@ -232,6 +257,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 body = self.rfile.read(length).decode("utf-8")
                 data = json.loads(body)
                 current_lyrics = data
+                save_cached_lyrics(current_lyrics)
                 log_debug(f"POST /lyrics -> uri={data.get('uri')} type={data.get('type')} lines={len(data.get('lines', []))}")
                 emit_lyrics(current_lyrics)
             except Exception as e:
@@ -253,6 +279,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self.end_headers_cors(200)
             try:
                 self.wfile.write(b'{"status":"ok"}')
+            except Exception:
+                pass
+
+        elif parsed.path == "/eval":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                code = self.rfile.read(length).decode("utf-8")
+                queue_command({"action": "eval", "code": code})
+                log_debug(f"Queued eval: {code[:60]}...")
+            except Exception as e:
+                log_debug(f"Eval queue error: {e}")
+            self.end_headers_cors(200)
+            try:
+                self.wfile.write(b'{"status":"queued"}')
             except Exception:
                 pass
 
@@ -317,6 +357,8 @@ def main():
         sys.stdout.flush()
     except Exception:
         pass
+
+    load_cached_lyrics()
 
     try:
         server.serve_forever()

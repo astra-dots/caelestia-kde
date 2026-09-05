@@ -27,6 +27,9 @@ Item {
                 lyrics.isReady = false;
             }
         } else {
+            if (SpotifyService.isSpotify && !SpotifyService.hasSpicyLyrics) {
+                SpotifyService.requestLyrics();
+            }
             Qt.callLater(() => {
                 if (typeof lyrics !== "undefined" && lyrics && lyrics.height > 100) {
                     lyrics.jumpToCurrent(true);
@@ -286,7 +289,7 @@ Item {
     Timer {
         id: syncTimer
         running: Players.active?.isPlaying ?? false
-        interval: 60
+        interval: 25
         repeat: true
         triggeredOnStart: true
         onTriggered: {
@@ -354,10 +357,10 @@ Item {
         Component.onCompleted: {
             currentIndex = Qt.binding(() => {
                 lyrics.model; // Force update when lyrics change
-                const pos = Players.active?.position ?? 0;
                 if (root.useSpicy) {
-                    return SpotifyService.indexForTime(pos);
+                    return SpotifyService.indexForTime(SpotifyService.effectivePosition);
                 }
+                const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
                 return Lyrics.indexForTime(pos);
             });
             jumpToCurrent(true);
@@ -459,74 +462,139 @@ Item {
             Component {
                 id: syllableFlowComponent
 
-                Flow {
-                    id: flowLayout
+                Item {
+                    id: flowWrapper
 
                     width: contentLoader.width
-                    spacing: 0
+                    implicitWidth: contentLoader.width
+                    implicitHeight: flowLayout.implicitHeight
 
-                    Repeater {
-                        model: lyricItem.syllables
+                    StyledText {
+                        id: spaceMetric
 
-                        delegate: Item {
-                            id: wordItem
+                        visible: false
+                        text: " "
+                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                    }
 
-                            required property var modelData
-                            required property int index
+                    Flow {
+                        id: flowLayout
 
-                            readonly property string wText: modelData.text || ""
-                            readonly property real wStart: Number(modelData.startTime) || 0
-                            readonly property real wEnd: Number(modelData.endTime) || (wStart + 0.4)
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        spacing: 0
 
-                            readonly property real currentPos: Players.active?.position ?? 0
-                            readonly property bool isWordPast: lyricItem.isCurrent && currentPos >= wEnd
-                            readonly property bool isWordActive: lyricItem.isCurrent && currentPos >= wStart && currentPos < wEnd
+                        Repeater {
+                            model: lyricItem.syllables
 
-                            implicitWidth: wordText.implicitWidth
-                            implicitHeight: wordText.implicitHeight
+                            delegate: Item {
+                                id: wordItem
 
-                            StyledText {
-                                id: wordText
+                                required property var modelData
+                                required property int index
 
-                                anchors.centerIn: parent
-                                text: wordItem.wText
-                                font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                readonly property string rawText: modelData.text || ""
+                                readonly property real wStart: Number(modelData.startTime) || 0
+                                readonly property real wEnd: Number(modelData.endTime) || (wStart + 0.4)
+                                readonly property bool isPartOfWord: Boolean(modelData.isPartOfWord)
+                                readonly property bool hasTrailingSpace: rawText.endsWith(" ")
+                                readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
+                                readonly property string displayText: rawText.trim()
 
-                                color: {
-                                    if (!lyricItem.isCurrent) {
-                                        return mouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline;
-                                    }
-                                    if (wordItem.isWordActive || wordItem.isWordPast) {
-                                        return Colours.palette.m3primary;
-                                    }
-                                    return Qt.alpha(Colours.palette.m3onSurface, 0.4);
+                                readonly property real currentPos: root.useSpicy
+                                    ? SpotifyService.effectivePosition
+                                    : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
+
+                                readonly property bool isWordPast: lyricItem.isCurrent && currentPos >= wEnd
+                                readonly property bool isWordActive: lyricItem.isCurrent && currentPos >= wStart && currentPos < wEnd
+                                readonly property real fillProgress: {
+                                    if (!lyricItem.isCurrent || currentPos < wStart) return 0.0;
+                                    if (currentPos >= wEnd) return 1.0;
+                                    const dur = Math.max(0.04, wEnd - wStart);
+                                    return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
                                 }
 
-                                scale: wordItem.isWordActive ? 1.05 : 1.0
+                                implicitWidth: baseText.implicitWidth + (needsSpace ? spaceMetric.implicitWidth : 0)
+                                implicitHeight: baseText.implicitHeight
+
+                                // 1. Inactive/Upcoming base text
+                                StyledText {
+                                    id: baseText
+
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    text: wordItem.displayText
+                                    font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+
+                                    color: {
+                                        if (!lyricItem.isCurrent) {
+                                            return wordMouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline;
+                                        }
+                                        if (wordItem.isWordPast) {
+                                            return Colours.palette.m3primary;
+                                        }
+                                        if (wordMouse.containsMouse) {
+                                            return Colours.palette.m3onSurface;
+                                        }
+                                        return Qt.alpha(Colours.palette.m3onSurface, 0.4);
+                                    }
+                                }
+
+                                // 2. Active illuminated text, smoothly revealed from left to right as syllable is vocalized
+                                Item {
+                                    id: activeClip
+
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    clip: true
+                                    width: Math.min(baseText.implicitWidth, Math.round(baseText.implicitWidth * wordItem.fillProgress))
+                                    visible: lyricItem.isCurrent && width > 0
+
+                                    StyledText {
+                                        id: activeText
+
+                                        anchors.left: parent.left
+                                        anchors.top: parent.top
+                                        width: baseText.implicitWidth
+                                        height: baseText.implicitHeight
+                                        text: wordItem.displayText
+                                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                        color: Colours.palette.m3primary
+
+                                        layer.enabled: wordItem.isWordActive
+                                        layer.effect: MultiEffect {
+                                            shadowEnabled: true
+                                            shadowColor: Colours.palette.m3primary
+                                            shadowOpacity: 0.85
+                                            shadowBlur: 0.55
+                                            blur: 0.0
+                                        }
+                                    }
+                                }
+
+                                // 3. Subtle scale when actively vocalized
+                                scale: wordItem.isWordActive ? 1.04 : 1.0
+                                transformOrigin: Item.Left
                                 Behavior on scale {
                                     Anim {
-                                        duration: 100
+                                        duration: 80
                                         easing.type: Easing.OutQuad
                                     }
                                 }
 
-                                layer.enabled: wordItem.isWordActive
-                                layer.effect: MultiEffect {
-                                    shadowEnabled: true
-                                    shadowColor: Colours.palette.m3primary
-                                    shadowOpacity: 0.8
-                                    shadowBlur: 0.6
-                                    blur: 0.0
-                                }
-                            }
+                                // 4. Isolated syllable/word hover & click-to-seek
+                                MouseArea {
+                                    id: wordMouse
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    const p = Players.active;
-                                    if (p && wordItem.wStart >= 0) {
-                                        p.position = wordItem.wStart;
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        const p = Players.active;
+                                        if (p && wordItem.wStart >= 0) {
+                                            p.position = wordItem.wStart;
+                                        }
                                     }
                                 }
                             }
@@ -540,7 +608,7 @@ Item {
 
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                hoverEnabled: true
+                hoverEnabled: !lyricItem.hasSyllables
                 z: -1
                 onClicked: {
                     const p = Players.active;

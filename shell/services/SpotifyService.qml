@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Caelestia.Services
 import qs.services
 import qs.utils
 
@@ -29,6 +30,21 @@ Singleton {
     readonly property bool hasSpicyLyrics: Boolean(root.isSpotify && root.spicyLyrics && root.spicyLyrics.lines && root.spicyLyrics.lines.length > 0)
     readonly property string syncType: root.spicyLyrics?.type ?? "None"
     readonly property var lyricLines: root.spicyLyrics?.lines ?? []
+
+    readonly property real leadOffset: 0.15
+    readonly property real effectivePosition: (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0) + root.leadOffset
+
+    function requestLyrics(): void {
+        if (!root.isSpotify) return;
+        Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics"]);
+        Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/refresh"]);
+    }
+
+    onIsSpotifyChanged: {
+        if (root.isSpotify) {
+            root.requestLyrics();
+        }
+    }
 
     function indexForTime(timeSeconds: real): int {
         if (!root.hasSpicyLyrics || root.lyricLines.length === 0) return -1;
@@ -122,6 +138,7 @@ Singleton {
                             if (root.spicyLyrics && root.spicyLyrics.uri !== state.uri) {
                                 root.spicyLyrics = null;
                             }
+                            root.requestLyrics();
                         } else if (!root.isDebouncing) {
                             root.isLiked = Boolean(state.isLiked);
                         }

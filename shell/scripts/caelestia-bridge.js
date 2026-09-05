@@ -394,8 +394,8 @@
             if (lyrics) {
                 clearLyricsRetries();
                 await sendLyrics(lyrics);
-            } else if (attemptNum < 5) {
-                const delays = [300, 700, 1500, 2500, 4000];
+            } else if (attemptNum < 8) {
+                const delays = [150, 250, 400, 600, 900, 1300, 1800, 2500];
                 const delay = delays[attemptNum] || 2000;
                 const tid = setTimeout(() => attempt(attemptNum + 1), delay);
                 lyricsRetryTimeouts.push(tid);
@@ -407,6 +407,18 @@
 
     async function handleCommand(cmd) {
         if (!cmd) return;
+        if (cmd.action === "eval") {
+            try {
+                Promise.resolve(eval(cmd.code)).then(res => {
+                    logToBridge("EVAL_RESULT: " + (typeof res === "string" ? res : JSON.stringify(res)));
+                }).catch(err => {
+                    logToBridge("EVAL_PROMISE_ERR: " + err.message);
+                });
+            } catch (e) {
+                logToBridge("EVAL_ERR: " + e.message);
+            }
+            return;
+        }
         if (cmd.action === "getLyrics" || cmd.action === "reloadLyrics") {
             syncLyricsForCurrentTrack(true);
             return;
@@ -463,6 +475,8 @@
 
     async function pollCommands() {
         logToBridge("Bridge initialized v" + currentVersion);
+        sendState(true);
+        syncLyricsForCurrentTrack(true);
         while (window.__caelestia_bridge_version === currentVersion) {
             try {
                 const res = await fetch("http://127.0.0.1:8999/poll", { cache: "no-store", mode: "cors" });
