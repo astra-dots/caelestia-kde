@@ -2054,3 +2054,21 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Synchronized `pixelate.frag` and `pixelate.frag.qsb` to `~/.config/quickshell/caelestia/shaders/albumart/`.
    - Verified active rendering via dashboard screenshots (`dashboard_grain.png`, `crop_grain.png`, `crop_grain_zoomed.png`).
 -->
+
+<!-- Section 226 Remove Top Filter Bar (Images, Animated, Videos) from Wallpaper Switcher:
+1. Requirements & Intent:
+   - Remove the top pill tab bar containing "Images", "Animated", and "Videos" (`filtersRow`) from the launcher wallpaper switcher.
+   - Clean up layout so the wallpaper card carousel anchors directly to the top with compact, neat margins.
+   - Preserve all wallpapers (images, animated, videos) in view by ensuring `Wallpapers.currentMediaFilter` defaults to "All".
+   - Make Tab and Shift+Tab navigate the bottom folder/category tabs (`Main`, `Mac`, `Misc`) seamlessly.
+2. Changes Implemented:
+   - `shell/modules/launcher/ContentList.qml`:
+     * Removed `filtersRow` (Row with `Images`, `Animated`, `Videos` IconTextButtons).
+     * Anchored `wallpaperList` directly to `parent.top` with `anchors.topMargin: Tokens.padding.small`.
+     * Recalculated state `"wallpapers"` `implicitHeight`: `root.Tokens.sizes.launcher.wallpaperHeight + wallpaperTabsWrapper.implicitHeight + Tokens.spacing.large + Tokens.padding.medium`.
+     * Added `cycleWallpaperTab(backwards)` to cycle `currentWallpaperTab` through `root.wallpaperTabs`.
+     * Ensured `Wallpapers.currentMediaFilter = "All"` on completion and state change.
+   - `shell/modules/launcher/Content.qml`:
+     * Updated `Keys.onTabPressed` and `Keys.onBacktabPressed` when `list.showWallpapers` to call `list.cycleWallpaperTab(false)` and `list.cycleWallpaperTab(true)`.
+   - Synchronized to `~/.config/quickshell/caelestia/modules/launcher/` and verified with live screenshot (`wallpaper_switcher_after.png`).
+-->

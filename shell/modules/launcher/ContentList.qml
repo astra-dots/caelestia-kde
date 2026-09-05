@@ -75,7 +75,7 @@ Item {
             PropertyChanges {
                 target: root
                 implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, wallpaperList.implicitWidth)
-                implicitHeight: filtersRow.implicitHeight + Tokens.spacing.medium + root.Tokens.sizes.launcher.wallpaperHeight + wallpaperTabsWrapper.implicitHeight + 24
+                implicitHeight: root.Tokens.sizes.launcher.wallpaperHeight + wallpaperTabsWrapper.implicitHeight + Tokens.spacing.large + Tokens.padding.medium
             }
         },
         State {
@@ -117,15 +117,13 @@ Item {
     ]
 
     Component.onCompleted: {
-        Wallpapers.currentMediaFilter = wallpaperSettings.mediaFilter;
-    }
-
-    onActiveFocusChanged: {
-        wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+        Wallpapers.currentMediaFilter = "All";
+        wallpaperSettings.mediaFilter = "All";
     }
 
     onShowWallpapersChanged: {
         if (showWallpapers) {
+            Wallpapers.currentMediaFilter = "All";
             for (let category of Wallpapers.categories) {
                 let walls = Wallpapers.grouped[category] || [];
                 if (walls.some(w => w.path === Wallpapers.actualCurrent)) {
@@ -166,17 +164,20 @@ Item {
         category: "Wallpapers"
     }
 
-    function cycleWallpaperFilter(backwards: bool): void {
-        const filters = ["All", "Image", "Animated", "Video"];
-        let idx = filters.indexOf(Wallpapers.currentMediaFilter);
+    function cycleWallpaperTab(backwards: bool): void {
+        if (!root.wallpaperTabs || root.wallpaperTabs.length === 0) return;
+        let idx = root.wallpaperTabs.findIndex(t => t.id === root.currentWallpaperTab);
         if (idx === -1) idx = 0;
         if (backwards) {
-            idx = (idx - 1 + filters.length) % filters.length;
+            idx = (idx - 1 + root.wallpaperTabs.length) % root.wallpaperTabs.length;
         } else {
-            idx = (idx + 1) % filters.length;
+            idx = (idx + 1) % root.wallpaperTabs.length;
         }
-        Wallpapers.currentMediaFilter = filters[idx];
-        wallpaperSettings.mediaFilter = filters[idx];
+        root.currentWallpaperTab = root.wallpaperTabs[idx].id;
+    }
+
+    function cycleWallpaperFilter(backwards: bool): void {
+        cycleWallpaperTab(backwards);
     }
 
     Timer {
@@ -243,52 +244,14 @@ Item {
         }
     }
 
-    Row {
-        id: filtersRow
-
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: Tokens.spacing.small
-
-        visible: root.state === "wallpapers"
-
-        IconTextButton {
-            text: qsTr("Images")
-            icon: "image"
-            type: Wallpapers.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
-            onClicked: {
-                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Image" ? "All" : "Image";
-                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
-            }
-        }
-        IconTextButton {
-            text: qsTr("Animated")
-            icon: "animation"
-            type: Wallpapers.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
-            onClicked: {
-                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Animated" ? "All" : "Animated";
-                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
-            }
-        }
-        IconTextButton {
-            text: qsTr("Videos")
-            icon: "videocam"
-            type: Wallpapers.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
-            onClicked: {
-                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Video" ? "All" : "Video";
-                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
-            }
-        }
-    }
-
     Loader {
         id: wallpaperList
 
         asynchronous: true
         active: root.state === "wallpapers"
 
-        anchors.top: filtersRow.bottom
-        anchors.topMargin: Tokens.spacing.medium
+        anchors.top: parent.top
+        anchors.topMargin: Tokens.padding.small
         anchors.horizontalCenter: parent.horizontalCenter
         height: root.Tokens.sizes.launcher.wallpaperHeight
 

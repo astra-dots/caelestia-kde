@@ -277,7 +277,7 @@ Item {
                     list.currentList?.nextCategory();
                     event.accepted = true;
                 } else if (list.showWallpapers) {
-                    list.cycleWallpaperFilter(false);
+                    list.cycleWallpaperTab(false);
                     event.accepted = true;
                 }
             }
@@ -287,7 +287,7 @@ Item {
                     list.currentList?.prevCategory();
                     event.accepted = true;
                 } else if (list.showWallpapers) {
-                    list.cycleWallpaperFilter(true);
+                    list.cycleWallpaperTab(true);
                     event.accepted = true;
                 }
             }
