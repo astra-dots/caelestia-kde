@@ -186,15 +186,22 @@ Item {
                     }
 
                     IconButton {
+                        icon: "restart_alt"
+                        type: IconButton.Text
+                        visible: Math.round(Lyrics.offset) !== 0
+                        onClicked: Lyrics.offset = 0
+                    }
+
+                    IconButton {
                         icon: "remove"
                         type: IconButton.Text
-                        onClicked: Lyrics.offset -= 100
+                        onClicked: Lyrics.offset -= 50
                     }
 
                     IconButton {
                         icon: "add"
                         type: IconButton.Text
-                        onClicked: Lyrics.offset += 100
+                        onClicked: Lyrics.offset += 50
                     }
                 }
             }

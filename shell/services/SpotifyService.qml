@@ -31,12 +31,14 @@ Singleton {
     readonly property string syncType: root.spicyLyrics?.type ?? "None"
     readonly property var lyricLines: root.spicyLyrics?.lines ?? []
 
-    readonly property real leadOffset: 0.15
+    readonly property real leadOffset: 0.06
     readonly property real effectivePosition: (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0) + root.leadOffset
 
     function requestLyrics(): void {
         if (!root.isSpotify) return;
-        Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics"]);
+        const uri = Players.active?.trackId ?? "";
+        const uriParam = uri ? ("?uri=" + encodeURIComponent(uri)) : "";
+        Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics" + uriParam]);
         Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/refresh"]);
     }
 

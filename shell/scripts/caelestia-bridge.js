@@ -275,20 +275,73 @@
                                         });
                                     }
                                 }
+
+                                // Extract background vocals (small lyrics):
+                                const backgroundLines = [];
+                                if (Array.isArray(item.Background)) {
+                                    for (const bgItem of item.Background) {
+                                        const bgSyllables = [];
+                                        let bgFullText = "";
+                                        if (Array.isArray(bgItem.Syllables)) {
+                                            for (let sIdx = 0; sIdx < bgItem.Syllables.length; sIdx++) {
+                                                const s = bgItem.Syllables[sIdx];
+                                                const isLast = sIdx === bgItem.Syllables.length - 1;
+                                                let stext = s.Text || "";
+                                                if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
+                                                    stext += " ";
+                                                }
+                                                bgFullText += stext;
+                                                bgSyllables.push({
+                                                    text: stext,
+                                                    startTime: Number(s.StartTime) || 0,
+                                                    endTime: Number(s.EndTime) || 0,
+                                                    isPartOfWord: Boolean(s.IsPartOfWord)
+                                                });
+                                            }
+                                        }
+                                        if (bgFullText.trim().length > 0 || bgSyllables.length > 0) {
+                                            backgroundLines.push({
+                                                text: bgFullText.trim(),
+                                                startTime: Number(bgItem.StartTime) || 0,
+                                                endTime: Number(bgItem.EndTime) || 0,
+                                                syllables: bgSyllables
+                                            });
+                                        }
+                                    }
+                                }
+
                                 lines.push({
                                     text: fullText.trim(),
                                     startTime: Number(lead.StartTime) || 0,
                                     endTime: Number(lead.EndTime) || 0,
-                                    syllables: syllables
+                                    syllables: syllables,
+                                    oppositeAligned: Boolean(item.OppositeAligned),
+                                    background: backgroundLines
                                 });
                             }
                         } else {
                             for (const item of content.Content) {
+                                const backgroundLines = [];
+                                if (Array.isArray(item.Background)) {
+                                    for (const bgItem of item.Background) {
+                                        const bgText = (bgItem.Text || "").trim();
+                                        if (bgText.length > 0) {
+                                            backgroundLines.push({
+                                                text: bgText,
+                                                startTime: Number(bgItem.StartTime) || 0,
+                                                endTime: Number(bgItem.EndTime) || 0,
+                                                syllables: []
+                                            });
+                                        }
+                                    }
+                                }
                                 lines.push({
                                     text: (item.Text || "").trim(),
                                     startTime: Number(item.StartTime) || 0,
                                     endTime: Number(item.EndTime) || 0,
-                                    syllables: []
+                                    syllables: [],
+                                    oppositeAligned: Boolean(item.OppositeAligned),
+                                    background: backgroundLines
                                 });
                             }
                         }

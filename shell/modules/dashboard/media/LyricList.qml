@@ -318,20 +318,25 @@ Item {
             id: settleTimer
             interval: 60
             onTriggered: {
-                if (lyrics.currentIndex >= 0 && lyrics.count > 0 && lyrics.height > 100) {
-                    lyrics.positionViewAtIndex(lyrics.currentIndex, ListView.Center);
+                if (lyrics.count > 0 && lyrics.height > 100) {
+                    if (lyrics.currentIndex >= 0) {
+                        lyrics.positionViewAtIndex(lyrics.currentIndex, ListView.Center);
+                    } else {
+                        lyrics.positionViewAtIndex(0, ListView.Beginning);
+                    }
                     lyrics.isReady = true;
                 }
             }
         }
 
         function jumpToCurrent(forceInstant = false) {
-            if (currentIndex >= 0 && count > 0 && height > 0) {
+            if (count > 0 && height > 0) {
+                const targetIdx = Math.max(0, currentIndex);
                 if (forceInstant || !isReady) {
                     isReady = false;
-                    positionViewAtIndex(currentIndex, ListView.Center);
+                    positionViewAtIndex(targetIdx, currentIndex >= 0 ? ListView.Center : ListView.Beginning);
                     settleTimer.restart();
-                } else {
+                } else if (currentIndex >= 0) {
                     positionViewAtIndex(currentIndex, ListView.Center);
                 }
             }
@@ -344,7 +349,7 @@ Item {
             if (height > 100) {
                 if (!isReady) {
                     jumpToCurrent(true);
-                } else {
+                } else if (currentIndex >= 0) {
                     positionViewAtIndex(currentIndex, ListView.Center);
                 }
             }
@@ -352,6 +357,15 @@ Item {
         onModelChanged: {
             isReady = false;
             Qt.callLater(() => jumpToCurrent(true));
+        }
+        onCurrentIndexChanged: {
+            if (count > 0 && height > 0) {
+                if (!isReady) {
+                    jumpToCurrent(true);
+                } else if (currentIndex >= 0) {
+                    positionViewAtIndex(currentIndex, ListView.Center);
+                }
+            }
         }
 
         Component.onCompleted: {
@@ -389,11 +403,12 @@ Item {
         highlightRangeMode: userScrolling ? ListView.NoHighlightRange : ListView.StrictlyEnforceRange
         highlightMoveDuration: isReady ? Tokens.anim.durations.large : 0
         highlightMoveVelocity: -1
-        preferredHighlightBegin: (height - (currentItem?.implicitHeight ?? 0)) / 2
-        preferredHighlightEnd: (height + (currentItem?.implicitHeight ?? 0)) / 2
+        preferredHighlightBegin: (height - 48) / 2
+        preferredHighlightEnd: (height + 48) / 2
 
         spacing: Tokens.spacing.extraSmall
         opacity: 0
+        visible: opacity > 0
 
         delegate: Item {
             id: lyricItem
@@ -408,6 +423,8 @@ Item {
             readonly property var syllables: (typeof modelData === "object" && modelData?.syllables) ? modelData.syllables : []
             readonly property bool hasSyllables: syllables.length > 0
             readonly property real lineStartTime: (typeof modelData === "object" && modelData?.startTime !== undefined) ? modelData.startTime : -1
+            readonly property var backgroundLines: (typeof modelData === "object" && modelData?.background) ? modelData.background : []
+            readonly property bool hasBackground: backgroundLines.length > 0
 
             width: lyrics.width
             implicitWidth: lyrics.width
@@ -434,27 +451,45 @@ Item {
             Component {
                 id: simpleLineComponent
 
-                StyledText {
-                    id: lyricText
-
+                Column {
                     width: contentLoader.width
-                    text: lyricItem.lineText || ". . ."
-                    horizontalAlignment: Text.AlignLeft
-                    color: lyricItem.isCurrent
-                        ? Colours.palette.m3primary
-                        : mouse.containsMouse
-                            ? Colours.palette.m3onSurface
-                            : Colours.palette.m3outline
-                    font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
-                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    spacing: Tokens.spacing.extraSmall
 
-                    layer.enabled: lyricItem.effectScale > 0
-                    layer.effect: MultiEffect {
-                        shadowEnabled: true
-                        shadowColor: Colours.palette.m3primary
-                        shadowOpacity: 0.6 * lyricItem.effectScale
-                        shadowBlur: 0.5 * lyricItem.effectScale
-                        blur: 0.0
+                    StyledText {
+                        id: lyricText
+
+                        width: parent.width
+                        text: lyricItem.lineText || ". . ."
+                        horizontalAlignment: Text.AlignLeft
+                        color: lyricItem.isCurrent
+                            ? Colours.palette.m3primary
+                            : mouse.containsMouse
+                                ? Colours.palette.m3onSurface
+                                : Colours.palette.m3outline
+                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+
+                        layer.enabled: lyricItem.effectScale > 0
+                        layer.effect: MultiEffect {
+                            shadowEnabled: true
+                            shadowColor: Colours.palette.m3primary
+                            shadowOpacity: 0.6 * lyricItem.effectScale
+                            shadowBlur: 0.5 * lyricItem.effectScale
+                            blur: 0.0
+                        }
+                    }
+
+                    Repeater {
+                        model: lyricItem.backgroundLines
+
+                        delegate: StyledText {
+                            required property var modelData
+                            width: parent.width
+                            text: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
+                            font: Tokens.font.body.small
+                            color: lyricItem.isCurrent ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.7)
+                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                        }
                     }
                 }
             }
@@ -467,133 +502,282 @@ Item {
 
                     width: contentLoader.width
                     implicitWidth: contentLoader.width
-                    implicitHeight: flowLayout.implicitHeight
+                    implicitHeight: mainColumn.implicitHeight
 
-                    StyledText {
-                        id: spaceMetric
-
-                        visible: false
-                        text: " "
-                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
-                    }
-
-                    Flow {
-                        id: flowLayout
+                    Column {
+                        id: mainColumn
 
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        spacing: 0
+                        spacing: Tokens.spacing.extraSmall
 
+                        // 1. Main Lead Vocal Flow
+                        Flow {
+                            id: flowLayout
+
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            spacing: 0
+
+                            StyledText {
+                                id: spaceMetric
+
+                                visible: false
+                                text: " "
+                                font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                            }
+
+                            Repeater {
+                                model: lyricItem.syllables
+
+                                delegate: Item {
+                                    id: wordItem
+
+                                    required property var modelData
+                                    required property int index
+
+                                    readonly property string rawText: modelData.text || ""
+                                    readonly property real wStart: Number(modelData.startTime) || 0
+                                    readonly property real wEnd: Number(modelData.endTime) || (wStart + 0.4)
+                                    readonly property bool isPartOfWord: Boolean(modelData.isPartOfWord)
+                                    readonly property bool hasTrailingSpace: rawText.endsWith(" ")
+                                    readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
+                                    readonly property string displayText: rawText.trim()
+
+                                    readonly property real currentPos: root.useSpicy
+                                        ? SpotifyService.effectivePosition
+                                        : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
+
+                                    readonly property bool isWordPast: lyricItem.isCurrent && currentPos >= wEnd
+                                    readonly property bool isWordActive: lyricItem.isCurrent && currentPos >= wStart && currentPos < wEnd
+                                    readonly property real fillProgress: {
+                                        if (!lyricItem.isCurrent || currentPos < wStart) return 0.0;
+                                        if (currentPos >= wEnd) return 1.0;
+                                        const dur = Math.max(0.04, wEnd - wStart);
+                                        return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
+                                    }
+
+                                    implicitWidth: baseText.implicitWidth + (needsSpace ? spaceMetric.implicitWidth : 0)
+                                    implicitHeight: baseText.implicitHeight
+
+                                    StyledText {
+                                        id: baseText
+
+                                        anchors.left: parent.left
+                                        anchors.top: parent.top
+                                        text: wordItem.displayText
+                                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+
+                                        color: {
+                                            if (!lyricItem.isCurrent) {
+                                                return wordMouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline;
+                                            }
+                                            if (wordItem.isWordPast) {
+                                                return Colours.palette.m3primary;
+                                            }
+                                            if (wordMouse.containsMouse) {
+                                                return Colours.palette.m3onSurface;
+                                            }
+                                            return Qt.alpha(Colours.palette.m3onSurface, 0.4);
+                                        }
+                                    }
+
+                                    Item {
+                                        id: activeClip
+
+                                        anchors.left: parent.left
+                                        anchors.top: parent.top
+                                        anchors.bottom: parent.bottom
+                                        clip: true
+                                        width: Math.min(baseText.implicitWidth, Math.round(baseText.implicitWidth * wordItem.fillProgress))
+                                        visible: lyricItem.isCurrent && width > 0
+
+                                        StyledText {
+                                            id: activeText
+
+                                            anchors.left: parent.left
+                                            anchors.top: parent.top
+                                            width: baseText.implicitWidth
+                                            height: baseText.implicitHeight
+                                            text: wordItem.displayText
+                                            font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                            color: Colours.palette.m3primary
+
+                                            layer.enabled: wordItem.isWordActive
+                                            layer.effect: MultiEffect {
+                                                shadowEnabled: true
+                                                shadowColor: Colours.palette.m3primary
+                                                shadowOpacity: 0.85
+                                                shadowBlur: 0.55
+                                                blur: 0.0
+                                            }
+                                        }
+                                    }
+
+                                    scale: wordItem.isWordActive ? 1.04 : 1.0
+                                    transformOrigin: Item.Left
+                                    Behavior on scale {
+                                        Anim {
+                                            duration: 80
+                                            easing.type: Easing.OutQuad
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: wordMouse
+
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        hoverEnabled: true
+                                        onClicked: {
+                                            const p = Players.active;
+                                            if (p && wordItem.wStart >= 0) {
+                                                p.position = wordItem.wStart;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Background Vocals (Small Lyrics in soft capsule)
                         Repeater {
-                            model: lyricItem.syllables
+                            model: lyricItem.backgroundLines
 
-                            delegate: Item {
-                                id: wordItem
+                            delegate: Rectangle {
+                                id: bgCapsule
 
                                 required property var modelData
                                 required property int index
 
-                                readonly property string rawText: modelData.text || ""
-                                readonly property real wStart: Number(modelData.startTime) || 0
-                                readonly property real wEnd: Number(modelData.endTime) || (wStart + 0.4)
-                                readonly property bool isPartOfWord: Boolean(modelData.isPartOfWord)
-                                readonly property bool hasTrailingSpace: rawText.endsWith(" ")
-                                readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
-                                readonly property string displayText: rawText.trim()
+                                readonly property var bgSyllables: modelData?.syllables ?? []
+                                readonly property bool bgHasSyllables: bgSyllables.length > 0
+                                readonly property string bgText: modelData?.text ?? ""
+                                readonly property real bgStart: Number(modelData?.startTime) || -1
+                                readonly property real bgEnd: Number(modelData?.endTime) || -1
 
-                                readonly property real currentPos: root.useSpicy
-                                    ? SpotifyService.effectivePosition
-                                    : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
+                                width: Math.min(mainColumn.width, bgFlow.implicitWidth + (Tokens.padding.small * 2))
+                                implicitWidth: width
+                                implicitHeight: bgFlow.implicitHeight + (Tokens.padding.extraSmall * 2)
 
-                                readonly property bool isWordPast: lyricItem.isCurrent && currentPos >= wEnd
-                                readonly property bool isWordActive: lyricItem.isCurrent && currentPos >= wStart && currentPos < wEnd
-                                readonly property real fillProgress: {
-                                    if (!lyricItem.isCurrent || currentPos < wStart) return 0.0;
-                                    if (currentPos >= wEnd) return 1.0;
-                                    const dur = Math.max(0.04, wEnd - wStart);
-                                    return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
-                                }
+                                radius: Tokens.rounding.small
+                                color: lyricItem.isCurrent ? Qt.alpha(Colours.palette.m3surfaceContainerHigh, 0.45) : "transparent"
 
-                                implicitWidth: baseText.implicitWidth + (needsSpace ? spaceMetric.implicitWidth : 0)
-                                implicitHeight: baseText.implicitHeight
-
-                                // 1. Inactive/Upcoming base text
                                 StyledText {
-                                    id: baseText
+                                    id: bgSpaceMetric
+
+                                    visible: false
+                                    text: " "
+                                    font: Tokens.font.body.small
+                                }
+
+                                Flow {
+                                    id: bgFlow
 
                                     anchors.left: parent.left
+                                    anchors.right: parent.right
                                     anchors.top: parent.top
-                                    text: wordItem.displayText
-                                    font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                                    anchors.margins: Tokens.padding.extraSmall
+                                    spacing: 0
 
-                                    color: {
-                                        if (!lyricItem.isCurrent) {
-                                            return wordMouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline;
-                                        }
-                                        if (wordItem.isWordPast) {
-                                            return Colours.palette.m3primary;
-                                        }
-                                        if (wordMouse.containsMouse) {
-                                            return Colours.palette.m3onSurface;
-                                        }
-                                        return Qt.alpha(Colours.palette.m3onSurface, 0.4);
-                                    }
-                                }
+                                    Repeater {
+                                        model: bgCapsule.bgHasSyllables ? bgCapsule.bgSyllables : [ { "text": bgCapsule.bgText, "startTime": bgCapsule.bgStart, "endTime": bgCapsule.bgEnd, "isPartOfWord": false } ]
 
-                                // 2. Active illuminated text, smoothly revealed from left to right as syllable is vocalized
-                                Item {
-                                    id: activeClip
+                                        delegate: Item {
+                                            id: bgWordItem
 
-                                    anchors.left: parent.left
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    clip: true
-                                    width: Math.min(baseText.implicitWidth, Math.round(baseText.implicitWidth * wordItem.fillProgress))
-                                    visible: lyricItem.isCurrent && width > 0
+                                            required property var modelData
+                                            required property int index
 
-                                    StyledText {
-                                        id: activeText
+                                            readonly property string rawText: modelData.text || ""
+                                            readonly property real wStart: Number(modelData.startTime) || 0
+                                            readonly property real wEnd: Number(modelData.endTime) || (wStart + 0.4)
+                                            readonly property bool isPartOfWord: Boolean(modelData.isPartOfWord)
+                                            readonly property bool hasTrailingSpace: rawText.endsWith(" ")
+                                            readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
+                                            readonly property string displayText: rawText.trim()
 
-                                        anchors.left: parent.left
-                                        anchors.top: parent.top
-                                        width: baseText.implicitWidth
-                                        height: baseText.implicitHeight
-                                        text: wordItem.displayText
-                                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
-                                        color: Colours.palette.m3primary
+                                            readonly property real currentPos: root.useSpicy
+                                                ? SpotifyService.effectivePosition
+                                                : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
 
-                                        layer.enabled: wordItem.isWordActive
-                                        layer.effect: MultiEffect {
-                                            shadowEnabled: true
-                                            shadowColor: Colours.palette.m3primary
-                                            shadowOpacity: 0.85
-                                            shadowBlur: 0.55
-                                            blur: 0.0
-                                        }
-                                    }
-                                }
+                                            readonly property bool isWordPast: currentPos >= wEnd
+                                            readonly property bool isWordActive: currentPos >= wStart && currentPos < wEnd
+                                            readonly property real fillProgress: {
+                                                if (currentPos < wStart) return 0.0;
+                                                if (currentPos >= wEnd) return 1.0;
+                                                const dur = Math.max(0.04, wEnd - wStart);
+                                                return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
+                                            }
 
-                                // 3. Subtle scale when actively vocalized
-                                scale: wordItem.isWordActive ? 1.04 : 1.0
-                                transformOrigin: Item.Left
-                                Behavior on scale {
-                                    Anim {
-                                        duration: 80
-                                        easing.type: Easing.OutQuad
-                                    }
-                                }
+                                            implicitWidth: bgBaseText.implicitWidth + (needsSpace ? bgSpaceMetric.implicitWidth : 0)
+                                            implicitHeight: bgBaseText.implicitHeight
 
-                                // 4. Isolated syllable/word hover & click-to-seek
-                                MouseArea {
-                                    id: wordMouse
+                                            StyledText {
+                                                id: bgBaseText
 
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    hoverEnabled: true
-                                    onClicked: {
-                                        const p = Players.active;
-                                        if (p && wordItem.wStart >= 0) {
-                                            p.position = wordItem.wStart;
+                                                anchors.left: parent.left
+                                                anchors.top: parent.top
+                                                text: bgWordItem.displayText
+                                                font: Tokens.font.body.small
+
+                                                color: {
+                                                    if (!lyricItem.isCurrent) {
+                                                        return bgWordMouse.containsMouse ? Colours.palette.m3onSurface : Qt.alpha(Colours.palette.m3outline, 0.7);
+                                                    }
+                                                    if (bgWordItem.isWordPast) {
+                                                        return Colours.palette.m3primary;
+                                                    }
+                                                    if (bgWordMouse.containsMouse) {
+                                                        return Colours.palette.m3onSurface;
+                                                    }
+                                                    return Qt.alpha(Colours.palette.m3onSurface, 0.45);
+                                                }
+                                            }
+
+                                            Item {
+                                                id: bgActiveClip
+
+                                                anchors.left: parent.left
+                                                anchors.top: parent.top
+                                                anchors.bottom: parent.bottom
+                                                clip: true
+                                                width: Math.min(bgBaseText.implicitWidth, Math.round(bgBaseText.implicitWidth * bgWordItem.fillProgress))
+                                                visible: width > 0
+
+                                                StyledText {
+                                                    anchors.left: parent.left
+                                                    anchors.top: parent.top
+                                                    width: bgBaseText.implicitWidth
+                                                    height: bgBaseText.implicitHeight
+                                                    text: bgWordItem.displayText
+                                                    font: Tokens.font.body.small
+                                                    color: Colours.palette.m3primary
+
+                                                    layer.enabled: bgWordItem.isWordActive
+                                                    layer.effect: MultiEffect {
+                                                        shadowEnabled: true
+                                                        shadowColor: Colours.palette.m3primary
+                                                        shadowOpacity: 0.8
+                                                        shadowBlur: 0.5
+                                                        blur: 0.0
+                                                    }
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                id: bgWordMouse
+
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                hoverEnabled: true
+                                                onClicked: {
+                                                    const p = Players.active;
+                                                    if (p && bgWordItem.wStart >= 0) {
+                                                        p.position = bgWordItem.wStart;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }

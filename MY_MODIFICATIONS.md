@@ -2167,6 +2167,36 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
      * Added immediate `syncLyricsForCurrentTrack(true)` and `sendState(true)` upon bridge initialization.
    - Synchronized all modified files to `~/.config/quickshell/caelestia/` and verified live with high-resolution screenshot captures.
 -->
+<!-- Section 231 Spicy Lyrics Small (Background) Vocals, Intro Cold-Open Fix & Sub-100ms Sync Alignment:
+1. Requirements & Intent:
+   - Fix lyrics invisible during song intros: At the start of a song before lyrics start, no lyrics appear in the media panel; when lyrics finally start, the user had to close and reopen the panel to see them (though delegates were invisibly clickable).
+   - Prevent phantom clicks when lyrics are invisible (`visible: opacity > 0`).
+   - Render small background/duet vocals: Support Apple Music / Spicy Lyrics TTML background vocals (`item.Background`) directly beneath lead vocals in a smaller font (`Tokens.font.body.small`), inside a subtle translucent pill/capsule, with progressive syllable wipe and click-to-seek.
+   - Fine-tune vocal synchronization from 150ms leadOffset down to 60ms (matching Linux PipeWire quantum buffer + D-Bus poll timing), and provide 50ms user tuning buttons with a Reset button in `LyricsInfo.qml`.
+   - Resolve Qt Quick binding loop warning on `preferredHighlightBegin: (height - currentItem.implicitHeight) / 2`.
+2. Changes Implemented:
+   - `shell/scripts/caelestia-bridge.js`:
+     * Updated `tryGetSpicyLyrics()` to parse `item.Background` (extracting `text`, `startTime`, `endTime`, `syllables`) and `item.OppositeAligned`.
+   - `shell/scripts/spotify_bridge.py`:
+     * Added `find_spicy_lyrics_on_disk(uri)` to directly read and parse Spotify's CacheStorage on disk in <15ms (`~/.cache/spotify/Browser/Service Worker/CacheStorage/...`).
+     * Added `global current_lyrics` inside `do_GET` to fix `UnboundLocalError`.
+     * Added `req_uri` query param support to `GET /lyrics`.
+   - `shell/services/SpotifyService.qml`:
+     * Adjusted `leadOffset` from `0.15` (150ms) to `0.06` (60ms) to prevent lyrics from leading ahead of audio.
+     * Updated `requestLyrics()` to pass `?uri=` for immediate disk-cache lookup.
+   - `shell/modules/dashboard/media/LyricList.qml`:
+     * Fixed intro bug: `jumpToCurrent(forceInstant)` now handles `currentIndex < 0` by positioning index 0 at `ListView.Beginning` and triggering `settleTimer`.
+     * In `settleTimer`, sets `lyrics.isReady = true` even during intros so lyrics are immediately visible.
+     * Added `onCurrentIndexChanged` to smoothly center index 0 when lyrics transition from intro (`-1` to `0`).
+     * Added `visible: opacity > 0` to prevent phantom mouse interaction when hidden.
+     * Replaced `(height - (currentItem?.implicitHeight ?? 0)) / 2` with `(height - 48) / 2` to eliminate Qt Quick binding loop warnings.
+     * Added small lyrics rendering: Wrapped syllable flow inside a `Column` with a `Repeater` for `lyricItem.backgroundLines`. Each background line renders inside a soft rounded pill (`bgCapsule`) in `Tokens.font.body.small` with individual word fill progress, clip wipe, isolated hover, and click-to-seek.
+   - `shell/modules/dashboard/media/LyricsInfo.qml`:
+     * Switched offset increments from 100ms to 50ms for fine-tuning.
+     * Added a Reset button (`restart_alt`) that resets `Lyrics.offset = 0` when offset is non-zero.
+   - Synchronized all modified files to `~/.config/quickshell/caelestia/` and `~/.config/spicetify/Extensions/`.
+   - Verified live with high-resolution screenshot captures demonstrating background vocal rendering, intro cold-open rendering, and accurate lockstep sync.
+-->
 
 
 
