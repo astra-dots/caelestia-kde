@@ -74,12 +74,15 @@ def find_spicy_lyrics_on_disk(uri):
             lines = []
             if type_name == "Syllable":
                 for it in raw_items:
-                    lead = it.get("Lead")
-                    if not lead:
+                    lead = it.get("Lead") or {}
+                    syls = lead.get("Syllables", []) if isinstance(lead, dict) else []
+                    bg_raw = it.get("Background", [])
+
+                    if not syls and not bg_raw and not it.get("Text"):
                         continue
+
                     s_list = []
                     full_text = ""
-                    syls = lead.get("Syllables", [])
                     for sIdx, s_obj in enumerate(syls):
                         isLast = (sIdx == len(syls) - 1)
                         stext = s_obj.get("Text", "")
@@ -92,8 +95,9 @@ def find_spicy_lyrics_on_disk(uri):
                             "endTime": float(s_obj.get("EndTime", 0)),
                             "isPartOfWord": bool(s_obj.get("IsPartOfWord"))
                         })
+
                     bg_lines = []
-                    for bgItem in it.get("Background", []):
+                    for bgItem in bg_raw:
                         bg_s_list = []
                         bg_full_text = ""
                         bg_syls = bgItem.get("Syllables", [])
@@ -105,8 +109,8 @@ def find_spicy_lyrics_on_disk(uri):
                             bg_full_text += stext
                             bg_s_list.append({
                                 "text": stext,
-                                "startTime": float(bgItem.get("StartTime", 0)),
-                                "endTime": float(bgItem.get("EndTime", 0)),
+                                "startTime": float(s_obj.get("StartTime", 0)),
+                                "endTime": float(s_obj.get("EndTime", 0)),
                                 "isPartOfWord": bool(s_obj.get("IsPartOfWord"))
                             })
                         if bg_full_text.strip() or bg_s_list:
@@ -116,10 +120,14 @@ def find_spicy_lyrics_on_disk(uri):
                                 "endTime": float(bgItem.get("EndTime", 0)),
                                 "syllables": bg_s_list
                             })
+
+                    line_start = float(lead.get("StartTime", 0)) if (isinstance(lead, dict) and lead.get("StartTime") is not None) else float(it.get("StartTime", 0))
+                    line_end = float(lead.get("EndTime", 0)) if (isinstance(lead, dict) and lead.get("EndTime") is not None) else float(it.get("EndTime", 0))
+
                     lines.append({
                         "text": full_text.strip(),
-                        "startTime": float(lead.get("StartTime", 0)),
-                        "endTime": float(lead.get("EndTime", 0)),
+                        "startTime": line_start,
+                        "endTime": line_end,
                         "syllables": s_list,
                         "oppositeAligned": bool(it.get("OppositeAligned")),
                         "background": bg_lines
@@ -264,17 +272,19 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 pass
 
         elif path == "/lyrics" or parsed.path == "/lyrics":
-            req_uri = query.get("uri", [""])[0] if "query" in locals() else ""
-            if not req_uri:
-                from urllib.parse import parse_qs
-                req_uri = parse_qs(parsed.query).get("uri", [""])[0]
+            from urllib.parse import parse_qs
+            req_uri = parse_qs(parsed.query).get("uri", [""])[0]
             log_debug(f"GET /lyrics requested (req_uri={req_uri})")
-            if req_uri and (not current_lyrics or current_lyrics.get("uri") != req_uri):
-                disk_lyrics = find_spicy_lyrics_on_disk(req_uri)
+            target_uri = req_uri or current_state.get("uri") or current_lyrics.get("uri")
+            if target_uri:
+                disk_lyrics = find_spicy_lyrics_on_disk(target_uri)
                 if disk_lyrics:
-                    current_lyrics = disk_lyrics
-                    save_cached_lyrics(current_lyrics)
-                    log_debug(f"Loaded {len(current_lyrics.get('lines', []))} lines from Spotify disk cache for {req_uri}")
+                    disk_bg = sum(1 for l in disk_lyrics.get("lines", []) if l.get("background"))
+                    curr_bg = sum(1 for l in current_lyrics.get("lines", []) if l.get("background"))
+                    if not current_lyrics or current_lyrics.get("uri") != target_uri or disk_bg > curr_bg:
+                        current_lyrics = disk_lyrics
+                        save_cached_lyrics(current_lyrics)
+                        log_debug(f"Loaded {len(current_lyrics.get('lines', []))} lines (bg={disk_bg}) from Spotify disk cache for {target_uri}")
             if current_lyrics and current_lyrics.get("lines"):
                 emit_lyrics(current_lyrics)
             self.end_headers_cors(200)
@@ -377,6 +387,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode("utf-8")
                 data = json.loads(body)
+                post_bg_count = sum(1 for l in data.get("lines", []) if l.get("background"))
+                uri = data.get("uri") or current_state.get("uri")
+                if uri:
+                    disk_lyrics = find_spicy_lyrics_on_disk(uri)
+                    if disk_lyrics:
+                        disk_bg_count = sum(1 for l in disk_lyrics.get("lines", []) if l.get("background"))
+                        if disk_bg_count > post_bg_count:
+                            log_debug(f"Preserving {disk_bg_count} background lines from disk cache over bridge POST ({post_bg_count} bg)")
+                            data = disk_lyrics
                 current_lyrics = data
                 save_cached_lyrics(current_lyrics)
                 log_debug(f"POST /lyrics -> uri={data.get('uri')} type={data.get('type')} lines={len(data.get('lines', []))}")

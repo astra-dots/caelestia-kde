@@ -474,6 +474,14 @@ Item {
                         end = Math.max(end, Number(last.endTime));
                     }
                 }
+                if (backgroundLines.length > 0) {
+                    for (let b = 0; b < backgroundLines.length; b++) {
+                        const bg = backgroundLines[b];
+                        if (bg && bg.endTime !== undefined && Number(bg.endTime) > 0) {
+                            end = Math.max(end, Number(bg.endTime));
+                        }
+                    }
+                }
                 return end;
             }
 
@@ -502,7 +510,7 @@ Item {
                 anchors.leftMargin: Tokens.padding.medium
                 anchors.rightMargin: Tokens.padding.medium
 
-                sourceComponent: lyricItem.hasSyllables ? syllableFlowComponent : simpleLineComponent
+                sourceComponent: (lyricItem.hasSyllables || lyricItem.hasBackground) ? syllableFlowComponent : simpleLineComponent
             }
 
             Component {
@@ -516,7 +524,8 @@ Item {
                         id: lyricText
 
                         width: parent.width
-                        text: lyricItem.lineText || ". . ."
+                        text: lyricItem.lineText || (lyricItem.hasBackground ? "" : ". . .")
+                        visible: text.length > 0
                         horizontalAlignment: Text.AlignLeft
                         color: lyricItem.isLineActive
                             ? Colours.palette.m3primary
@@ -560,6 +569,7 @@ Item {
                     width: contentLoader.width
                     implicitWidth: contentLoader.width
                     implicitHeight: mainColumn.implicitHeight
+                    height: implicitHeight
 
                     Column {
                         id: mainColumn
@@ -568,10 +578,11 @@ Item {
                         anchors.right: parent.right
                         spacing: Tokens.spacing.extraSmall
 
-                        // 1. Main Lead Vocal Flow
+                        // 1. Main Lead Vocal Flow (when syllables are present)
                         Flow {
                             id: flowLayout
 
+                            visible: (lyricItem?.hasSyllables ?? false)
                             anchors.left: parent.left
                             anchors.right: parent.right
                             spacing: 0
@@ -695,7 +706,20 @@ Item {
                             }
                         }
 
-                        // 2. Background Vocals (Small Lyrics flowing horizontally)
+                        // Plain lead text if line has no syllables but has text (and background lyrics)
+                        StyledText {
+                            id: plainLeadText
+
+                            visible: !(lyricItem?.hasSyllables ?? false) && (lyricItem?.lineText ?? "").length > 0
+                            width: parent.width
+                            text: lyricItem?.lineText ?? ""
+                            horizontalAlignment: Text.AlignLeft
+                            color: (lyricItem?.isLineActive ?? false) ? Colours.palette.m3primary : Colours.palette.m3outline
+                            font: (lyricItem?.isCurrent ?? false) ? Tokens.font.title.small : Tokens.font.body.medium
+                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                        }
+
+                        // 2. Background Vocals (Small Lyrics flowing horizontally with syllable wipe)
                         Repeater {
                             model: lyricItem?.backgroundLines ?? []
 
@@ -723,11 +747,10 @@ Item {
                                     return end;
                                 }
 
-                                readonly property bool isBgLineActive: (lyricItem?.isCurrent ?? false) && (lyricItem?.currentPos ?? 0) >= bgStart && (bgEnd <= 0 || (lyricItem?.currentPos ?? 0) < bgEnd)
-
                                 width: mainColumn.width
                                 implicitWidth: mainColumn.width
                                 implicitHeight: bgFlow.implicitHeight
+                                height: implicitHeight
 
                                 StyledText {
                                     id: bgSpaceMetric
@@ -747,7 +770,7 @@ Item {
                                     Repeater {
                                         model: bgLineItem.bgHasSyllables
                                             ? bgLineItem.bgSyllables
-                                            : [ { "text": bgLineItem.bgText, "startTime": bgLineItem.bgStart, "endTime": bgLineItem.bgEnd, "isPartOfWord": false } ]
+                                            : (bgLineItem.bgText.length > 0 ? [ { "text": bgLineItem.bgText, "startTime": bgLineItem.bgStart, "endTime": bgLineItem.bgEnd, "isPartOfWord": false } ] : [])
 
                                         delegate: Item {
                                             id: bgWordItem
@@ -763,17 +786,20 @@ Item {
                                             readonly property bool needsSpace: !isPartOfWord || hasTrailingSpace
                                             readonly property string displayText: rawText.trim()
 
-                                            readonly property bool isWordPast: (bgLineItem?.isBgLineActive ?? false) && (lyricItem?.currentPos ?? 0) >= wEnd
-                                            readonly property bool isWordActive: (bgLineItem?.isBgLineActive ?? false) && (lyricItem?.currentPos ?? 0) >= wStart && (lyricItem?.currentPos ?? 0) < wEnd
+                                            readonly property real currentPos: lyricItem?.currentPos ?? 0
+                                            readonly property bool isWordPast: (lyricItem?.isLineActive ?? false) && currentPos >= wEnd
+                                            readonly property bool isWordActive: (lyricItem?.isLineActive ?? false) && currentPos >= wStart && currentPos < wEnd
                                             readonly property real fillProgress: {
-                                                if (!(bgLineItem?.isBgLineActive ?? false) || (lyricItem?.currentPos ?? 0) < wStart) return 0.0;
-                                                if ((lyricItem?.currentPos ?? 0) >= wEnd) return 1.0;
+                                                if (!(lyricItem?.isLineActive ?? false) || currentPos < wStart) return 0.0;
+                                                if (currentPos >= wEnd) return 1.0;
                                                 const dur = Math.max(0.04, wEnd - wStart);
-                                                return Math.min(1.0, Math.max(0.0, ((lyricItem?.currentPos ?? 0) - wStart) / dur));
+                                                return Math.min(1.0, Math.max(0.0, (currentPos - wStart) / dur));
                                             }
 
                                             implicitWidth: bgBaseText.implicitWidth + (needsSpace ? bgSpaceMetric.implicitWidth : 0)
                                             implicitHeight: bgBaseText.implicitHeight
+                                            width: implicitWidth
+                                            height: implicitHeight
 
                                             StyledText {
                                                 id: bgBaseText
@@ -784,7 +810,7 @@ Item {
                                                 font: Tokens.font.body.small
 
                                                 color: {
-                                                    if (!(bgLineItem?.isBgLineActive ?? false)) {
+                                                    if (!(lyricItem?.isLineActive ?? false)) {
                                                         return bgWordMouse.containsMouse ? Colours.palette.m3onSurface : Qt.alpha(Colours.palette.m3outline, 0.7);
                                                     }
                                                     if (bgWordItem.isWordPast) {
@@ -805,7 +831,7 @@ Item {
                                                 anchors.bottom: parent.bottom
                                                 clip: true
                                                 width: Math.min(bgBaseText.implicitWidth, Math.round(bgBaseText.implicitWidth * bgWordItem.fillProgress))
-                                                visible: (bgLineItem?.isBgLineActive ?? false) && width > 0
+                                                visible: (lyricItem?.isLineActive ?? false) && width > 0
 
                                                 StyledText {
                                                     anchors.left: parent.left

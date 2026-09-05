@@ -254,66 +254,69 @@
 
                         if (type === "Syllable") {
                             for (const item of content.Content) {
-                                const lead = item.Lead;
-                                if (!lead) continue;
+                                const lead = item.Lead || {};
+                                const syls = Array.isArray(lead.Syllables) ? lead.Syllables : [];
+                                const bgRaw = Array.isArray(item.Background) ? item.Background : [];
+
+                                if (syls.length === 0 && bgRaw.length === 0 && !item.Text) continue;
+
                                 const syllables = [];
                                 let fullText = "";
-                                if (Array.isArray(lead.Syllables)) {
-                                    for (let sIdx = 0; sIdx < lead.Syllables.length; sIdx++) {
-                                        const s = lead.Syllables[sIdx];
-                                        const isLast = sIdx === lead.Syllables.length - 1;
-                                        let stext = s.Text || "";
-                                        if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
-                                            stext += " ";
-                                        }
-                                        fullText += stext;
-                                        syllables.push({
-                                            text: stext,
-                                            startTime: Number(s.StartTime) || 0,
-                                            endTime: Number(s.EndTime) || 0,
-                                            isPartOfWord: Boolean(s.IsPartOfWord)
-                                        });
+                                for (let sIdx = 0; sIdx < syls.length; sIdx++) {
+                                    const s = syls[sIdx];
+                                    const isLast = sIdx === syls.length - 1;
+                                    let stext = s.Text || "";
+                                    if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
+                                        stext += " ";
                                     }
+                                    fullText += stext;
+                                    syllables.push({
+                                        text: stext,
+                                        startTime: Number(s.StartTime) || 0,
+                                        endTime: Number(s.EndTime) || 0,
+                                        isPartOfWord: Boolean(s.IsPartOfWord)
+                                    });
                                 }
 
                                 // Extract background vocals (small lyrics):
                                 const backgroundLines = [];
-                                if (Array.isArray(item.Background)) {
-                                    for (const bgItem of item.Background) {
-                                        const bgSyllables = [];
-                                        let bgFullText = "";
-                                        if (Array.isArray(bgItem.Syllables)) {
-                                            for (let sIdx = 0; sIdx < bgItem.Syllables.length; sIdx++) {
-                                                const s = bgItem.Syllables[sIdx];
-                                                const isLast = sIdx === bgItem.Syllables.length - 1;
-                                                let stext = s.Text || "";
-                                                if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
-                                                    stext += " ";
-                                                }
-                                                bgFullText += stext;
-                                                bgSyllables.push({
-                                                    text: stext,
-                                                    startTime: Number(s.StartTime) || 0,
-                                                    endTime: Number(s.EndTime) || 0,
-                                                    isPartOfWord: Boolean(s.IsPartOfWord)
-                                                });
+                                for (const bgItem of bgRaw) {
+                                    const bgSyllables = [];
+                                    let bgFullText = "";
+                                    if (Array.isArray(bgItem.Syllables)) {
+                                        for (let sIdx = 0; sIdx < bgItem.Syllables.length; sIdx++) {
+                                            const s = bgItem.Syllables[sIdx];
+                                            const isLast = sIdx === bgItem.Syllables.length - 1;
+                                            let stext = s.Text || "";
+                                            if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
+                                                stext += " ";
                                             }
-                                        }
-                                        if (bgFullText.trim().length > 0 || bgSyllables.length > 0) {
-                                            backgroundLines.push({
-                                                text: bgFullText.trim(),
-                                                startTime: Number(bgItem.StartTime) || 0,
-                                                endTime: Number(bgItem.EndTime) || 0,
-                                                syllables: bgSyllables
+                                            bgFullText += stext;
+                                            bgSyllables.push({
+                                                text: stext,
+                                                startTime: Number(s.StartTime) || 0,
+                                                endTime: Number(s.EndTime) || 0,
+                                                isPartOfWord: Boolean(s.IsPartOfWord)
                                             });
                                         }
                                     }
+                                    if (bgFullText.trim().length > 0 || bgSyllables.length > 0) {
+                                        backgroundLines.push({
+                                            text: bgFullText.trim(),
+                                            startTime: Number(bgItem.StartTime) || 0,
+                                            endTime: Number(bgItem.EndTime) || 0,
+                                            syllables: bgSyllables
+                                        });
+                                    }
                                 }
+
+                                const lineStart = (lead.StartTime !== undefined) ? Number(lead.StartTime) : (Number(item.StartTime) || 0);
+                                const lineEnd = (lead.EndTime !== undefined) ? Number(lead.EndTime) : (Number(item.EndTime) || 0);
 
                                 lines.push({
                                     text: fullText.trim(),
-                                    startTime: Number(lead.StartTime) || 0,
-                                    endTime: Number(lead.EndTime) || 0,
+                                    startTime: lineStart,
+                                    endTime: lineEnd,
                                     syllables: syllables,
                                     oppositeAligned: Boolean(item.OppositeAligned),
                                     background: backgroundLines
