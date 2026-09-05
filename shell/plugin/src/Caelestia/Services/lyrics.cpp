@@ -209,7 +209,7 @@ int Lyrics::indexForTime(qreal time) const {
     if (m_lines.isEmpty()) {
         return -1;
     }
-    const qreal target = time - m_offset + kIndexFudge;
+    const qreal target = time - (m_offset / 1000.0) + kIndexFudge;
     qsizetype lo = 0;
     qsizetype hi = m_lines.size();
     while (lo < hi) {
@@ -227,7 +227,7 @@ qreal Lyrics::timeForIndex(int index) const {
     if (index < 0 || index >= m_lines.size()) {
         return -1.0;
     }
-    return m_lines.at(index).time + m_offset;
+    return m_lines.at(index).time + (m_offset / 1000.0);
 }
 
 void Lyrics::setTrack(const QString& artist, const QString& title, const QString& album, qreal duration) {
@@ -1059,7 +1059,38 @@ QVector<LyricLine> Lyrics::parseLrc(const QString& text) {
         return a.time < b.time;
     });
 
-    return result;
+    // Deduplicate and merge lines sharing identical timestamps
+    QVector<LyricLine> cleaned;
+    cleaned.reserve(result.size());
+    for (const auto& line : result) {
+        if (!cleaned.isEmpty()) {
+            auto& prev = cleaned.last();
+            // If identical timestamp within 0.01s
+            if (std::abs(prev.time - line.time) < 0.01) {
+                if (prev.text == line.text) {
+                    // Exact duplicate, skip
+                    continue;
+                }
+                if (prev.text.isEmpty()) {
+                    prev.text = line.text;
+                    continue;
+                }
+                if (line.text.isEmpty()) {
+                    continue;
+                }
+                // Bilingual or multi-part lyrics on same timestamp: merge with newline
+                prev.text += QLatin1Char('\n') + line.text;
+                continue;
+            }
+            // Collapse consecutive empty lines (instrumental pauses) into a single pause
+            if (prev.text.isEmpty() && line.text.isEmpty()) {
+                continue;
+            }
+        }
+        cleaned.append(line);
+    }
+
+    return cleaned;
 }
 
 } // namespace caelestia::services

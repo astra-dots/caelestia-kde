@@ -77,6 +77,9 @@ Item {
                 previousLyricText = "";
                 nextLyricText = (Lyrics.lyrics[0] ?? "").replace(/\u00A0/g, " ");
             }
+            if (lyricSlide.running) {
+                lyricSlide.complete();
+            }
             lyricSlide.running = true;
         } else {
             currentLyricIndex = -1;
@@ -96,6 +99,9 @@ Item {
                 displayedLyric = "";
                 previousLyricText = "";
                 nextLyricText = (Lyrics.lyrics[0] ?? "").replace(/\u00A0/g, " ");
+            }
+            if (lyricSlide.running) {
+                lyricSlide.complete();
             }
             lyricSlide.running = true;
         } else {
@@ -176,7 +182,7 @@ Item {
 
     Timer {
         running: Players.active?.isPlaying ?? false
-        interval: GlobalConfig.dashboard.mediaUpdateInterval
+        interval: 100
         triggeredOnStart: true
         repeat: true
         onTriggered: {

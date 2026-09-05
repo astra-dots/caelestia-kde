@@ -2087,3 +2087,28 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Verified active rendering via screenshot (`wallpaper_switcher_keys_updated.png`).
 -->
 
+<!-- Section 228 Lyrics Reliability, Synchronization, Positioning & Anti-Overlap Overhaul:
+1. Requirements & Intent:
+   - Fix initial positioning glitch where lyrics appear at the top and then slide down into the middle when opening the media panel.
+   - Fix lyrics overlapping each other (text lines colliding or drawing on top of each other).
+   - Improve lyric synchronization responsiveness and fix offset calculation math.
+   - Enable natural user manual scrolling with automatic resume after reading.
+2. Changes Implemented:
+   - `shell/modules/dashboard/media/LyricList.qml`:
+     * Zero-Duration Initial Centering: Added `isReady` state property. Set `highlightMoveDuration: isReady ? Tokens.anim.durations.large : 0`. Snaps instantly to `positionViewAtIndex(currentIndex, ListView.Center)` during initialization and track changes, binding `lyrics.opacity: lyrics.isReady ? 1 : 0` so lyrics fade in already centered at the active line without sliding from the top.
+     * Robust Non-Overlapping Delegate Architecture: Replaced bare `StyledText` delegate anchored asynchronously to `contentItem` with an `Item` container having explicit synchronous `width: lyrics.width` and `implicitHeight: lyricText.implicitHeight + (Tokens.padding.extraSmall * 2)`. Ensures `wrapMode` computes accurate multi-line heights *before* ListView positions adjacent items, permanently preventing overlapping text.
+     * Typography & Glow Refinement: Replaced active text blur (`blur: 0.4`) with crisp text (`blur: 0.0`) and subtle Material 3 shadow glow (`shadowBlur: 0.5`).
+     * Event Consolidation: Removed duplicate overlapping `MouseArea` elements into a single clean handler for hover highlights and click-to-seek.
+     * 100ms Sync Precision: Added dedicated 100ms `syncTimer` active during playback, keeping lyric highlights locked tightly to the vocal track.
+     * Smart User Scroll & Auto-Resume: Added `userScrolling` state and `userScrollTimer` (3500ms). Disables highlight enforcement while scrolling/dragging to allow browsing, then smoothly returns to the active line.
+   - `shell/plugin/src/Caelestia/Services/lyrics.cpp`:
+     * Fixed millisecond offset conversion: Converted `m_offset` from milliseconds to seconds (`m_offset / 1000.0`) in both `indexForTime` and `timeForIndex`.
+     * LRC parser deduplication: Merged consecutive lines sharing identical timestamps with `\n` into single bilingual/multi-part cards, and collapsed redundant empty instrumental pause lines.
+   - `shell/modules/background/DesktopLyrics.qml` & `shell/modules/dashboard/media/Details.qml`:
+     * Added `lyricSlide.complete()` guard in `DesktopLyrics.qml` to prevent overlapping lines during rapid lyric changes.
+     * Updated position update timers to 100ms for tight synchronization and smooth seekbar animation.
+   - Recompiled `libcaelestia-services.so` and synchronized all QML files to `~/.config/quickshell/caelestia/`.
+   - Verified active layout and instant centering via screenshots (`lyrics_centered_and_fixed.png`, `lyrics_second_open.png`).
+-->
+
+

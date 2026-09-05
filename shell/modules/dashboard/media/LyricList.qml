@@ -19,6 +19,9 @@ Item {
     property list<string> lyricList: Lyrics.lyrics
 
     function reloadTrack() {
+        if (typeof lyrics !== "undefined" && lyrics) {
+            lyrics.isReady = false;
+        }
         const p = Players.active;
         if (p) {
             Lyrics.setTrack(p.trackArtist, p.trackTitle, p.trackAlbum, p.length);
@@ -90,7 +93,7 @@ Item {
 
             PropertyChanges {
                 loadingIndicator.opacity: 0
-                lyrics.opacity: 1
+                lyrics.opacity: lyrics.isReady ? 1 : 0
                 noLyrics.opacity: 0
             }
         },
@@ -176,6 +179,9 @@ Item {
     Connections {
         function onHasLyricsChanged() {
             root.flag = !root.flag;
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.isReady = false;
+            }
         }
 
         target: Lyrics
@@ -248,8 +254,24 @@ Item {
         }
     }
 
+    Timer {
+        id: syncTimer
+        running: Players.active?.isPlaying ?? false
+        interval: 100
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            if (Players.active) {
+                Players.active.positionChanged();
+            }
+        }
+    }
+
     StyledListView {
         id: lyrics
+
+        property bool isReady: false
+        property bool userScrolling: false
 
         anchors.fill: parent
         anchors.topMargin: parent.height * root.fadeAmount / 2
@@ -259,64 +281,112 @@ Item {
         displayMarginEnd: anchors.bottomMargin
 
         model: root.lyricList
+
+        function jumpToCurrent() {
+            if (currentIndex >= 0 && count > 0 && height > 0) {
+                positionViewAtIndex(currentIndex, ListView.Center);
+                if (!isReady) {
+                    Qt.callLater(() => {
+                        positionViewAtIndex(currentIndex, ListView.Center);
+                        isReady = true;
+                    });
+                }
+            }
+        }
+
+        onCountChanged: {
+            if (!isReady) jumpToCurrent();
+        }
+        onHeightChanged: {
+            if (!isReady && height > 0) jumpToCurrent();
+        }
+        onModelChanged: {
+            isReady = false;
+            Qt.callLater(() => jumpToCurrent());
+        }
+
         Component.onCompleted: {
             currentIndex = Qt.binding(() => {
                 model; // Force update when lyrics change
                 return Lyrics.indexForTime(Players.active?.position ?? 0);
             });
-            positionViewAtIndex(currentIndex, ListView.Center);
+            jumpToCurrent();
         }
-        onModelChanged: Qt.callLater(() => positionViewAtIndex(currentIndex, ListView.Center))
 
-        highlightRangeMode: ListView.ApplyRange
-        highlightMoveDuration: Tokens.anim.durations.large
+        Timer {
+            id: userScrollTimer
+            interval: 3500
+            onTriggered: {
+                lyrics.userScrolling = false;
+                if (lyrics.currentIndex >= 0 && lyrics.count > 0) {
+                    lyrics.positionViewAtIndex(lyrics.currentIndex, ListView.Center);
+                }
+            }
+        }
+
+        onMovementStarted: {
+            userScrolling = true;
+            userScrollTimer.stop();
+        }
+
+        onMovementEnded: {
+            userScrollTimer.restart();
+        }
+
+        highlightRangeMode: userScrolling ? ListView.NoHighlightRange : ListView.ApplyRange
+        highlightMoveDuration: isReady ? Tokens.anim.durations.large : 0
         highlightMoveVelocity: -1
         preferredHighlightBegin: (height - (currentItem?.implicitHeight ?? 0)) / 2
         preferredHighlightEnd: (height + (currentItem?.implicitHeight ?? 0)) / 2
 
-        spacing: Tokens.spacing.small
+        spacing: Tokens.spacing.extraSmall
         opacity: 0
 
-        delegate: StyledText {
-            id: lyric
+        delegate: Item {
+            id: lyricItem
 
             required property string modelData
             required property int index
-            property real effectScale: ListView.isCurrentItem ? 1 : 0
 
-            anchors.left: lyrics.contentItem.left
-            anchors.right: lyrics.contentItem.right
+            readonly property bool isCurrent: ListView.isCurrentItem
+            property real effectScale: isCurrent ? 1 : 0
 
-            text: modelData || ". . ."
-            color: ListView.isCurrentItem ? Colours.palette.m3primary : mouse.containsMouse ? Colours.palette.m3onSurface : Colours.palette.m3outline
-            font: Tokens.font.body.medium
-            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-
-            layer.enabled: effectScale > 0
-            layer.effect: MultiEffect {
-                shadowEnabled: true
-                shadowColor: Colours.palette.m3primary
-                shadowOpacity: 0.5 * lyric.effectScale
-                shadowBlur: 0.6 * lyric.effectScale
-                blur: 0.4 * lyric.effectScale
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (Players.active) {
-                        let time = Lyrics.timeForIndex(index);
-                        if (time >= 0) {
-                            Players.active.position = time + Lyrics.offset + 0.01;
-                        }
-                    }
-                }
-            }
+            width: lyrics.width
+            implicitWidth: lyrics.width
+            implicitHeight: lyricText.implicitHeight + (Tokens.padding.extraSmall * 2)
 
             Behavior on effectScale {
                 Anim {
                     type: Anim.SlowEffects
+                }
+            }
+
+            StyledText {
+                id: lyricText
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: Tokens.padding.medium
+                anchors.rightMargin: Tokens.padding.medium
+
+                text: lyricItem.modelData || ". . ."
+                horizontalAlignment: Text.AlignLeft
+                color: lyricItem.isCurrent
+                    ? Colours.palette.m3primary
+                    : mouse.containsMouse
+                        ? Colours.palette.m3onSurface
+                        : Colours.palette.m3outline
+                font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+
+                layer.enabled: lyricItem.effectScale > 0
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: Colours.palette.m3primary
+                    shadowOpacity: 0.6 * lyricItem.effectScale
+                    shadowBlur: 0.5 * lyricItem.effectScale
+                    blur: 0.0
                 }
             }
 
@@ -328,8 +398,12 @@ Item {
                 hoverEnabled: true
                 onClicked: {
                     const p = Players.active;
-                    if (p)
-                        p.position = Lyrics.timeForIndex(lyric.index);
+                    if (p) {
+                        const time = Lyrics.timeForIndex(lyricItem.index);
+                        if (time >= 0) {
+                            p.position = time;
+                        }
+                    }
                 }
             }
         }

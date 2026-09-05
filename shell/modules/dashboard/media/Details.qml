@@ -30,7 +30,7 @@ ColumnLayout {
 
     Timer {
         running: Players.active?.isPlaying ?? false
-        interval: GlobalConfig.dashboard.mediaUpdateInterval
+        interval: 100
         triggeredOnStart: true
         repeat: true
         onTriggered: Players.active?.positionChanged()
