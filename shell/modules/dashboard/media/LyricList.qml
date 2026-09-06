@@ -20,6 +20,7 @@ Item {
 
     readonly property bool useSpicy: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics
     readonly property bool hasLyrics: useSpicy || Lyrics.hasLyrics
+    readonly property bool isStaticLyrics: root.useSpicy && SpotifyService.syncType === "Static"
     property bool isMediaActive: false
 
     onIsMediaActiveChanged: {
@@ -29,30 +30,20 @@ Item {
             }
             if (typeof lyrics !== "undefined" && lyrics) {
                 lyrics.userScrolling = false;
-                lyrics.centerCurrent(true);
-                openSettleTimer.ticks = 0;
-                openSettleTimer.restart();
+                lyrics.isReady = false;
+                lyrics.jumpToCurrent();
+                settleTimer.restart();
             }
-        } else {
-            openSettleTimer.stop();
         }
     }
 
     Timer {
-        id: openSettleTimer
-        interval: 40
-        repeat: true
-        property int ticks: 0
+        id: settleTimer
+        interval: 350
         onTriggered: {
-            ticks++;
-            if (typeof lyrics !== "undefined" && lyrics && lyrics.height > 100) {
-                lyrics.centerCurrent(true);
-            }
-            if (ticks >= 10) {
-                stop();
-                if (typeof lyrics !== "undefined" && lyrics) {
-                    lyrics.centerCurrent(true);
-                }
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.jumpToCurrent();
+                lyrics.isReady = true;
             }
         }
     }
@@ -64,11 +55,9 @@ Item {
             }
             if (typeof lyrics !== "undefined" && lyrics) {
                 lyrics.userScrolling = false;
-                lyrics.centerCurrent(true);
-                if (isMediaActive) {
-                    openSettleTimer.ticks = 0;
-                    openSettleTimer.restart();
-                }
+                lyrics.isReady = false;
+                lyrics.jumpToCurrent();
+                settleTimer.restart();
             }
         }
     }
@@ -81,7 +70,9 @@ Item {
             Lyrics.clearTrack();
         }
         if (typeof lyrics !== "undefined" && lyrics) {
-            lyrics.centerCurrent(true);
+            lyrics.isReady = false;
+            lyrics.jumpToCurrent();
+            settleTimer.restart();
         }
     }
 
@@ -294,6 +285,7 @@ Item {
     StyledListView {
         id: lyrics
 
+        property bool isReady: false
         property bool userScrolling: false
 
         anchors.fill: parent
@@ -305,103 +297,33 @@ Item {
 
         model: root.useSpicy ? SpotifyService.lyricLines : root.lyricList
 
-        NumberAnimation {
-            id: scrollAnim
-            target: lyrics
-            property: "contentY"
-            duration: Tokens.anim.durations.large
-            easing.type: Easing.OutCubic
-        }
-
-        function centerCurrent(instant = false) {
+        function jumpToCurrent() {
             if (count === 0 || height <= 0) return;
-
-            if (currentIndex < 0) {
-                scrollAnim.stop();
-                if (instant) {
-                    contentY = 0;
-                    positionViewAtIndex(0, ListView.Beginning);
-                } else if (!userScrolling) {
-                    scrollAnim.stop();
-                    scrollAnim.to = 0;
-                    scrollAnim.start();
-                }
-                return;
-            }
-
-            if (instant) {
-                scrollAnim.stop();
+            if (currentIndex >= 0) {
                 positionViewAtIndex(currentIndex, ListView.Center);
-                Qt.callLater(() => {
-                    if (currentItem && height > 0) {
-                        const itemCenter = currentItem.y + (currentItem.height / 2);
-                        const maxScroll = Math.max(0, lyrics.contentHeight - lyrics.height);
-                        const targetY = Math.max(0, Math.min(itemCenter - (lyrics.height / 2), maxScroll));
-                        lyrics.contentY = targetY;
-                    }
-                });
-                return;
+            } else {
+                positionViewAtIndex(0, ListView.Beginning);
             }
-
-            if (userScrolling) return;
-
-            Qt.callLater(() => {
-                if (currentItem && !userScrolling) {
-                    const itemCenter = currentItem.y + (currentItem.height / 2);
-                    const maxScroll = Math.max(0, lyrics.contentHeight - lyrics.height);
-                    const targetY = Math.max(0, Math.min(itemCenter - (lyrics.height / 2), maxScroll));
-                    if (Math.abs(lyrics.contentY - targetY) > lyrics.height * 2.5) {
-                        positionViewAtIndex(currentIndex, ListView.Center);
-                        Qt.callLater(() => {
-                            if (currentItem && !userScrolling) {
-                                const ic = currentItem.y + (currentItem.height / 2);
-                                const ms = Math.max(0, lyrics.contentHeight - lyrics.height);
-                                const ty = Math.max(0, Math.min(ic - (lyrics.height / 2), ms));
-                                lyrics.contentY = ty;
-                            }
-                        });
-                    } else {
-                        scrollAnim.stop();
-                        scrollAnim.to = targetY;
-                        scrollAnim.start();
-                    }
-                } else if (!currentItem && currentIndex >= 0) {
-                    positionViewAtIndex(currentIndex, ListView.Center);
-                    Qt.callLater(() => {
-                        if (currentItem && !userScrolling) {
-                            const ic = currentItem.y + (currentItem.height / 2);
-                            const ms = Math.max(0, lyrics.contentHeight - lyrics.height);
-                            const ty = Math.max(0, Math.min(ic - (lyrics.height / 2), ms));
-                            lyrics.contentY = ty;
-                        }
-                    });
-                }
-            });
         }
 
         function scrollToCurrent(instant = false) {
-            centerCurrent(instant);
-        }
-
-        function jumpToCurrent(forceInstant = false) {
-            centerCurrent(forceInstant);
+            jumpToCurrent();
         }
 
         onCountChanged: {
-            centerCurrent(true);
+            if (!isReady) jumpToCurrent();
         }
         onHeightChanged: {
-            if (height > 100 && !userScrolling) {
-                centerCurrent(true);
+            if (!isReady && height > 100) {
+                jumpToCurrent();
             }
         }
         onModelChanged: {
-            centerCurrent(true);
-        }
-        onCurrentIndexChanged: {
-            if (count > 0 && height > 0 && !userScrolling) {
-                centerCurrent(false);
-            }
+            isReady = false;
+            Qt.callLater(() => {
+                jumpToCurrent();
+                settleTimer.restart();
+            });
         }
 
         Component.onCompleted: {
@@ -414,7 +336,7 @@ Item {
                 const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
                 return Lyrics.indexForTime(pos);
             });
-            centerCurrent(true);
+            jumpToCurrent();
         }
 
         Timer {
@@ -422,13 +344,11 @@ Item {
             interval: 3500
             onTriggered: {
                 lyrics.userScrolling = false;
-                lyrics.centerCurrent(false);
+                lyrics.jumpToCurrent();
             }
         }
 
         onMovementStarted: {
-            openSettleTimer.stop();
-            scrollAnim.stop();
             userScrolling = true;
             userScrollTimer.stop();
         }
@@ -437,7 +357,11 @@ Item {
             userScrollTimer.restart();
         }
 
-        highlightRangeMode: ListView.NoHighlightRange
+        highlightRangeMode: (userScrolling || root.isStaticLyrics) ? ListView.NoHighlightRange : ListView.ApplyRange
+        highlightMoveDuration: isReady ? Tokens.anim.durations.large : 0
+        highlightMoveVelocity: -1
+        preferredHighlightBegin: (height - (currentItem?.implicitHeight ?? 30)) / 2
+        preferredHighlightEnd: (height + (currentItem?.implicitHeight ?? 30)) / 2
 
         spacing: Tokens.spacing.extraSmall
         opacity: 0
