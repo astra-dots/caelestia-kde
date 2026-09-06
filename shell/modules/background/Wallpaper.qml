@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
-import QtMultimedia
 import Quickshell
 import M3Shapes
 import Caelestia.Config
@@ -20,13 +19,6 @@ Item {
     property bool completed
     property bool skipTransition: false
     property var screen: null
-
-    function isVideo(path: string): bool {
-        if (!path)
-            return false;
-        const ext = path.split('.').pop().toLowerCase();
-        return ["mp4", "webm", "mkv", "avi", "mov", "wmv", "flv"].includes(ext);
-    }
 
     onSourceChanged: {
         if (!source)
@@ -110,7 +102,7 @@ Item {
 
                             title: qsTr("Select a wallpaper")
                             filterLabel: qsTr("Media files")
-                            filters: Images.validImageExtensions.concat(Images.validVideoExtensions)
+                            filters: Images.validImageExtensions
                             onAccepted: path => Wallpapers.setWallpaper(path)
                         }
                         StateLayer {
@@ -146,8 +138,6 @@ Item {
         id: img
 
         property string imagePath: ""
-        property string videoPath: ""
-        property bool isVideoImage: root.isVideo(root.source)
         property var screen: null
         readonly property real maxRadius: Math.sqrt(width * width + height * height)
         property real maskRadius: root.skipTransition ? maxRadius : 0
@@ -170,43 +160,16 @@ Item {
 
         function update(): void {
             this.screen = root.screen;
-            // Ask about the source being switched to, not the isVideoImage binding:
-            // that binding can still hold the previous source's answer when this
-            // runs, which routed a video into the image loader. The image cannot
-            // decode it, so the wallpaper just went white.
-            const isVideoImage = root.isVideo(root.source);
-            if (isVideoImage) {
-                if (videoPath === root.source)
-                    root.current = this;
-                else {
-                    imagePath = "";
-                    videoPath = root.source;
-                }
-            } else {
-                if (imagePath === root.source)
-                    root.current = this;
-                else {
-                    videoPath = "";
-                    imagePath = root.source;
-                }
-            }
-        }
-        function updateContent(): void {
-            const isVideoImage = root.isVideo(root.source);
-            if (isVideoImage) {
-                imagePath = "";
-                videoPath = root.source;
-            } else {
-                videoPath = "";
+            if (imagePath === root.source)
+                root.current = this;
+            else
                 imagePath = root.source;
-            }
         }
 
-        onIsVideoImageChanged: updateContent()
         anchors.fill: parent
         opacity: 1
         scale: 1
-        Component.onCompleted: maskRadius = root.skipTransition ? maxRadius : maxRadius // Wait, original was maxRadius, but wait, onZChanged resets it
+        Component.onCompleted: maskRadius = maxRadius
         z: root.current === img ? 1 : 0
         onZChanged: {
             if (z === 1) {
@@ -277,57 +240,20 @@ Item {
 
                 anchors.fill: parent
                 path: img.imagePath
-                visible: !img.isVideoImage && img.imagePath !== ""
+                visible: img.imagePath !== ""
                 asynchronous: true
                 fillMode: Config.background.wallpaperFillMode
                 source: img.imagePath || ""
                 playing: true
-                // Decode near the size actually drawn. Left alone, the image is
-                // decoded at whatever resolution it happens to be: an 8K wallpaper
-                // is ~132MB of pixels and a slow decode, paid twice over while the
-                // outgoing and incoming images overlap through the reveal — which
-                // is the hitch on every wallpaper change. Every other wallpaper
-                // view already asks for a size; only the one drawing the biggest
-                // image did not.
-                //
-                // Only the width is given. Setting both dimensions scales the
-                // decode to exactly that box and drops the aspect ratio, which
-                // turns a 16:9 wallpaper into a square — fillMode is configurable
-                // and PreserveAspectCrop then shows that square pillarboxed. With
-                // one dimension the other follows the image's own aspect.
-                //
-                // It asks for half again the long edge so the result still covers
-                // the item under PreserveAspectCrop even for footage much wider
-                // than the screen; Qt never upscales a decode, so nothing is lost
-                // on images that are already smaller. An 8K wallpaper on this
-                // screen still comes down from ~33MP to under 7MP.
-                //
-                // Tiling is left unconstrained: there the decode size is the tile
-                // size, so capping it would change how the wallpaper looks.
                 sourceSize: {
-                    // Nothing to size when this element is not the one drawing:
-                    // for a video the source here is empty, and handing a decode
-                    // size to an AnimatedImage in that state leaves the wallpaper
-                    // blank.
-                    if (img.isVideoImage || img.imagePath === "" || img.tiled)
+                    if (img.imagePath === "" || img.tiled)
                         return Qt.size(0, 0);
                     const dpr = wallpaperImage.Screen.devicePixelRatio || 1;
                     const edge = Math.ceil(Math.max(wallpaperImage.width, wallpaperImage.height) * dpr * 1.5);
                     return edge > 0 ? Qt.size(edge, 0) : Qt.size(0, 0);
                 }
                 onStatusChanged: {
-                    if (status === Image.Ready && !img.isVideoImage)
-                        root.current = img;
-                }
-            }
-            CachingVideo {
-                anchors.fill: parent
-                path: img.videoPath
-                screen: root.screen
-                visible: img.isVideoImage && img.videoPath !== ""
-                fillMode: Config.background.wallpaperFillMode
-                onPlayingChanged: {
-                    if (playing && img.isVideoImage)
+                    if (status === Image.Ready)
                         root.current = img;
                 }
             }

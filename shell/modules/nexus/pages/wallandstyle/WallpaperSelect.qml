@@ -377,15 +377,6 @@ PageBase {
                         onClicked: {
                             if (root.nState) root.nState.wallpaperFilterType = "gif"
                         }
-                    },
-                    MenuItem {
-                        property string filterValue: "video"
-
-                        text: qsTr("Videos")
-                        icon: "movie"
-                        onClicked: {
-                            if (root.nState) root.nState.wallpaperFilterType = "video"
-                        }
                     }
                 ]
 
@@ -421,14 +412,11 @@ PageBase {
                     const filter = root.nState ? root.nState.wallpaperFilterType : "all";
 
                     for (const w of walls) {
-                        const isVid = Images.isVideo(w.name);
                         const isGif = w.name.toLowerCase().endsWith(".gif");
                         const isImg = Images.isValidImageByName(w.name) && !isGif;
 
                         let matches = false;
                         if (filter === "all") {
-                            matches = true;
-                        } else if (filter === "video" && isVid) {
                             matches = true;
                         } else if (filter === "gif" && isGif) {
                             matches = true;

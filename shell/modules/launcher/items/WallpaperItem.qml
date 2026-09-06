@@ -63,24 +63,12 @@ Item {
             text: "image"
             color: Colours.tPalette.m3onSurfaceVariant
             fontStyle: Tokens.font.icon.builders.extraLarge.scale(2).weight(Font.DemiBold).build()
-            visible: !Images.isVideo(root.modelData.name)
-        }
-
-        MaterialIcon {
-            anchors.centerIn: parent
-            text: "videocam"
-            color: Colours.tPalette.m3onSurfaceVariant
-            fontStyle: Tokens.font.icon.builders.extraLarge.scale(2).weight(Font.DemiBold).build()
-            visible: Images.isVideo(root.modelData.name) && Wallpapers.thumbFor(root.modelData.path) === ""
         }
 
         CachingImage {
             anchors.fill: parent
-            // Videos get an extracted frame; until it exists this is empty and the
-            // videocam icon above shows through.
-            path: Images.isVideo(root.modelData.name) ? Wallpapers.thumbFor(root.modelData.path) : root.modelData.path
+            path: root.modelData.path
             smooth: !root.PathView.view.moving
-            visible: path !== ""
             sourceSize: {
                 const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
                 return Qt.size(image.implicitWidth * dpr * 2, image.implicitHeight * dpr * 2);

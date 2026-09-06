@@ -14,7 +14,6 @@ Searcher {
     id: root
 
     readonly property string currentNamePath: `${Paths.state}/wallpaper/path.txt`
-    readonly property string currentMediaPath: `${Paths.state}/wallpaper/media_path.txt`
     readonly property list<string> smartArg: GlobalConfig.services.smartScheme ? [] : ["--no-smart"]
     readonly property string fallback: Quickshell.shellPath("assets/wallpapers/Minimal-Paper.png")
 
@@ -24,17 +23,13 @@ Searcher {
     property string actualCurrent
     property bool previewColourLock
     property bool pendingPreviewClear
-    property var videoThumbs: ({})
-    property var videoThumbsPending: ({})
 
     property string currentMediaFilter: "All"
 
     property var filteredList: {
         const res = wallpapers.entries || [];
         if (currentMediaFilter === "Image") {
-            return res.filter(w => !Images.isVideo(w.relativePath) && !Images.isAnimated(w.relativePath));
-        } else if (currentMediaFilter === "Video") {
-            return res.filter(w => Images.isVideo(w.relativePath));
+            return res.filter(w => !Images.isAnimated(w.relativePath));
         } else if (currentMediaFilter === "Animated") {
             return res.filter(w => Images.isAnimated(w.relativePath));
         }
@@ -117,21 +112,9 @@ Searcher {
     function setWallpaper(path: string): void {
         const cleanPath = String(path || "").replace(/^file:\/\//, "");
         actualCurrent = cleanPath;
-        if (Images.isVideo(cleanPath)) {
-            const thumb = thumbFor(cleanPath);
-            if (thumb !== "") {
-                const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$1" > "$2"; printf "%s" "$3" > "$4"';
-                Quickshell.execDetached(["sh", "-c", script, "--", thumb, root.currentNamePath, cleanPath, root.currentMediaPath]);
-                syncPlasmaWallpaper(thumb);
-            } else {
-                Quickshell.execDetached(["sh", "-c", 'printf "%s" "$1" > "$2"', "--", cleanPath, root.currentMediaPath]);
-                // Still frame not ready yet — onVideoThumb() syncs Plasma once it is.
-            }
-        } else {
-            const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; : > "$2"';
-            Quickshell.execDetached(["sh", "-c", script, "--", cleanPath, root.currentMediaPath]);
-            syncPlasmaWallpaper(cleanPath);
-        }
+        const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ");
+        Quickshell.execDetached(["sh", "-c", script, "--", cleanPath]);
+        syncPlasmaWallpaper(cleanPath);
     }
 
     // Mirrors the wallpaper onto Plasma's own desktop background so it doesn't
@@ -166,75 +149,8 @@ Searcher {
             Colours.showPreview = false;
     }
 
-    function getThumbnailPath(path: string): string {
-        if (Images.isVideo(path)) {
-            return `${Paths.cache}/wallpapers/${CUtils.sha256(path)}/first_frame.png`;
-        }
-        return path;
-    }
-
-    // Video wallpapers have no still to show, so the pickers had nothing to draw
-    // and sat on a loading spinner forever. Extract a frame once and cache it
-    // beside the wallpaper caches, keyed the same way getThumbnailPath already
-    // described — that path was being computed but never produced by anything.
-    // What a picker should actually display for a wallpaper: the image itself, or
-    // a video's extracted frame once there is one. Returns "" for a video whose
-    // frame is still being made, so callers can show a placeholder meanwhile.
     function thumbFor(path: string): string {
-        const p = String(path || "").replace(/^file:\/\//, "");
-        if (p === "" || !Images.isVideo(p))
-            return p;
-        if (root.videoThumbs[p])
-            return root.videoThumbs[p];
-        requestVideoThumb(p);
-        return "";
-    }
-
-    function requestVideoThumb(path: string): void {
-        if (root.videoThumbsPending[path] || root.videoThumbs[path])
-            return;
-        const pending = root.videoThumbsPending;
-        pending[path] = true;
-        root.videoThumbsPending = pending;
-
-        const out = getThumbnailPath(path);
-        const script = 'out="$1"; src="$2"; [ -s "$out" ] || { mkdir -p "$(dirname "$out")"; ' +
-                       'ffmpeg -y -loglevel error -i "$src" -vf "thumbnail,scale=640:-1" -frames:v 1 "$out" >/dev/null 2>&1; }; ' +
-                       '[ -s "$out" ] && printf %s "$out"';
-        const qml = 'import QtQuick\nimport Quickshell.Io\n' +
-            'Process {\n' +
-            '    id: p\n' +
-            '    command: ' + JSON.stringify(["sh", "-c", script, "--", out, path]) + '\n' +
-            '    stdout: StdioCollector { onStreamFinished: root.onVideoThumb(' + JSON.stringify(path) + ', (text || "").trim(), p); }\n' +
-            '    onExited: code => { if (code !== 0) p.destroy(); }\n' +
-            '}';
-        try {
-            const o = Qt.createQmlObject(qml, root, "videoThumbProc");
-            o.running = true;
-        } catch (e) {
-            Logger.log("[wallpapers] video thumbnail error: " + e.message);
-        }
-    }
-
-    function onVideoThumb(path: string, out: string, proc: var): void {
-        const cleanPath = String(path || "").replace(/^file:\/\//, "");
-        if (out !== "") {
-            const m = root.videoThumbs;
-            m[cleanPath] = out;
-            root.videoThumbs = Object.assign({}, m);   // a copy, so bindings re-run
-            const cur = String(root.actualCurrent || "").replace(/^file:\/\//, "");
-            if (cleanPath === cur) {
-                const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$1" > "$2"; printf "%s" "$3" > "$4"';
-                Quickshell.execDetached(["sh", "-c", script, "--", out, root.currentNamePath, cleanPath, root.currentMediaPath]);
-                syncPlasmaWallpaper(out);
-            }
-        }
-        const pending = root.videoThumbsPending;
-        delete pending[cleanPath];
-        delete pending[path];
-        root.videoThumbsPending = pending;
-        if (proc)
-            proc.destroy();
+        return String(path || "").replace(/^file:\/\//, "");
     }
 
     onPreviewColourLockChanged: {
@@ -266,50 +182,20 @@ Searcher {
     }
 
     FileView {
-        id: mediaFileView
-
-        path: root.currentMediaPath
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: {
-            const media = text().trim();
-            if (media && Images.isVideo(media)) {
-                root.actualCurrent = media;
-            }
-        }
-    }
-
-    FileView {
         path: root.currentNamePath
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
-            const media = (mediaFileView.text() || "").trim();
-            if (media && Images.isVideo(media)) {
-                root.actualCurrent = media;
-                root.previewColourLock = false;
-                return;
-            }
             let wall = text().trim();
             if (!wall) {
                 wall = root.fallback;
                 Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
             }
-            if (Images.isVideo(root.actualCurrent) && (wall === root.getThumbnailPath(root.actualCurrent) || (root.videoThumbs[root.actualCurrent] && wall === root.videoThumbs[root.actualCurrent]))) {
-                return;
-            }
             root.actualCurrent = wall;
             root.previewColourLock = false;
         }
         onLoadFailed: {
-            const media = (mediaFileView.text() || "").trim();
-            if (media && Images.isVideo(media)) {
-                root.actualCurrent = media;
-                root.previewColourLock = false;
-                return;
-            }
             root.actualCurrent = root.fallback;
             root.previewColourLock = false;
             Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
@@ -322,7 +208,7 @@ Searcher {
         recursive: true
         path: Paths.wallsdir
         filter: FileSystemModel.Files
-        nameFilters: Images.validImageExtensions.concat(Images.validVideoExtensions).map(e => `*.${e}`)
+        nameFilters: Images.validImageExtensions.map(e => `*.${e}`)
     }
 
     Process {

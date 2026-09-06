@@ -126,7 +126,7 @@ PageBase {
                     id: wallImg
 
                     anchors.fill: parent
-                    source: Wallpapers.thumbFor(Wallpapers.current)
+                    source: Wallpapers.current
                     preventInit: wallIndicatorLoader.opacity > 0
                     fadeOutAnim: Anim.DefaultEffects
                     fadeInAnim: Anim.SlowEffects
@@ -395,13 +395,6 @@ PageBase {
                 label: qsTr("Slideshow & Order")
                 status: qsTr("Slideshow interval and randomization")
                 onClicked: root.nState.openSubPage(6)
-            }
-
-            NavRow {
-                icon: "movie"
-                label: qsTr("Video Wallpapers")
-                status: qsTr("Audio and pausing behavior")
-                onClicked: root.nState.openSubPage(7)
             }
 
             NavRow {
