@@ -24,8 +24,11 @@ ColumnLayout {
     readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0) + elementFontOffset)
 
     readonly property bool hasInput: Audio.sources.length > 0
-    width: Math.max((hasInput ? 520 : 270) * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
+    width: Math.max((hasInput ? 580 : 300) * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
+    implicitWidth: width
     spacing: Tokens.spacing.medium * scaleOffset
+
+    readonly property real cardHeight: Math.max(outputLayout.implicitHeight, (root.hasInput ? inputLayout.implicitHeight : 0)) + Tokens.padding.medium * 2 * root.scaleOffset
 
     ButtonGroup {
         id: sinks
@@ -35,6 +38,7 @@ ColumnLayout {
         id: sources
     }
 
+    // Title Row: Audio Title + Settings Button
     RowLayout {
         Layout.fillWidth: true
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
@@ -56,54 +60,153 @@ ColumnLayout {
         }
     }
 
+    // Device Cards Row: Left Output Card, Right Input Card (Both matched to exact same height)
     RowLayout {
         Layout.fillWidth: true
         spacing: Tokens.spacing.medium * root.scaleOffset
 
-        // Left Column: Output Device & Volume
-        ColumnLayout {
+        // Left Card: Output Devices
+        StyledRect {
+            id: outputCard
+
             Layout.fillWidth: true
-            Layout.alignment: Qt.AlignTop
-            spacing: Tokens.spacing.small * root.scaleOffset
+            Layout.fillHeight: true
+            Layout.preferredWidth: 1
+            implicitHeight: root.cardHeight
+            radius: Tokens.rounding.medium * root.scaleOffset
+            color: Colours.tPalette.m3surfaceContainer
+            clip: true
 
-            StyledRect {
-                Layout.fillWidth: true
-                implicitWidth: outputLayout.implicitWidth + Tokens.padding.medium * 2 * root.scaleOffset
-                implicitHeight: outputLayout.implicitHeight + Tokens.padding.medium * 2 * root.scaleOffset
-                radius: Tokens.rounding.medium * root.scaleOffset
-                color: Colours.tPalette.m3surfaceContainer
-                clip: true
+            ColumnLayout {
+                id: outputLayout
 
-                ColumnLayout {
-                    id: outputLayout
+                width: parent.width - Tokens.padding.medium * 2 * root.scaleOffset
+                x: Tokens.padding.medium * root.scaleOffset
+                y: Tokens.padding.medium * root.scaleOffset
+                spacing: Tokens.spacing.medium * root.scaleOffset
 
-                    width: parent.width - Tokens.padding.medium * 2 * root.scaleOffset
-                    x: Tokens.padding.medium * root.scaleOffset
-                    y: Tokens.padding.medium * root.scaleOffset
-                    spacing: Tokens.spacing.medium * root.scaleOffset
+                StyledText {
+                    text: qsTr("Output device")
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                }
 
-                    StyledText {
-                        text: qsTr("Output device")
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
-                    }
+                Repeater {
+                    model: Audio.sinks
 
-                    Repeater {
-                        model: Audio.sinks
+                    StyledRadioButton {
+                        id: outputControl
 
-                        StyledRadioButton {
-                            id: outputControl
+                        required property PwNode modelData
 
-                            required property PwNode modelData
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: outputLayout.width
+                        width: outputLayout.width
 
-                            ButtonGroup.group: sinks
-                            checked: Audio.sink?.id === modelData.id
-                            onClicked: Audio.setAudioSink(modelData)
-                            text: modelData.description
-                            font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
+                        ButtonGroup.group: sinks
+                        checked: Audio.sink?.id === modelData.id
+                        onClicked: Audio.setAudioSink(modelData)
+                        text: modelData.description
+                        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
+
+                        contentItem: MarqueeText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: (outputControl.indicator ? outputControl.indicator.implicitWidth : 20) + Tokens.spacing.medium * root.scaleOffset
+                            anchors.right: parent.right
+                            anchors.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: outputControl.text
+                            font: outputControl.font
+                            alwaysScroll: true
+                            externalHovered: outputControl.hovered
+                            color: outputControl.checked ? Colours.palette.m3primary : Colours.palette.m3onSurface
+
+                            TapHandler {
+                                cursorShape: Qt.PointingHandCursor
+                                onTapped: outputControl.click()
+                            }
                         }
                     }
                 }
             }
+        }
+
+        // Right Card: Input Devices
+        StyledRect {
+            id: inputCard
+
+            visible: root.hasInput
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.preferredWidth: 1
+            implicitHeight: root.cardHeight
+            radius: Tokens.rounding.medium * root.scaleOffset
+            color: Colours.tPalette.m3surfaceContainer
+            clip: true
+
+            ColumnLayout {
+                id: inputLayout
+
+                width: parent.width - Tokens.padding.medium * 2 * root.scaleOffset
+                x: Tokens.padding.medium * root.scaleOffset
+                y: Tokens.padding.medium * root.scaleOffset
+                spacing: Tokens.spacing.medium * root.scaleOffset
+
+                StyledText {
+                    text: qsTr("Input device")
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                }
+
+                Repeater {
+                    model: Audio.sources
+
+                    StyledRadioButton {
+                        id: inputControl
+
+                        required property PwNode modelData
+
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: inputLayout.width
+                        width: inputLayout.width
+
+                        ButtonGroup.group: sources
+                        checked: Audio.source?.id === modelData.id
+                        onClicked: Audio.setAudioSource(modelData)
+                        text: modelData.description
+                        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
+
+                        contentItem: MarqueeText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: (inputControl.indicator ? inputControl.indicator.implicitWidth : 20) + Tokens.spacing.medium * root.scaleOffset
+                            anchors.right: parent.right
+                            anchors.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: inputControl.text
+                            font: inputControl.font
+                            alwaysScroll: true
+                            externalHovered: inputControl.hovered
+                            color: inputControl.checked ? Colours.palette.m3primary : Colours.palette.m3onSurface
+
+                            TapHandler {
+                                cursorShape: Qt.PointingHandCursor
+                                onTapped: inputControl.click()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Sliders Row: Volume on Left, Microphone on Right (Guaranteed identical vertical height)
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.medium * root.scaleOffset
+
+        // Left: Volume
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
+            spacing: Tokens.spacing.small * root.scaleOffset
 
             StyledText {
                 Layout.topMargin: Tokens.spacing.small * root.scaleOffset
@@ -134,51 +237,12 @@ ColumnLayout {
             }
         }
 
-        // Right Column: Input Device & Microphone
+        // Right: Microphone
         ColumnLayout {
             visible: root.hasInput
             Layout.fillWidth: true
-            Layout.alignment: Qt.AlignTop
+            Layout.preferredWidth: 1
             spacing: Tokens.spacing.small * root.scaleOffset
-
-            StyledRect {
-                Layout.fillWidth: true
-                implicitWidth: inputLayout.implicitWidth + Tokens.padding.medium * 2 * root.scaleOffset
-                implicitHeight: inputLayout.implicitHeight + Tokens.padding.medium * 2 * root.scaleOffset
-                radius: Tokens.rounding.medium * root.scaleOffset
-                color: Colours.tPalette.m3surfaceContainer
-                clip: true
-
-                ColumnLayout {
-                    id: inputLayout
-
-                    width: parent.width - Tokens.padding.medium * 2 * root.scaleOffset
-                    x: Tokens.padding.medium * root.scaleOffset
-                    y: Tokens.padding.medium * root.scaleOffset
-                    spacing: Tokens.spacing.medium * root.scaleOffset
-
-                    StyledText {
-                        text: qsTr("Input device")
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
-                    }
-
-                    Repeater {
-                        model: Audio.sources
-
-                        StyledRadioButton {
-                            id: inputControl
-
-                            required property PwNode modelData
-
-                            ButtonGroup.group: sources
-                            checked: Audio.source?.id === modelData.id
-                            onClicked: Audio.setAudioSource(modelData)
-                            text: modelData.description
-                            font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
-                        }
-                    }
-                }
-            }
 
             StyledText {
                 Layout.topMargin: Tokens.spacing.small * root.scaleOffset

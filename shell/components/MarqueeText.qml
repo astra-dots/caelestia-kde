@@ -18,6 +18,7 @@ Item {
     property int pauseDelay: 1600 // ms
     property bool scrollEnabled: true
     property bool externalHovered: false
+    property bool alwaysScroll: false
 
     readonly property bool isHovered: hoverHandler.hovered || root.externalHovered
     readonly property real textWidth: Math.max(textMeasurer.width, mainText.implicitWidth)
@@ -86,7 +87,7 @@ Item {
         id: animator
         property real scrollOffset: 0
 
-        readonly property bool shouldScroll: root.scrollEnabled && root.isOverflowing && (root.isHovered || (Players.active?.isPlaying ?? false))
+        readonly property bool shouldScroll: root.scrollEnabled && root.isOverflowing && (root.alwaysScroll || root.isHovered || (Players.active?.isPlaying ?? false))
 
         SequentialAnimation on scrollOffset {
             id: marqueeAnim
