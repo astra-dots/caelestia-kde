@@ -17,7 +17,7 @@ Item {
     property string source: Wallpapers.current
     property Item current: one
     property bool completed
-    property bool skipTransition: Wallpapers.showPreview
+    property bool skipTransition: false
     property var screen: null
 
     onSourceChanged: {
@@ -206,6 +206,8 @@ Item {
             anchors.fill: parent
             hideSource: true
             live: img.needsMask
+            mipmap: false
+            smooth: true
         }
         Item {
             id: contentItem
@@ -219,9 +221,9 @@ Item {
                 maskSource: maskSourceItem
                 shadowEnabled: img.needsMask
                 shadowColor: "black"
-                shadowBlur: 1.0
-                shadowVerticalOffset: 15
-                shadowHorizontalOffset: 5
+                shadowBlur: 0.4
+                shadowVerticalOffset: 8
+                shadowHorizontalOffset: 0
                 saturation: (img.shouldRecolor && img.isDynamicMonochrome) ? -1 : 0
                 colorization: img.shouldRecolor ? Config.background.wallpaperRecolorStrength : 0
                 colorizationColor: Colours.palette.m3primary
@@ -266,7 +268,7 @@ Item {
                 from: 0
                 to: img.maxRadius
                 type: Anim.Emphasized
-                duration: 2500
+                duration: 1200
             }
     }
 }

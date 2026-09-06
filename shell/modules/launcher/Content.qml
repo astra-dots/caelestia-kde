@@ -389,7 +389,11 @@ Item {
             }
 
             text: "delete"
-            color: Colours.palette.m3onSurfaceVariant
+            color: clipboardMouse.containsMouse ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
+
+            Behavior on color {
+                CAnim {}
+            }
 
             MouseArea {
                 id: clipboardMouse
@@ -479,7 +483,7 @@ Item {
 
         padding: Tokens.padding.large
 
-        contentItem: Column {
+        contentItem: ColumnLayout {
             spacing: Tokens.spacing.medium
 
             StyledText {
@@ -493,15 +497,20 @@ Item {
                 font: Tokens.font.body.small
             }
 
-            Row {
+            RowLayout {
+                Layout.fillWidth: true
                 spacing: Tokens.spacing.small
 
                 TextButton {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
                     text: qsTr("Cancel")
                     onClicked: clearClipboardConfirmPopup.close()
                 }
 
                 TextButton {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
                     text: qsTr("Clear")
                     type: TextButton.Filled
                     onClicked: {

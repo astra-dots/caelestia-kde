@@ -123,13 +123,34 @@ PathView {
         onValuesChanged: {
             let idx = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent);
             root.currentIndex = Math.max(0, idx);
+            Qt.callLater(() => {
+                if (root.count > 0)
+                    root.positionViewAtIndex(root.currentIndex, PathView.Center);
+            });
             if (values.length > 0 && root.currentIndex >= 0 && root.currentIndex < values.length) {
                 previewTimer.restart();
             }
         }
     }
 
-    Component.onCompleted: currentIndex = Wallpapers.list.findIndex(w => w.path === Wallpapers.actualCurrent)
+    onWidthChanged: {
+        if (width > 0 && count > 0)
+            Qt.callLater(() => root.positionViewAtIndex(root.currentIndex, PathView.Center));
+    }
+
+    onCountChanged: {
+        if (count > 0 && width > 0)
+            Qt.callLater(() => root.positionViewAtIndex(root.currentIndex, PathView.Center));
+    }
+
+    Component.onCompleted: {
+        let idx = scriptModel.values.findIndex(w => w.path === Wallpapers.actualCurrent);
+        currentIndex = Math.max(0, idx);
+        Qt.callLater(() => {
+            if (count > 0)
+                root.positionViewAtIndex(root.currentIndex, PathView.Center);
+        });
+    }
     Component.onDestruction: Wallpapers.stopPreview()
 
     Timer {
