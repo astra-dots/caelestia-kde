@@ -22,31 +22,25 @@ Item {
     readonly property bool hasLyrics: useSpicy || Lyrics.hasLyrics
 
     onVisibleChanged: {
-        if (!visible) {
-            if (typeof lyrics !== "undefined" && lyrics) {
-                lyrics.isReady = false;
-            }
-        } else {
+        if (visible) {
             if (SpotifyService.isSpotify && !SpotifyService.hasSpicyLyrics) {
                 SpotifyService.requestLyrics();
             }
-            Qt.callLater(() => {
-                if (typeof lyrics !== "undefined" && lyrics && lyrics.height > 100) {
-                    lyrics.jumpToCurrent(true);
-                }
-            });
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.scrollToCurrent(true);
+            }
         }
     }
 
     function reloadTrack() {
-        if (typeof lyrics !== "undefined" && lyrics) {
-            lyrics.isReady = false;
-        }
         const p = Players.active;
         if (p) {
             Lyrics.setTrack(p.trackArtist, p.trackTitle, p.trackAlbum, p.length);
         } else {
             Lyrics.clearTrack();
+        }
+        if (typeof lyrics !== "undefined" && lyrics) {
+            lyrics.scrollToCurrent(true);
         }
     }
 
@@ -113,7 +107,7 @@ Item {
 
             PropertyChanges {
                 loadingIndicator.opacity: 0
-                lyrics.opacity: lyrics.isReady ? 1 : 0
+                lyrics.opacity: 1
                 noLyrics.opacity: 0
             }
         },
@@ -130,50 +124,11 @@ Item {
 
     transitions: [
         Transition {
-            from: "loading"
-
-            SequentialAnimation {
+            ParallelAnimation {
                 Anim {
-                    target: loadingIndicator
+                    targets: [loadingIndicator, lyrics, noLyrics]
                     property: "opacity"
-                    type: Anim.DefaultEffects
-                }
-                Anim {
-                    targets: [lyrics, noLyrics]
-                    property: "opacity"
-                    type: Anim.SlowEffects
-                }
-            }
-        },
-        Transition {
-            from: "hasLyrics"
-
-            SequentialAnimation {
-                Anim {
-                    target: lyrics
-                    property: "opacity"
-                    type: Anim.DefaultEffects
-                }
-                Anim {
-                    targets: [loadingIndicator, noLyrics]
-                    property: "opacity"
-                    type: Anim.SlowEffects
-                }
-            }
-        },
-        Transition {
-            from: "noLyrics"
-
-            SequentialAnimation {
-                Anim {
-                    target: noLyrics
-                    property: "opacity"
-                    type: Anim.DefaultEffects
-                }
-                Anim {
-                    targets: [loadingIndicator, lyrics]
-                    property: "opacity"
-                    type: Anim.SlowEffects
+                    type: Anim.FastEffects
                 }
             }
         }
@@ -211,8 +166,7 @@ Item {
         function onSpicyLyricsChanged() {
             root.flag = !root.flag;
             if (typeof lyrics !== "undefined" && lyrics) {
-                lyrics.isReady = false;
-                Qt.callLater(() => lyrics.jumpToCurrent(true));
+                lyrics.scrollToCurrent(true);
             }
         }
 
@@ -286,12 +240,9 @@ Item {
         }
     }
 
-    Timer {
-        id: syncTimer
-        running: Players.active?.isPlaying ?? false
-        interval: 25
-        repeat: true
-        triggeredOnStart: true
+    FrameAnimation {
+        id: syncFrameAnim
+        running: root.visible && (Players.active?.isPlaying ?? false)
         onTriggered: {
             if (Players.active) {
                 Players.active.positionChanged();
@@ -302,7 +253,6 @@ Item {
     StyledListView {
         id: lyrics
 
-        property bool isReady: false
         property bool userScrolling: false
 
         anchors.fill: parent
@@ -322,26 +272,11 @@ Item {
             easing.type: Easing.OutCubic
         }
 
-        Timer {
-            id: settleTimer
-            interval: 60
-            onTriggered: {
-                if (lyrics.count > 0 && lyrics.height > 100) {
-                    if (lyrics.currentIndex >= 0) {
-                        lyrics.positionViewAtIndex(lyrics.currentIndex, ListView.Center);
-                    } else {
-                        lyrics.positionViewAtIndex(0, ListView.Beginning);
-                    }
-                    lyrics.isReady = true;
-                }
-            }
-        }
-
         function scrollToCurrent(instant = false) {
             if (count === 0 || height <= 0) return;
 
             if (currentIndex < 0) {
-                if (instant || !isReady) {
+                if (instant) {
                     scrollAnim.stop();
                     positionViewAtIndex(0, ListView.Beginning);
                 } else if (!userScrolling) {
@@ -352,7 +287,7 @@ Item {
                 return;
             }
 
-            if (instant || !isReady) {
+            if (instant) {
                 scrollAnim.stop();
                 positionViewAtIndex(currentIndex, ListView.Center);
                 return;
@@ -387,27 +322,15 @@ Item {
         }
         onHeightChanged: {
             if (height > 100) {
-                if (!isReady) {
-                    scrollToCurrent(true);
-                    settleTimer.restart();
-                }
+                scrollToCurrent(true);
             }
         }
         onModelChanged: {
-            isReady = false;
-            Qt.callLater(() => {
-                scrollToCurrent(true);
-                settleTimer.restart();
-            });
+            scrollToCurrent(true);
         }
         onCurrentIndexChanged: {
             if (count > 0 && height > 0) {
-                if (!isReady) {
-                    scrollToCurrent(true);
-                    settleTimer.restart();
-                } else {
-                    scrollToCurrent(false);
-                }
+                scrollToCurrent(false);
             }
         }
 
@@ -415,6 +338,7 @@ Item {
             currentIndex = Qt.binding(() => {
                 lyrics.model; // Force update when lyrics change
                 if (root.useSpicy) {
+                    if (SpotifyService.syncType === "Static") return -1;
                     return SpotifyService.indexForTime(SpotifyService.effectivePosition);
                 }
                 const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
@@ -460,6 +384,8 @@ Item {
                 : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
 
             readonly property string lineText: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
+            readonly property bool isInterlude: Boolean(modelData?.isInterlude) || (lyricItem.lineText === ". . ." || lyricItem.lineText === "• • •" || lyricItem.lineText === "...")
+            readonly property bool isStaticLyric: root.useSpicy && SpotifyService.syncType === "Static"
             readonly property var syllables: (typeof modelData === "object" && modelData?.syllables) ? modelData.syllables : []
             readonly property bool hasSyllables: syllables.length > 0
             readonly property real lineStartTime: (typeof modelData === "object" && modelData?.startTime !== undefined) ? Number(modelData.startTime) : -1
@@ -485,7 +411,7 @@ Item {
                 return end;
             }
 
-            readonly property bool isLineActive: isCurrent && currentPos >= lineStartTime && (lineEndTime <= 0 || currentPos < lineEndTime)
+            readonly property bool isLineActive: isStaticLyric ? false : (root.useSpicy ? (isCurrent && currentPos >= lineStartTime && (lineEndTime <= 0 || currentPos < lineEndTime)) : isCurrent)
             property real effectScale: isLineActive ? 1 : 0
 
             readonly property var backgroundLines: (typeof modelData === "object" && modelData?.background) ? modelData.background : []
@@ -510,7 +436,45 @@ Item {
                 anchors.leftMargin: Tokens.padding.medium
                 anchors.rightMargin: Tokens.padding.medium
 
-                sourceComponent: (lyricItem.hasSyllables || lyricItem.hasBackground) ? syllableFlowComponent : simpleLineComponent
+                sourceComponent: lyricItem.isInterlude ? interludeComponent : (lyricItem.hasSyllables || lyricItem.hasBackground) ? syllableFlowComponent : simpleLineComponent
+            }
+
+            Component {
+                id: interludeComponent
+
+                Row {
+                    spacing: Tokens.spacing.small
+                    height: 28
+
+                    Repeater {
+                        model: 3
+
+                        delegate: Rectangle {
+                            required property int index
+                            width: 10
+                            height: 10
+                            radius: 5
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            readonly property real phase: index * 0.8
+                            readonly property real wave: Math.max(0, Math.sin((lyricItem.currentPos * 5.0) - phase))
+                            readonly property real pulse: lyricItem.isLineActive ? (1.0 + 0.4 * wave) : 1.0
+
+                            scale: pulse
+                            color: lyricItem.isLineActive ? Colours.palette.m3primary : Colours.palette.m3outline
+                            opacity: lyricItem.isLineActive ? (0.4 + 0.6 * wave) : 0.3
+
+                            layer.enabled: lyricItem.isLineActive
+                            layer.effect: MultiEffect {
+                                shadowEnabled: true
+                                shadowColor: Colours.palette.m3primary
+                                shadowOpacity: 0.7 * wave
+                                shadowBlur: 0.4
+                                blur: 0.0
+                            }
+                        }
+                    }
+                }
             }
 
             Component {
@@ -527,15 +491,17 @@ Item {
                         text: lyricItem.lineText || (lyricItem.hasBackground ? "" : ". . .")
                         visible: text.length > 0
                         horizontalAlignment: Text.AlignLeft
-                        color: lyricItem.isLineActive
-                            ? Colours.palette.m3primary
-                            : mouse.containsMouse
-                                ? Colours.palette.m3onSurface
-                                : Colours.palette.m3outline
-                        font: lyricItem.isCurrent ? Tokens.font.title.small : Tokens.font.body.medium
+                        color: lyricItem.isStaticLyric
+                            ? Colours.palette.m3onSurface
+                            : lyricItem.isLineActive
+                                ? Colours.palette.m3primary
+                                : mouse.containsMouse
+                                    ? Colours.palette.m3onSurface
+                                    : Colours.palette.m3outline
+                        font: (!lyricItem.isStaticLyric && lyricItem.isCurrent) ? Tokens.font.title.small : Tokens.font.body.medium
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
 
-                        layer.enabled: lyricItem.effectScale > 0
+                        layer.enabled: !lyricItem.isStaticLyric && lyricItem.effectScale > 0
                         layer.effect: MultiEffect {
                             shadowEnabled: true
                             shadowColor: Colours.palette.m3primary
@@ -553,7 +519,11 @@ Item {
                             width: parent.width
                             text: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
                             font: Tokens.font.body.small
-                            color: lyricItem.isLineActive ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.7)
+                            color: lyricItem.isStaticLyric
+                                ? Qt.alpha(Colours.palette.m3onSurface, 0.7)
+                                : lyricItem.isLineActive
+                                    ? Colours.palette.m3primary
+                                    : Qt.alpha(Colours.palette.m3outline, 0.7)
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         }
                     }
@@ -904,12 +874,6 @@ Item {
                         }
                     }
                 }
-            }
-        }
-
-        Behavior on opacity {
-            Anim {
-                type: Anim.SlowEffects
             }
         }
     }

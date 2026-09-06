@@ -248,12 +248,28 @@
                     const wrapped = await res.json();
                     logToBridge("Cache JSON loaded, keys: " + JSON.stringify(Object.keys(wrapped || {})));
                     const content = wrapped?.Content || wrapped;
-                    if (content && Array.isArray(content.Content) && content.Content.length > 0) {
-                        const type = content.Type === "Syllable" ? "Syllable" : "Line";
+                    const rawItems = Array.isArray(content?.Content) ? content.Content : (Array.isArray(content?.Lines) ? content.Lines : []);
+                    if (content && rawItems.length > 0) {
+                        const isStatic = (content.Type === "Static" || (!content.Type && !rawItems[0]?.StartTime && !rawItems[0]?.Lead));
+                        const type = isStatic ? "Static" : (content.Type === "Syllable" ? "Syllable" : "Line");
                         const lines = [];
 
-                        if (type === "Syllable") {
-                            for (const item of content.Content) {
+                        if (type === "Static") {
+                            for (const item of rawItems) {
+                                const t = (item.Text || item.words || "").trim();
+                                if (t.length > 0) {
+                                    lines.push({
+                                        text: t,
+                                        startTime: -1,
+                                        endTime: -1,
+                                        syllables: [],
+                                        oppositeAligned: false,
+                                        background: []
+                                    });
+                                }
+                            }
+                        } else if (type === "Syllable") {
+                            for (const item of rawItems) {
                                 const lead = item.Lead || {};
                                 const syls = Array.isArray(lead.Syllables) ? lead.Syllables : [];
                                 const bgRaw = Array.isArray(item.Background) ? item.Background : [];
@@ -323,7 +339,7 @@
                                 });
                             }
                         } else {
-                            for (const item of content.Content) {
+                            for (const item of rawItems) {
                                 const backgroundLines = [];
                                 if (Array.isArray(item.Background)) {
                                     for (const bgItem of item.Background) {
@@ -373,7 +389,32 @@
                 if (rawLyrics && Array.isArray(rawLyrics.lines) && rawLyrics.lines.length > 0) {
                     const syncType = rawLyrics.syncType;
                     const isSyllable = syncType === "SYLLABLE_SYNCED";
+                    const isUnsynced = syncType === "UNSYNCED";
                     const lines = [];
+
+                    if (isUnsynced) {
+                        for (const l of rawLyrics.lines) {
+                            const t = (l.words || "").trim();
+                            if (t.length > 0) {
+                                lines.push({
+                                    text: t,
+                                    startTime: -1,
+                                    endTime: -1,
+                                    syllables: [],
+                                    oppositeAligned: false,
+                                    background: []
+                                });
+                            }
+                        }
+                        if (lines.length > 0) {
+                            return {
+                                uri: uri,
+                                source: "spotify-internal",
+                                type: "Static",
+                                lines: lines
+                            };
+                        }
+                    }
 
                     for (let i = 0; i < rawLyrics.lines.length; i++) {
                         const l = rawLyrics.lines[i];
@@ -450,11 +491,20 @@
             if (lyrics) {
                 clearLyricsRetries();
                 await sendLyrics(lyrics);
-            } else if (attemptNum < 8) {
-                const delays = [150, 250, 400, 600, 900, 1300, 1800, 2500];
+            } else if (attemptNum < 7) {
+                const delays = [150, 250, 400, 600, 900, 1300, 1800];
                 const delay = delays[attemptNum] || 2000;
                 const tid = setTimeout(() => attempt(attemptNum + 1), delay);
                 lyricsRetryTimeouts.push(tid);
+            } else {
+                // All retries exhausted: explicitly notify bridge that track has no lyrics!
+                clearLyricsRetries();
+                await sendLyrics({
+                    uri: uri,
+                    source: "none",
+                    type: "None",
+                    lines: []
+                });
             }
         }
 

@@ -31,12 +31,36 @@ Singleton {
     readonly property string syncType: root.spicyLyrics?.type ?? "None"
     readonly property var lyricLines: root.spicyLyrics?.lines ?? []
 
-    readonly property real leadOffset: 0.06
-    readonly property real effectivePosition: (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0) + root.leadOffset
+    readonly property real effectivePosition: (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0)
+
+    Connections {
+        target: Players.active
+        ignoreUnknownSignals: true
+
+        function onTrackTitleChanged() {
+            root.handleTrackChange();
+        }
+        function onTrackArtistChanged() {
+            root.handleTrackChange();
+        }
+        function onPostTrackChanged() {
+            root.handleTrackChange();
+        }
+    }
+
+    function handleTrackChange(): void {
+        if (!root.isSpotify) return;
+        const newUri = Players.active?.trackId ?? "";
+        if (newUri && newUri !== root.currentTrackUri) {
+            root.currentTrackUri = newUri;
+            root.spicyLyrics = null;
+            root.requestLyrics();
+        }
+    }
 
     function requestLyrics(): void {
         if (!root.isSpotify) return;
-        const uri = Players.active?.trackId ?? "";
+        const uri = Players.active?.trackId ?? root.currentTrackUri;
         const uriParam = uri ? ("?uri=" + encodeURIComponent(uri)) : "";
         Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics" + uriParam]);
         Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/refresh"]);
@@ -50,6 +74,7 @@ Singleton {
 
     function indexForTime(timeSeconds: real): int {
         if (!root.hasSpicyLyrics || root.lyricLines.length === 0) return -1;
+        if (root.syncType === "Static") return -1;
         const lines = root.lyricLines;
         let low = 0;
         let high = lines.length - 1;
@@ -122,7 +147,12 @@ Singleton {
                     try {
                         const lyricsData = JSON.parse(line.substring(7));
                         if (lyricsData && lyricsData.lines && lyricsData.lines.length > 0) {
-                            root.spicyLyrics = lyricsData;
+                            const trackUri = Players.active?.trackId ?? root.currentTrackUri;
+                            if (!lyricsData.uri || !trackUri || lyricsData.uri === trackUri) {
+                                root.spicyLyrics = lyricsData;
+                            } else {
+                                root.spicyLyrics = null;
+                            }
                         } else {
                             root.spicyLyrics = null;
                         }

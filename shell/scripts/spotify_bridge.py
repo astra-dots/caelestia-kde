@@ -49,12 +49,46 @@ def save_cached_theme_mode():
         log_debug(f"Error saving theme mode: {e}")
 
 
+SCHEME_STATE_FILE = os.path.expanduser("~/.local/state/caelestia/scheme.json")
+
+
+def read_scheme_from_file():
+    if not os.path.exists(SCHEME_STATE_FILE):
+        return None
+    try:
+        with open(SCHEME_STATE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        colours = data.get("colours", {})
+        if not colours:
+            return None
+        colors = {}
+        for k, v in colours.items():
+            if isinstance(v, str):
+                val = v.strip()
+                if val:
+                    if not val.startswith("#"):
+                        val = "#" + val
+                    colors[k] = val
+        return colors
+    except Exception as e:
+        log_debug(f"Error reading scheme file: {e}")
+        return None
+
+
 def get_caelestia_scheme():
     global cached_scheme, last_scheme_check
     now = time.time()
     if cached_scheme and (now - last_scheme_check < 2.0):
         return cached_scheme
 
+    # 1. Fast read from scheme.json state file (sub-millisecond)
+    fast_colors = read_scheme_from_file()
+    if fast_colors:
+        cached_scheme = fast_colors
+        last_scheme_check = now
+        return cached_scheme
+
+    # 2. Fallback to CLI command if scheme.json is missing
     colors = {}
     try:
         out = subprocess.check_output(["caelestia", "scheme", "get"], text=True, timeout=2)
@@ -80,6 +114,85 @@ def get_caelestia_scheme():
     except Exception as e:
         log_debug(f"Error fetching caelestia scheme: {e}")
     return cached_scheme or colors
+
+
+def scheme_watcher_loop():
+    last_mtime = 0
+    if os.path.exists(SCHEME_STATE_FILE):
+        try:
+            last_mtime = os.path.getmtime(SCHEME_STATE_FILE)
+        except Exception:
+            pass
+    while True:
+        time.sleep(0.3)
+        try:
+            if os.path.exists(SCHEME_STATE_FILE):
+                mtime = os.path.getmtime(SCHEME_STATE_FILE)
+                if mtime != last_mtime:
+                    last_mtime = mtime
+                    scheme = read_scheme_from_file()
+                    if scheme:
+                        global cached_scheme
+                        cached_scheme = scheme
+                        log_debug(f"Detected scheme.json change (mtime={mtime})")
+                        if current_theme_mode == "system":
+                            log_debug("Auto-pushing updated system scheme to Spotify")
+                            queue_command({"action": "setThemeMode", "mode": "system", "scheme": scheme})
+        except Exception as e:
+            log_debug(f"Scheme watcher error: {e}")
+
+
+def inject_interludes(lines, min_gap=3.5):
+    if not lines or not isinstance(lines, list):
+        return lines
+
+    has_timing = any(float(l.get("startTime", -1)) >= 0 for l in lines)
+    if not has_timing:
+        return lines
+
+    # Don't inject if interludes already present
+    if any(l.get("isInterlude") for l in lines):
+        return lines
+
+    result = []
+    # 1. Intro interlude
+    first = lines[0]
+    first_start = float(first.get("startTime", -1))
+    if first_start >= min_gap:
+        result.append({
+            "text": "• • •",
+            "isInterlude": True,
+            "startTime": 0.0,
+            "endTime": round(first_start, 3),
+            "syllables": [],
+            "background": []
+        })
+
+    for i in range(len(lines)):
+        curr = lines[i]
+        result.append(curr)
+        if i + 1 < len(lines):
+            nxt = lines[i + 1]
+            curr_start = float(curr.get("startTime", -1))
+            curr_end = float(curr.get("endTime", -1))
+            nxt_start = float(nxt.get("startTime", -1))
+
+            if curr_start >= 0 and nxt_start >= 0:
+                if curr_end <= curr_start:
+                    dur = max(2.0, min(5.0, len(curr.get("text", "")) * 0.08))
+                    curr_end = curr_start + dur
+
+                if (nxt_start - curr_end) >= min_gap:
+                    result.append({
+                        "text": "• • •",
+                        "isInterlude": True,
+                        "startTime": round(curr_end, 3),
+                        "endTime": round(nxt_start, 3),
+                        "syllables": [],
+                        "background": []
+                    })
+
+    return result
 
 
 def load_cached_lyrics():
@@ -128,9 +241,23 @@ def find_spicy_lyrics_on_disk(uri):
             type_name = content.get("Type", "Line")
             raw_items = content.get("Content", [])
             if not raw_items:
+                raw_items = content.get("Lines", [])
+            if not raw_items:
                 continue
             lines = []
-            if type_name == "Syllable":
+            if type_name == "Static":
+                for it in raw_items:
+                    text_val = (it.get("Text") or it.get("words") or "").strip()
+                    if text_val:
+                        lines.append({
+                            "text": text_val,
+                            "startTime": -1.0,
+                            "endTime": -1.0,
+                            "syllables": [],
+                            "oppositeAligned": False,
+                            "background": []
+                        })
+            elif type_name == "Syllable":
                 for it in raw_items:
                     lead = it.get("Lead") or {}
                     syls = lead.get("Syllables", []) if isinstance(lead, dict) else []
@@ -211,6 +338,8 @@ def find_spicy_lyrics_on_disk(uri):
                         "background": bg_lines
                     })
             if lines:
+                if type_name != "Static":
+                    lines = inject_interludes(lines)
                 return {
                     "uri": uri,
                     "source": "spicy-lyrics",
@@ -335,6 +464,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
             log_debug(f"GET /lyrics requested (req_uri={req_uri})")
             target_uri = req_uri or current_state.get("uri") or current_lyrics.get("uri")
             if target_uri:
+                # If target_uri does not match current_lyrics, discard stale lyrics immediately!
+                if current_lyrics.get("uri") and current_lyrics.get("uri") != target_uri:
+                    current_lyrics = {"uri": target_uri, "type": "None", "lines": []}
                 disk_lyrics = find_spicy_lyrics_on_disk(target_uri)
                 if disk_lyrics:
                     disk_bg = sum(1 for l in disk_lyrics.get("lines", []) if l.get("background"))
@@ -343,8 +475,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         current_lyrics = disk_lyrics
                         save_cached_lyrics(current_lyrics)
                         log_debug(f"Loaded {len(current_lyrics.get('lines', []))} lines (bg={disk_bg}) from Spotify disk cache for {target_uri}")
-            if current_lyrics and current_lyrics.get("lines"):
+                else:
+                    if current_lyrics.get("uri") != target_uri:
+                        current_lyrics = {"uri": target_uri, "type": "None", "lines": []}
+            if current_lyrics and current_lyrics.get("lines") and current_lyrics.get("uri") == target_uri:
                 emit_lyrics(current_lyrics)
+            elif target_uri:
+                emit_lyrics({"uri": target_uri, "type": "None", "lines": []})
             self.end_headers_cors(200)
             try:
                 self.wfile.write(json.dumps(current_lyrics).encode("utf-8"))
@@ -463,19 +600,29 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode("utf-8")
                 data = json.loads(body)
-                post_bg_count = sum(1 for l in data.get("lines", []) if l.get("background"))
                 uri = data.get("uri") or current_state.get("uri")
-                if uri:
-                    disk_lyrics = find_spicy_lyrics_on_disk(uri)
-                    if disk_lyrics:
-                        disk_bg_count = sum(1 for l in disk_lyrics.get("lines", []) if l.get("background"))
-                        if disk_bg_count > post_bg_count:
-                            log_debug(f"Preserving {disk_bg_count} background lines from disk cache over bridge POST ({post_bg_count} bg)")
-                            data = disk_lyrics
-                current_lyrics = data
-                save_cached_lyrics(current_lyrics)
-                log_debug(f"POST /lyrics -> uri={data.get('uri')} type={data.get('type')} lines={len(data.get('lines', []))}")
-                emit_lyrics(current_lyrics)
+                lines = data.get("lines", [])
+
+                if not lines:
+                    current_lyrics = {"uri": uri, "type": "None", "lines": []}
+                    save_cached_lyrics(current_lyrics)
+                    log_debug(f"POST /lyrics -> explicitly no lyrics for {uri}")
+                    emit_lyrics(current_lyrics)
+                else:
+                    if data.get("type") != "Static":
+                        data["lines"] = inject_interludes(lines)
+                    post_bg_count = sum(1 for l in data.get("lines", []) if l.get("background"))
+                    if uri:
+                        disk_lyrics = find_spicy_lyrics_on_disk(uri)
+                        if disk_lyrics:
+                            disk_bg_count = sum(1 for l in disk_lyrics.get("lines", []) if l.get("background"))
+                            if disk_bg_count > post_bg_count:
+                                log_debug(f"Preserving {disk_bg_count} background lines from disk cache over bridge POST ({post_bg_count} bg)")
+                                data = disk_lyrics
+                    current_lyrics = data
+                    save_cached_lyrics(current_lyrics)
+                    log_debug(f"POST /lyrics -> uri={data.get('uri')} type={data.get('type')} lines={len(data.get('lines', []))}")
+                    emit_lyrics(current_lyrics)
             except Exception as e:
                 log_debug(f"POST /lyrics error: {e}")
 
@@ -588,6 +735,9 @@ def main():
 
     t = threading.Thread(target=stdin_reader, daemon=True)
     t.start()
+
+    t_scheme = threading.Thread(target=scheme_watcher_loop, daemon=True)
+    t_scheme.start()
 
     log_debug(f"Server ready on port {PORT}")
     try:

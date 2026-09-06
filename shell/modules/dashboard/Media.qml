@@ -49,32 +49,32 @@ Item {
                 Transition {
                     from: ""
 
-                    SequentialAnimation {
+                    ParallelAnimation {
                         Anim {
                             target: content
                             property: "opacity"
-                            type: Anim.DefaultEffects
+                            type: Anim.FastEffects
                         }
                         Anim {
                             target: noMedia
                             property: "opacity"
-                            type: Anim.SlowEffects
+                            type: Anim.FastEffects
                         }
                     }
                 },
                 Transition {
                     to: ""
 
-                    SequentialAnimation {
+                    ParallelAnimation {
                         Anim {
                             target: noMedia
                             property: "opacity"
-                            type: Anim.DefaultEffects
+                            type: Anim.FastEffects
                         }
                         Anim {
                             target: content
                             property: "opacity"
-                            type: Anim.SlowEffects
+                            type: Anim.FastEffects
                         }
                     }
                 }
@@ -148,8 +148,8 @@ Item {
                 id: content
 
                 anchors.fill: parent
-                asynchronous: true
-                active: opacity > 0
+                asynchronous: false
+                active: Boolean(Players.active)
 
                 sourceComponent: RowLayout {
                     spacing: Tokens.spacing.extraLarge
