@@ -14,7 +14,6 @@ Searcher {
     id: root
 
     readonly property string currentNamePath: `${Paths.state}/wallpaper/path.txt`
-    readonly property string currentMediaPath: `${Paths.state}/wallpaper/media_path.txt`
     readonly property list<string> smartArg: GlobalConfig.services.smartScheme ? [] : ["--no-smart"]
     readonly property string fallback: Quickshell.shellPath("assets/wallpapers/Minimal-Paper.png")
 
@@ -115,22 +114,20 @@ Searcher {
     }
 
     function setWallpaper(path: string): void {
-        const cleanPath = String(path || "").replace(/^file:\/\//, "");
-        actualCurrent = cleanPath;
-        if (Images.isVideo(cleanPath)) {
-            const thumb = thumbFor(cleanPath);
+        actualCurrent = path;
+        if (Images.isVideo(path)) {
+            const thumb = thumbFor(path);
             if (thumb !== "") {
-                const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$1" > "$2"; printf "%s" "$3" > "$4"';
-                Quickshell.execDetached(["sh", "-c", script, "--", thumb, root.currentNamePath, cleanPath, root.currentMediaPath]);
+                const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$2" > "$3"';
+                Quickshell.execDetached(["sh", "-c", script, "--", thumb, path, root.currentNamePath]);
                 syncPlasmaWallpaper(thumb);
             } else {
-                Quickshell.execDetached(["sh", "-c", 'printf "%s" "$1" > "$2"', "--", cleanPath, root.currentMediaPath]);
+                Quickshell.execDetached(["sh", "-c", 'printf "%s" "$1" > "$2"', "--", path, root.currentNamePath]);
                 // Still frame not ready yet — onVideoThumb() syncs Plasma once it is.
             }
         } else {
-            const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; : > "$2"';
-            Quickshell.execDetached(["sh", "-c", script, "--", cleanPath, root.currentMediaPath]);
-            syncPlasmaWallpaper(cleanPath);
+            Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
+            syncPlasmaWallpaper(path);
         }
     }
 
@@ -217,20 +214,17 @@ Searcher {
     }
 
     function onVideoThumb(path: string, out: string, proc: var): void {
-        const cleanPath = String(path || "").replace(/^file:\/\//, "");
         if (out !== "") {
             const m = root.videoThumbs;
-            m[cleanPath] = out;
+            m[path] = out;
             root.videoThumbs = Object.assign({}, m);   // a copy, so bindings re-run
-            const cur = String(root.actualCurrent || "").replace(/^file:\/\//, "");
-            if (cleanPath === cur) {
-                const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$1" > "$2"; printf "%s" "$3" > "$4"';
-                Quickshell.execDetached(["sh", "-c", script, "--", out, root.currentNamePath, cleanPath, root.currentMediaPath]);
+            if (path === root.actualCurrent) {
+                const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$2" > "$3"';
+                Quickshell.execDetached(["sh", "-c", script, "--", out, path, root.currentNamePath]);
                 syncPlasmaWallpaper(out);
             }
         }
         const pending = root.videoThumbsPending;
-        delete pending[cleanPath];
         delete pending[path];
         root.videoThumbsPending = pending;
         if (proc)
@@ -266,50 +260,23 @@ Searcher {
     }
 
     FileView {
-        id: mediaFileView
-
-        path: root.currentMediaPath
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: {
-            const media = text().trim();
-            if (media && Images.isVideo(media)) {
-                root.actualCurrent = media;
-            }
-        }
-    }
-
-    FileView {
         path: root.currentNamePath
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
-            const media = (mediaFileView.text() || "").trim();
-            if (media && Images.isVideo(media)) {
-                root.actualCurrent = media;
-                root.previewColourLock = false;
-                return;
-            }
             let wall = text().trim();
             if (!wall) {
                 wall = root.fallback;
                 Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
             }
-            if (Images.isVideo(root.actualCurrent) && (wall === root.getThumbnailPath(root.actualCurrent) || (root.videoThumbs[root.actualCurrent] && wall === root.videoThumbs[root.actualCurrent]))) {
+            if (Images.isVideo(root.actualCurrent) && wall === root.getThumbnailPath(root.actualCurrent)) {
                 return;
             }
             root.actualCurrent = wall;
             root.previewColourLock = false;
         }
         onLoadFailed: {
-            const media = (mediaFileView.text() || "").trim();
-            if (media && Images.isVideo(media)) {
-                root.actualCurrent = media;
-                root.previewColourLock = false;
-                return;
-            }
             root.actualCurrent = root.fallback;
             root.previewColourLock = false;
             Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);

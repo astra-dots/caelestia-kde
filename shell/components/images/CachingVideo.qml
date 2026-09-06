@@ -197,24 +197,13 @@ Item {
     Timer {
         id: checkTimer
 
-        interval: 300
-        running: GlobalConfig.background.videoWallpaperPauseOnFullscreen || GlobalConfig.background.videoWallpaperPauseOnTiled
+        interval: 100
+        running: true
         repeat: true
 
         onTriggered: {
             checkPauseState();
-        }
-    }
-
-    Connections {
-        target: typeof KWinActiveWindowBridge !== "undefined" ? KWinActiveWindowBridge : null
-        function onWindowListChanged() {
-            if (GlobalConfig.background.videoWallpaperPauseOnFullscreen || GlobalConfig.background.videoWallpaperPauseOnTiled)
-                checkPauseState();
-        }
-        function onActiveOutputNameChanged() {
-            if (GlobalConfig.background.videoWallpaperPauseOnFullscreen || GlobalConfig.background.videoWallpaperPauseOnTiled)
-                checkPauseState();
+            checkMuteState();
         }
     }
 

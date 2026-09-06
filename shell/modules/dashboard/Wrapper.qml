@@ -62,28 +62,13 @@ Item {
         event.accepted = true;
     }
 
-    property bool hasBeenOpened: false
-
-    onShouldBeActiveChanged: {
-        if (shouldBeActive)
-            hasBeenOpened = true;
-    }
-
-    Timer {
-        interval: 3000
-        running: true
-        repeat: false
-        onTriggered: root.hasBeenOpened = true
-    }
-
     Loader {
         id: content
 
-        asynchronous: true
         focus: root.shouldBeActive
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        active: root.hasBeenOpened || root.shouldBeActive || root.visible
+        active: root.shouldBeActive || root.visible
         sourceComponent: Content {
             visibilities: root.visibilities
             dashState: root.dashState

@@ -149,7 +149,7 @@ StyledWindow {
     anchors.left: true
     anchors.right: true
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: (actualFullscreen && (hasOpenOverlay || Config.general.showOverFullscreen || fsTransitionProg < 1)) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || visibilities.overview || visibilities.screenshot || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.layer: hasOpenOverlay || (actualFullscreen && fsTransitionProg < 1) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     onWantsKeyboardChanged: {
