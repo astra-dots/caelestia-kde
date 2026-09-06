@@ -23,7 +23,7 @@ Item {
     }
 
     implicitWidth: Tokens.sizes.dashboard.mediaTabWidth
-    implicitHeight: Tokens.sizes.dashboard.mediaTabHeight + 70
+    implicitHeight: Tokens.sizes.dashboard.mediaTabHeight + 52
 
     BackgroundShapes {
         anchors.fill: parent
