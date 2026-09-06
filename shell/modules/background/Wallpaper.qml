@@ -267,8 +267,8 @@ Item {
                 property: "maskRadius"
                 from: 0
                 to: img.maxRadius
-                type: Anim.Emphasized
-                duration: 1200
+                type: Anim.EmphasizedExtraLarge
+                duration: 2200
             }
     }
 }
