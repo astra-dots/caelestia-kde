@@ -11,7 +11,14 @@ import qs.components.misc
 Singleton {
     id: root
 
-    readonly property list<MprisPlayer> list: Mpris.players.values
+    readonly property list<MprisPlayer> list: {
+        const all = Mpris.players.values;
+        const hasPlasmaBrowser = all.some(p => p.dbusName && p.dbusName.includes("plasma-browser-integration"));
+        if (hasPlasmaBrowser) {
+            return all.filter(p => (!p.dbusName || !p.dbusName.includes(".firefox.")) && (!p.identity || !p.identity.toLowerCase().startsWith("mozilla ")));
+        }
+        return all;
+    }
     readonly property MprisPlayer active: props.manualActive ?? list.find(p => getIdentity(p) === GlobalConfig.services.defaultPlayer) ?? list[0] ?? null
     property alias manualActive: props.manualActive
 

@@ -64,10 +64,9 @@ Item {
 
     function reloadTrack() {
         const p = Players.active;
+        Lyrics.clearTrack();
         if (p) {
             Lyrics.setTrack(p.trackArtist, p.trackTitle, p.trackAlbum, p.length);
-        } else {
-            Lyrics.clearTrack();
         }
         if (typeof lyrics !== "undefined" && lyrics) {
             lyrics.isReady = false;
@@ -181,6 +180,14 @@ Item {
 
         target: Players.active
         ignoreUnknownSignals: true
+    }
+
+    Connections {
+        function onActiveChanged() {
+            root.reloadTrack();
+        }
+
+        target: Players
     }
 
     Connections {

@@ -72,6 +72,8 @@ Singleton {
         if (root.isSpotify) {
             root.requestLyrics();
             fetchThemeProc.running = true;
+        } else {
+            root.spicyLyrics = null;
         }
     }
 
