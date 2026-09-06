@@ -38,6 +38,7 @@ Item {
         anchors.fill: image
         radius: image.radius
         opacity: root.PathView.isCurrentItem ? 1 : 0
+        visible: opacity > 0
         level: 4
 
         Behavior on opacity {
@@ -68,7 +69,7 @@ Item {
         CachingImage {
             anchors.fill: parent
             path: root.modelData.path
-            smooth: !root.PathView.view.moving
+            smooth: true
             sourceSize: {
                 const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
                 return Qt.size(image.implicitWidth * dpr * 2, image.implicitHeight * dpr * 2);

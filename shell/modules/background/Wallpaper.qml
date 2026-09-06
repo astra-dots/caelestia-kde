@@ -17,7 +17,7 @@ Item {
     property string source: Wallpapers.current
     property Item current: one
     property bool completed
-    property bool skipTransition: false
+    property bool skipTransition: Wallpapers.showPreview
     property var screen: null
 
     onSourceChanged: {

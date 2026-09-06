@@ -77,7 +77,9 @@ Item {
                 fillMode: Image.PreserveAspectCrop
                 sourceSize: {
                     const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
-                    return Qt.size(width * dpr, height * dpr);
+                    const w = width > 0 ? width : (imgWrapper.width > 0 ? imgWrapper.width : 200);
+                    const h = height > 0 ? height : (imgWrapper.height > 0 ? imgWrapper.height : 200);
+                    return Qt.size(w * dpr, h * dpr);
                 }
                 retainWhileLoading: true
                 opacity: status === Image.Ready ? 1 : 0

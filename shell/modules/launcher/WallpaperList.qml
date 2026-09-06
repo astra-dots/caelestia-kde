@@ -135,16 +135,25 @@ PathView {
     Timer {
         id: previewTimer
 
-        interval: 100
+        interval: 250
         onTriggered: {
-            if (root.currentItem)
+            if (root.currentItem && !root.moving)
                 Wallpapers.preview((root.currentItem as WallpaperItem).modelData.path);
         }
     }
 
     onCurrentItemChanged: {
-        if (currentItem)
+        if (!moving && currentItem)
             previewTimer.restart();
+        else
+            previewTimer.stop();
+    }
+
+    onMovingChanged: {
+        if (!moving && currentItem)
+            previewTimer.restart();
+        else
+            previewTimer.stop();
     }
 
     implicitWidth: Math.min(numItems, count) * itemWidth
@@ -192,6 +201,7 @@ PathView {
         acceptedButtons: Qt.NoButton
 
         function onWheel(event: WheelEvent): void {
+            previewTimer.stop();
             if (event.angleDelta.y > 0 || event.angleDelta.x > 0)
                 root.decrementCurrentIndex();
             else if (event.angleDelta.y < 0 || event.angleDelta.x < 0)

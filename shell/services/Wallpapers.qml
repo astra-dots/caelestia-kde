@@ -137,8 +137,11 @@ Searcher {
         previewPath = path;
         showPreview = true;
 
-        if (Colours.scheme === "dynamic")
+        if (Colours.scheme === "dynamic") {
+            if (getPreviewColoursProc.running)
+                getPreviewColoursProc.running = false;
             getPreviewColoursProc.running = true;
+        }
     }
 
     function stopPreview(): void {
