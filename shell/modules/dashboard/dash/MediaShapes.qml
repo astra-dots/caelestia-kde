@@ -29,8 +29,10 @@ Item {
         Colours.palette.m3error
     ]
 
+    property bool active: false
+
     ServiceRef {
-        service: Audio.cava
+        service: (root.active && (Players.active?.isPlaying ?? false)) ? Audio.cava : null
     }
 
     MaterialShape {

@@ -38,8 +38,8 @@ StyledRect {
     property bool audioActive: Config.bar.status.showAudio
     property bool microphoneActive: Config.bar.status.showMicrophone
     property bool kblayoutActive: Config.bar.status.showKbLayout && (Hypr.kbLayout || "").length > 0
-    property bool networkActive: Config.bar.status.showNetwork && (!Nmcli.activeEthernet || Config.bar.status.showWifi)
-    property bool ethernetActive: Config.bar.status.showNetwork && Nmcli.activeEthernet
+    property bool networkActive: Config.bar.status.showNetwork
+    property bool ethernetActive: false
     property bool bluetoothActive: Config.bar.status.showBluetooth
     property bool batteryActive: Config.bar.status.showBattery
     property bool peripheralBatteryActive: Config.bar.status.showPeripheralBattery
@@ -50,9 +50,12 @@ StyledRect {
     function syncModel() {
         if (root.isDragging) return;
 
-        const defaultOrder = ["lockstatus", "microphone", "kblayout", "network", "ethernet", "bluetooth", "audio", "battery", "peripheralBattery", "nightlight", "notifications"];
+        const defaultOrder = ["lockstatus", "microphone", "kblayout", "network", "bluetooth", "audio", "battery", "peripheralBattery", "nightlight", "notifications"];
         let savedOrder = root.iconsOrderStr ? root.iconsOrderStr.split(",") : [];
         if (savedOrder.length === 1 && savedOrder[0] === "") savedOrder = [];
+
+        // Strip legacy ethernet entry from saved order if present
+        savedOrder = savedOrder.filter(name => name !== "ethernet");
 
         for (let i = 0; i < defaultOrder.length; i++) {
             if (!savedOrder.includes(defaultOrder[i])) {
@@ -68,7 +71,7 @@ StyledRect {
                 case "microphone": return root.microphoneActive;
                 case "kblayout": return root.kblayoutActive;
                 case "network": return root.networkActive;
-                case "ethernet": return root.ethernetActive;
+                case "ethernet": return false;
                 case "bluetooth": return root.bluetoothActive;
                 case "battery": return root.batteryActive;
                 case "peripheralBattery": return root.peripheralBatteryActive;
@@ -85,7 +88,7 @@ StyledRect {
     }
 
     function saveOrder() {
-        const defaultOrder = ["lockstatus", "microphone", "kblayout", "network", "ethernet", "bluetooth", "audio", "battery", "peripheralBattery", "nightlight", "notifications"];
+        const defaultOrder = ["lockstatus", "microphone", "kblayout", "network", "bluetooth", "audio", "battery", "peripheralBattery", "nightlight", "notifications"];
 
         let activeOrder = [];
         for (let i = 0; i < iconModel.count; i++) {
@@ -93,6 +96,8 @@ StyledRect {
         }
 
         let previousOrder = root.iconsOrderStr ? root.iconsOrderStr.split(",") : defaultOrder.slice();
+        if (previousOrder.length === 1 && previousOrder[0] === "") previousOrder = defaultOrder.slice();
+        previousOrder = previousOrder.filter(name => name !== "ethernet");
         if (previousOrder.length === 1 && previousOrder[0] === "") previousOrder = defaultOrder.slice();
 
         // Find which slots in the full order were occupied by currently-active icons.
@@ -491,7 +496,13 @@ StyledRect {
 
         MaterialIcon {
             animate: true
-            text: Nmcli.active ? Icons.getNetworkIcon(Nmcli.active.strength ?? 0) : "wifi_off"
+            text: {
+                if (Nmcli.active)
+                    return Icons.getNetworkIcon(Nmcli.active.strength ?? 0);
+                if (Nmcli.activeEthernet)
+                    return "network_wifi";
+                return "wifi_off";
+            }
             color: root.colour
         }
     }

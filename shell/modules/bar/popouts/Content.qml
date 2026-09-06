@@ -59,7 +59,6 @@ Item {
             name: "network"
             sourceComponent: Network {
                 popouts: root.popouts
-                view: "wireless"
             }
         }
 
@@ -67,7 +66,6 @@ Item {
             name: "ethernet"
             sourceComponent: Network {
                 popouts: root.popouts
-                view: "ethernet"
             }
         }
 

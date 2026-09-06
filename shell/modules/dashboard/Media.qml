@@ -37,6 +37,7 @@ Item {
         CoverVisualiser {
             Layout.fillHeight: true
             implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
+            active: root.isMediaActive && (Players.active?.isPlaying ?? false)
         }
 
         Item {

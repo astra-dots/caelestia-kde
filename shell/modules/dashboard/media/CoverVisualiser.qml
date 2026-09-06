@@ -18,8 +18,10 @@ Item {
     readonly property real spacing: Tokens.spacing.medium
     readonly property real maxMagnitude: (implicitWidth - cover.implicitWidth) / 2 - spacing
 
+    property bool active: false
+
     ServiceRef {
-        service: Audio.cava
+        service: (root.active && (Players.active?.isPlaying ?? false)) ? Audio.cava : null
     }
 
     Shape {

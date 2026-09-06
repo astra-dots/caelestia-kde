@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
-import Quickshell
+import Caelestia
 import Caelestia.Components
 import Caelestia.Config
 import Caelestia.Services
@@ -16,6 +16,8 @@ Item {
     id: root
 
     property DrawerVisibilities visibilities: null
+    property DashboardState dashState: null
+    readonly property bool isDashActive: (visibilities?.dashboard ?? false) && (!dashState || dashState.currentTab === 0)
     property real playerProgress: {
         const active = Players.active;
         return active?.length ? (active.position % active.length) / active.length : 0;
@@ -42,7 +44,7 @@ Item {
     }
 
     ServiceRef {
-        service: Audio.beatTracker
+        service: (root.isDashActive && (Players.active?.isPlaying ?? false)) ? Audio.beatTracker : null
     }
 
     CircularProgress {
@@ -220,6 +222,7 @@ Item {
         MediaShapes {
             anchors.fill: parent
             visible: Config.dashboard.useMediaShapes
+            active: visible && root.isDashActive && (Players.active?.isPlaying ?? false)
         }
     }
 }

@@ -98,6 +98,7 @@ GridLayout {
             id: media
 
             visibilities: root.visibilities
+            dashState: root.dashState
         }
     }
 
