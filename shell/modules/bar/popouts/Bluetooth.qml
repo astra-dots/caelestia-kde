@@ -24,14 +24,28 @@ ColumnLayout {
     readonly property real elementFontOffset: GlobalConfig.bar.perElementFontScale ? (!isNaN(GlobalConfig.bar.previewFontScales.bluetooth) ? GlobalConfig.bar.previewFontScales.bluetooth : 0.0) : 0.0
     readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0) + elementFontOffset)
 
-    width: Math.max(345 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
+    width: Math.max(360 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
     spacing: Tokens.spacing.small * scaleOffset
 
-    StyledText {
+    RowLayout {
+        Layout.fillWidth: true
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
-        text: qsTr("Bluetooth")
-        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+        Layout.rightMargin: Tokens.padding.small * root.scaleOffset
+
+        StyledText {
+            Layout.fillWidth: true
+            text: qsTr("Bluetooth")
+            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+        }
+
+        IconButton {
+            type: IconButton.Text
+            isRound: true
+            icon: "settings"
+            font: Tokens.font.icon.builders.medium.size(Tokens.font.icon.medium.pointSize * root.fontScale).build()
+            onClicked: root.popouts.detachRequested("bluetooth")
+        }
     }
 
     StyledRect {
@@ -215,16 +229,6 @@ ColumnLayout {
         }
     }
 
-    IconTextButton {
-        Layout.fillWidth: true
-        inactiveColour: Colours.palette.m3primaryContainer
-        inactiveOnColour: Colours.palette.m3onPrimaryContainer
-        verticalPadding: Tokens.padding.small * root.scaleOffset
-        text: qsTr("Open settings")
-        icon: "settings"
-
-        onClicked: root.popouts.detachRequested("bluetooth")
-    }
 
     component Toggle: RowLayout {
         required property string label

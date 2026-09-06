@@ -18,10 +18,12 @@ Item {
     property bool flag
     property list<string> lyricList: Lyrics.lyrics
 
+    readonly property bool onlineTrackMatches: Lyrics.trackTitle.length > 0 && Lyrics.trackTitle.toLowerCase() === (Players.active?.trackTitle ?? "").toLowerCase()
+    readonly property bool onlineHasSyncedLyrics: onlineTrackMatches && !Lyrics.loading && (Lyrics.hasLyrics || (root.lyricList && root.lyricList.length > 0))
     readonly property bool spicyIsSynced: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics && SpotifyService.syncType !== "Static"
     readonly property bool spicyIsStatic: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics && SpotifyService.syncType === "Static"
-    readonly property bool useSpicy: spicyIsSynced || (spicyIsStatic && !Lyrics.hasLyrics)
-    readonly property bool hasLyrics: spicyIsSynced || Lyrics.hasLyrics || (spicyIsStatic && !Lyrics.loading)
+    readonly property bool useSpicy: spicyIsSynced || (spicyIsStatic && !onlineHasSyncedLyrics)
+    readonly property bool hasLyrics: spicyIsSynced || onlineHasSyncedLyrics || (spicyIsStatic && !Lyrics.loading)
     readonly property bool isStaticLyrics: useSpicy ? (SpotifyService.syncType === "Static") : false
     property bool isMediaActive: false
 
@@ -66,10 +68,17 @@ Item {
 
     function reloadTrack() {
         const p = Players.active;
-        Lyrics.clearTrack();
-        if (p) {
-            Lyrics.setTrack(p.trackArtist, p.trackTitle, p.trackAlbum, p.length);
+        if (!p) {
+            Lyrics.clearTrack();
+            return;
         }
+        const currentTitle = p.trackTitle || "";
+        const currentArtist = p.trackArtist || "";
+        if (Lyrics.trackTitle === currentTitle && Lyrics.trackArtist === currentArtist && (Lyrics.hasLyrics || (root.lyricList && root.lyricList.length > 0) || Lyrics.loading)) {
+            return;
+        }
+        Lyrics.clearTrack();
+        Lyrics.setTrack(currentArtist, currentTitle, p.trackAlbum, p.length);
         if (typeof lyrics !== "undefined" && lyrics) {
             lyrics.isReady = false;
             lyrics.jumpToCurrent();
@@ -193,6 +202,13 @@ Item {
     }
 
     Connections {
+        function onLyricsChanged() {
+            root.flag = !root.flag;
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.isReady = false;
+            }
+        }
+
         function onHasLyricsChanged() {
             root.flag = !root.flag;
             if (typeof lyrics !== "undefined" && lyrics) {

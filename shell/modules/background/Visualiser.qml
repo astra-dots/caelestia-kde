@@ -71,7 +71,7 @@ Item {
             active: root.opacity > 0
             sourceComponent: Item {
                 ServiceRef {
-                    service: Audio.cava
+                    service: (root.opacity > 0 && (Players.active?.isPlaying ?? false)) ? Audio.cava : null
                 }
                 VisualiserBars {
                     id: bars
