@@ -34,7 +34,7 @@ Item {
     }
 
     Timer {
-        running: Players.active?.isPlaying ?? false
+        running: (Players.active?.isPlaying ?? false) && root.visible
         interval: GlobalConfig.dashboard.mediaUpdateInterval
         triggeredOnStart: true
         repeat: true
