@@ -216,7 +216,7 @@ ColumnLayout {
 
             CustomMouseArea {
                 Layout.fillWidth: true
-                implicitHeight: Tokens.padding.medium * 3 * root.scaleOffset
+                implicitHeight: Math.round(26 * root.scaleOffset)
 
                 onWheel: event => {
                     if (event.angleDelta.y > 0)
@@ -228,7 +228,8 @@ ColumnLayout {
                 StyledSlider {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    implicitHeight: parent.implicitHeight
+                    anchors.verticalCenter: parent.verticalCenter
+                    implicitHeight: Math.round(10 * root.scaleOffset)
 
                     value: Audio.volume
                     onInteraction: v => Audio.setVolume(v)
@@ -252,7 +253,7 @@ ColumnLayout {
 
             CustomMouseArea {
                 Layout.fillWidth: true
-                implicitHeight: Tokens.padding.medium * 3 * root.scaleOffset
+                implicitHeight: Math.round(26 * root.scaleOffset)
 
                 onWheel: event => {
                     if (event.angleDelta.y > 0)
@@ -264,7 +265,8 @@ ColumnLayout {
                 StyledSlider {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    implicitHeight: parent.implicitHeight
+                    anchors.verticalCenter: parent.verticalCenter
+                    implicitHeight: Math.round(10 * root.scaleOffset)
 
                     value: Audio.sourceVolume
                     onInteraction: v => Audio.setSourceVolume(v)

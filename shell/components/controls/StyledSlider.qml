@@ -73,15 +73,21 @@ Slider {
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: Tokens.spacing.extraSmall
 
-            implicitWidth: 4
+            implicitWidth: (mouse.pressed || mouse.containsMouse) ? 6 : 4
             implicitHeight: {
                 const t = CUtils.clamp((parent.height - 12) / 16, 0, 1);
                 const lerp = (a, b) => a + (b - a) * t;
-                return parent.height * (mouse.pressed ? lerp(3.5, 1.5) : lerp(3, 1.2));
+                return parent.height * ((mouse.pressed || mouse.containsMouse) ? lerp(3.5, 1.5) : lerp(3, 1.2));
             }
 
             radius: Tokens.rounding.full
             color: root.fgColour
+
+            Behavior on implicitWidth {
+                Anim {
+                    type: Anim.FastSpatial
+                }
+            }
 
             Behavior on implicitHeight {
                 Anim {
@@ -165,6 +171,8 @@ Slider {
         anchors.verticalCenter: parent.verticalCenter
 
         preventStealing: true
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
         implicitHeight: Math.max(parent.height, 24)
 
         onPressed: e => {

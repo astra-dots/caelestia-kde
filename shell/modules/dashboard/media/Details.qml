@@ -9,6 +9,7 @@ import qs.components.controls
 import qs.components.effects
 import qs.components.images
 import qs.services
+import qs.utils
 
 ColumnLayout {
     id: root
@@ -242,6 +243,69 @@ ColumnLayout {
             visible: SpotifyService.isSpotify
             onClicked: SpotifyService.toggleLike()
             implicitWidth: Math.round(implicitHeight * 0.9)
+        }
+    }
+
+    // --- Application Volume Slider for Active Media Player ---
+    RowLayout {
+        id: playerVolumeRow
+
+        Layout.fillWidth: true
+        Layout.topMargin: Tokens.spacing.extraSmall
+        spacing: Tokens.spacing.small
+        visible: Players.active !== null
+
+        property real vol: Players.active?.volume ?? 0
+        property real lastNonZeroVol: 1.0
+
+        IconButton {
+            type: IconButton.Text
+            isRound: true
+            icon: Icons.getVolumeIcon(playerVolumeRow.vol, playerVolumeRow.vol <= 0.001)
+            onClicked: {
+                if (!Players.active)
+                    return;
+                if (playerVolumeRow.vol > 0.001) {
+                    playerVolumeRow.lastNonZeroVol = playerVolumeRow.vol;
+                    Players.active.volume = 0;
+                } else {
+                    Players.active.volume = playerVolumeRow.lastNonZeroVol > 0 ? playerVolumeRow.lastNonZeroVol : 1.0;
+                }
+            }
+        }
+
+        CustomMouseArea {
+            Layout.fillWidth: true
+            implicitHeight: 24
+
+            onWheel: event => {
+                if (!Players.active)
+                    return;
+                const step = 0.05;
+                if (event.angleDelta.y > 0)
+                    Players.active.volume = Math.min(1.0, (Players.active.volume ?? 0) + step);
+                else if (event.angleDelta.y < 0)
+                    Players.active.volume = Math.max(0.0, (Players.active.volume ?? 0) - step);
+            }
+
+            StyledSlider {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                implicitHeight: 8
+
+                value: Players.active?.volume ?? 0
+                onInteraction: v => {
+                    if (Players.active)
+                        Players.active.volume = Math.max(0, Math.min(1, v));
+                }
+            }
+        }
+
+        StyledText {
+            text: `${Math.round((Players.active?.volume ?? 0) * 100)}%`
+            color: Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.label.medium
         }
     }
 
