@@ -159,7 +159,9 @@
             if (isToggling && !force) return;
             if (!Spicetify.Player || !Spicetify.Player.data) return;
             const item = Spicetify.Player.data.item;
-            const uri = item?.uri || "";
+            const rawUri = item?.uri || "";
+            const m = String(rawUri).match(/[0-9a-zA-Z]{22}/);
+            const uri = m ? ("spotify:track:" + m[0]) : rawUri;
             const isHearted = getHeartState();
             const upcoming = await fetchUpcomingAsync();
             const upcomingHash = upcoming ? `${upcoming.uri || upcoming.title}_${upcoming.artist}` : "";
@@ -185,12 +187,7 @@
     }
 
     function logToBridge(msg) {
-        try {
-            fetch("http://127.0.0.1:8999/debug", {
-                method: "POST",
-                body: typeof msg === "string" ? msg : JSON.stringify(msg)
-            }).catch(() => {});
-        } catch (e) {}
+        // Disabled to prevent flooding IPC socket and freezing CEF
     }
 
     let lastLyricsUri = "";
@@ -202,258 +199,152 @@
     }
 
     async function tryGetSpicyLyrics(uri) {
-        logToBridge("tryGetSpicyLyrics for " + uri);
-        if (!uri || !uri.startsWith("spotify:track:")) return null;
-        const trackId = uri.split(":")[2];
+        if (!uri) return null;
+        const m = String(uri).match(/[0-9a-zA-Z]{22}/);
+        if (!m) return null;
+        const trackId = m[0];
+        const normUri = "spotify:track:" + trackId;
 
-        // 1. Try reading from Spicy Lyrics Browser CacheStorage
+        // Fast O(1) read from Spicy Lyrics CacheStorage
         try {
             if (window.caches) {
-                const keys = await window.caches.keys();
-                logToBridge("Available caches: " + JSON.stringify(keys));
                 const cache = await window.caches.open("SpicyLyrics_LyricsStore_g1");
-                let cachedRequests = [];
-                try {
-                    cachedRequests = await cache.keys();
-                } catch (ke) {
-                    logToBridge("cache.keys() error: " + ke.message);
-                }
-                logToBridge("Cache entries count: " + cachedRequests.length);
-                if (cachedRequests.length > 0) {
-                    logToBridge("Sample URLs: " + JSON.stringify(cachedRequests.slice(0, 3).map(r => r.url)));
-                    for (const req of cachedRequests.slice(0, 40)) {
-                        try {
-                            const cr = await cache.match(req);
-                            if (cr) {
-                                const cd = await cr.json();
-                                if (cd?.Content?.Type === "Syllable") {
-                                    logToBridge("FOUND_SYLLABLE_TRACK: " + req.url);
-                                    break;
-                                }
-                            }
-                        } catch (e) {}
-                    }
-                }
+                if (cache) {
+                    let res = await cache.match("/" + trackId);
+                    if (!res) res = await cache.match(trackId);
+                    if (!res) res = await cache.match(new Request("https://xpui.app.spotify.com/" + trackId));
+                    if (res) {
+                        const wrapped = await res.json();
+                        const content = wrapped?.Content || wrapped;
+                        const rawItems = Array.isArray(content?.Content) ? content.Content : (Array.isArray(content?.Lines) ? content.Lines : []);
+                        if (content && rawItems.length > 0) {
+                            const isStatic = (content.Type === "Static" || (!content.Type && !rawItems[0]?.StartTime && !rawItems[0]?.Lead));
+                            const type = isStatic ? "Static" : (content.Type === "Syllable" ? "Syllable" : "Line");
+                            const lines = [];
 
-                // Try both "/trackId" and full request
-                let res = await cache.match("/" + trackId);
-                if (!res) {
-                    res = await cache.match(new Request("https://xpui.app.spotify.com/" + trackId));
-                }
-                if (!res) {
-                    res = await cache.match(trackId);
-                }
-                logToBridge("Cache match for " + trackId + ": " + (res ? "HIT" : "MISS"));
-                if (res) {
-                    const wrapped = await res.json();
-                    logToBridge("Cache JSON loaded, keys: " + JSON.stringify(Object.keys(wrapped || {})));
-                    const content = wrapped?.Content || wrapped;
-                    const rawItems = Array.isArray(content?.Content) ? content.Content : (Array.isArray(content?.Lines) ? content.Lines : []);
-                    if (content && rawItems.length > 0) {
-                        const isStatic = (content.Type === "Static" || (!content.Type && !rawItems[0]?.StartTime && !rawItems[0]?.Lead));
-                        const type = isStatic ? "Static" : (content.Type === "Syllable" ? "Syllable" : "Line");
-                        const lines = [];
-
-                        if (type === "Static") {
-                            for (const item of rawItems) {
-                                const t = (item.Text || item.words || "").trim();
-                                if (t.length > 0) {
-                                    lines.push({
-                                        text: t,
-                                        startTime: -1,
-                                        endTime: -1,
-                                        syllables: [],
-                                        oppositeAligned: false,
-                                        background: []
-                                    });
-                                }
-                            }
-                        } else if (type === "Syllable") {
-                            for (const item of rawItems) {
-                                const lead = item.Lead || {};
-                                const syls = Array.isArray(lead.Syllables) ? lead.Syllables : [];
-                                const bgRaw = Array.isArray(item.Background) ? item.Background : [];
-
-                                if (syls.length === 0 && bgRaw.length === 0 && !item.Text) continue;
-
-                                const syllables = [];
-                                let fullText = "";
-                                for (let sIdx = 0; sIdx < syls.length; sIdx++) {
-                                    const s = syls[sIdx];
-                                    const isLast = sIdx === syls.length - 1;
-                                    let stext = s.Text || "";
-                                    if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
-                                        stext += " ";
-                                    }
-                                    fullText += stext;
-                                    syllables.push({
-                                        text: stext,
-                                        startTime: Number(s.StartTime) || 0,
-                                        endTime: Number(s.EndTime) || 0,
-                                        isPartOfWord: Boolean(s.IsPartOfWord)
-                                    });
-                                }
-
-                                // Extract background vocals (small lyrics):
-                                const backgroundLines = [];
-                                for (const bgItem of bgRaw) {
-                                    const bgSyllables = [];
-                                    let bgFullText = "";
-                                    if (Array.isArray(bgItem.Syllables)) {
-                                        for (let sIdx = 0; sIdx < bgItem.Syllables.length; sIdx++) {
-                                            const s = bgItem.Syllables[sIdx];
-                                            const isLast = sIdx === bgItem.Syllables.length - 1;
-                                            let stext = s.Text || "";
-                                            if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
-                                                stext += " ";
-                                            }
-                                            bgFullText += stext;
-                                            bgSyllables.push({
-                                                text: stext,
-                                                startTime: Number(s.StartTime) || 0,
-                                                endTime: Number(s.EndTime) || 0,
-                                                isPartOfWord: Boolean(s.IsPartOfWord)
-                                            });
-                                        }
-                                    }
-                                    if (bgFullText.trim().length > 0 || bgSyllables.length > 0) {
-                                        backgroundLines.push({
-                                            text: bgFullText.trim(),
-                                            startTime: Number(bgItem.StartTime) || 0,
-                                            endTime: Number(bgItem.EndTime) || 0,
-                                            syllables: bgSyllables
+                            if (type === "Static") {
+                                for (const item of rawItems) {
+                                    const t = (item.Text || item.words || "").trim();
+                                    if (t.length > 0) {
+                                        lines.push({
+                                            text: t,
+                                            startTime: -1,
+                                            endTime: -1,
+                                            syllables: [],
+                                            oppositeAligned: false,
+                                            background: []
                                         });
                                     }
                                 }
+                            } else if (type === "Syllable") {
+                                for (const item of rawItems) {
+                                    const lead = item.Lead || {};
+                                    const syls = Array.isArray(lead.Syllables) ? lead.Syllables : [];
+                                    const bgRaw = Array.isArray(item.Background) ? item.Background : [];
 
-                                const lineStart = (lead.StartTime !== undefined) ? Number(lead.StartTime) : (Number(item.StartTime) || 0);
-                                const lineEnd = (lead.EndTime !== undefined) ? Number(lead.EndTime) : (Number(item.EndTime) || 0);
+                                    if (syls.length === 0 && bgRaw.length === 0 && !item.Text) continue;
 
-                                lines.push({
-                                    text: fullText.trim(),
-                                    startTime: lineStart,
-                                    endTime: lineEnd,
-                                    syllables: syllables,
-                                    oppositeAligned: Boolean(item.OppositeAligned),
-                                    background: backgroundLines
-                                });
-                            }
-                        } else {
-                            for (const item of rawItems) {
-                                const backgroundLines = [];
-                                if (Array.isArray(item.Background)) {
-                                    for (const bgItem of item.Background) {
-                                        const bgText = (bgItem.Text || "").trim();
-                                        if (bgText.length > 0) {
+                                    const syllables = [];
+                                    let fullText = "";
+                                    for (let sIdx = 0; sIdx < syls.length; sIdx++) {
+                                        const s = syls[sIdx];
+                                        const isLast = sIdx === syls.length - 1;
+                                        let stext = s.Text || "";
+                                        if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
+                                            stext += " ";
+                                        }
+                                        fullText += stext;
+                                        syllables.push({
+                                            text: stext,
+                                            startTime: Number(s.StartTime) || 0,
+                                            endTime: Number(s.EndTime) || 0,
+                                            isPartOfWord: Boolean(s.IsPartOfWord)
+                                        });
+                                    }
+
+                                    const backgroundLines = [];
+                                    for (const bgItem of bgRaw) {
+                                        const bgSyllables = [];
+                                        let bgFullText = "";
+                                        if (Array.isArray(bgItem.Syllables)) {
+                                            for (let sIdx = 0; sIdx < bgItem.Syllables.length; sIdx++) {
+                                                const s = bgItem.Syllables[sIdx];
+                                                const isLast = sIdx === bgItem.Syllables.length - 1;
+                                                let stext = s.Text || "";
+                                                if (!s.IsPartOfWord && !isLast && !stext.endsWith(" ")) {
+                                                    stext += " ";
+                                                }
+                                                bgFullText += stext;
+                                                bgSyllables.push({
+                                                    text: stext,
+                                                    startTime: Number(s.StartTime) || 0,
+                                                    endTime: Number(s.EndTime) || 0,
+                                                    isPartOfWord: Boolean(s.IsPartOfWord)
+                                                });
+                                            }
+                                        }
+                                        if (bgFullText.trim().length > 0 || bgSyllables.length > 0) {
                                             backgroundLines.push({
-                                                text: bgText,
+                                                text: bgFullText.trim(),
                                                 startTime: Number(bgItem.StartTime) || 0,
                                                 endTime: Number(bgItem.EndTime) || 0,
-                                                syllables: []
+                                                syllables: bgSyllables
                                             });
                                         }
                                     }
+
+                                    const lineStart = (lead.StartTime !== undefined) ? Number(lead.StartTime) : (Number(item.StartTime) || 0);
+                                    const lineEnd = (lead.EndTime !== undefined) ? Number(lead.EndTime) : (Number(item.EndTime) || 0);
+
+                                    lines.push({
+                                        text: fullText.trim(),
+                                        startTime: lineStart,
+                                        endTime: lineEnd,
+                                        syllables: syllables,
+                                        oppositeAligned: Boolean(item.OppositeAligned),
+                                        background: backgroundLines
+                                    });
                                 }
-                                lines.push({
-                                    text: (item.Text || "").trim(),
-                                    startTime: Number(item.StartTime) || 0,
-                                    endTime: Number(item.EndTime) || 0,
-                                    syllables: [],
-                                    oppositeAligned: Boolean(item.OppositeAligned),
-                                    background: backgroundLines
-                                });
+                            } else {
+                                for (const item of rawItems) {
+                                    const backgroundLines = [];
+                                    if (Array.isArray(item.Background)) {
+                                        for (const bgItem of item.Background) {
+                                            const bgText = (bgItem.Text || "").trim();
+                                            if (bgText.length > 0) {
+                                                backgroundLines.push({
+                                                    text: bgText,
+                                                    startTime: Number(bgItem.StartTime) || 0,
+                                                    endTime: Number(bgItem.EndTime) || 0,
+                                                    syllables: []
+                                                });
+                                            }
+                                        }
+                                    }
+                                    lines.push({
+                                        text: (item.Text || "").trim(),
+                                        startTime: Number(item.StartTime) || 0,
+                                        endTime: Number(item.EndTime) || 0,
+                                        syllables: [],
+                                        oppositeAligned: Boolean(item.OppositeAligned),
+                                        background: backgroundLines
+                                    });
+                                }
                             }
-                        }
 
-                        if (lines.length > 0) {
-                            return {
-                                uri: uri,
-                                source: "spicy-lyrics",
-                                type: type,
-                                lines: lines
-                            };
+                            if (lines.length > 0) {
+                                return {
+                                    uri: normUri,
+                                    source: "spicy-lyrics",
+                                    type: type,
+                                    lines: lines
+                                };
+                            }
                         }
                     }
                 }
             }
-        } catch (e) {
-            logToBridge("Error in cache read: " + e.message);
-        }
-
-        // 2. Fallback: Spotify's internal color-lyrics Cosmos API
-        try {
-            if (window.Spicetify && Spicetify.CosmosAsync) {
-                const res = await Spicetify.CosmosAsync.get("sp://lyrics/v1/track/" + trackId);
-                logToBridge("Cosmos lyrics response: " + (res ? "received" : "null"));
-                const rawLyrics = res?.lyrics;
-                if (rawLyrics && Array.isArray(rawLyrics.lines) && rawLyrics.lines.length > 0) {
-                    const syncType = rawLyrics.syncType;
-                    const isSyllable = syncType === "SYLLABLE_SYNCED";
-                    const isUnsynced = syncType === "UNSYNCED";
-                    const lines = [];
-
-                    if (isUnsynced) {
-                        for (const l of rawLyrics.lines) {
-                            const t = (l.words || "").trim();
-                            if (t.length > 0) {
-                                lines.push({
-                                    text: t,
-                                    startTime: -1,
-                                    endTime: -1,
-                                    syllables: [],
-                                    oppositeAligned: false,
-                                    background: []
-                                });
-                            }
-                        }
-                        if (lines.length > 0) {
-                            return {
-                                uri: uri,
-                                source: "spotify-internal",
-                                type: "Static",
-                                lines: lines
-                            };
-                        }
-                    }
-
-                    for (let i = 0; i < rawLyrics.lines.length; i++) {
-                        const l = rawLyrics.lines[i];
-                        const startMs = Number(l.startTimeMs) || 0;
-                        const nextMs = i + 1 < rawLyrics.lines.length ? (Number(rawLyrics.lines[i + 1].startTimeMs) || startMs + 3000) : startMs + 4000;
-                        const syllables = [];
-
-                        if (isSyllable && Array.isArray(l.syllables) && l.syllables.length > 0) {
-                            for (const s of l.syllables) {
-                                syllables.push({
-                                    text: s.words || s.text || "",
-                                    startTime: (Number(s.startTimeMs) || startMs) / 1000.0,
-                                    endTime: (Number(s.endTimeMs) || nextMs) / 1000.0,
-                                    isPartOfWord: Boolean(s.isPartOfWord)
-                                });
-                            }
-                        }
-
-                        lines.push({
-                            text: (l.words || "").trim(),
-                            startTime: startMs / 1000.0,
-                            endTime: nextMs / 1000.0,
-                            syllables: syllables
-                        });
-                    }
-
-                    if (lines.length > 0) {
-                        return {
-                            uri: uri,
-                            source: "spotify-internal",
-                            type: isSyllable ? "Syllable" : "Line",
-                            lines: lines
-                        };
-                    }
-                }
-            }
-        } catch (e) {
-            logToBridge("Cosmos error: " + e.message);
-        }
+        } catch (e) {}
 
         return null;
     }
@@ -472,35 +363,36 @@
     async function syncLyricsForCurrentTrack(force = false) {
         const item = Spicetify.Player.data?.item;
         const uri = item?.uri || "";
-        if (!uri || !uri.startsWith("spotify:track:")) {
+        const m = String(uri).match(/[0-9a-zA-Z]{22}/);
+        if (!m) {
             clearLyricsRetries();
             lastLyricsUri = "";
             return;
         }
+        const normUri = "spotify:track:" + m[0];
 
-        if (!force && uri === lastLyricsUri) return;
+        if (!force && normUri === lastLyricsUri) return;
 
         clearLyricsRetries();
-        lastLyricsUri = uri;
+        lastLyricsUri = normUri;
 
         async function attempt(attemptNum) {
             const currentItem = Spicetify.Player.data?.item;
-            if (currentItem?.uri !== uri) return;
+            const curM = String(currentItem?.uri || "").match(/[0-9a-zA-Z]{22}/);
+            if (!curM || curM[0] !== m[0]) return;
 
-            const lyrics = await tryGetSpicyLyrics(uri);
+            const lyrics = await tryGetSpicyLyrics(normUri);
             if (lyrics) {
                 clearLyricsRetries();
                 await sendLyrics(lyrics);
-            } else if (attemptNum < 7) {
-                const delays = [150, 250, 400, 600, 900, 1300, 1800];
-                const delay = delays[attemptNum] || 2000;
-                const tid = setTimeout(() => attempt(attemptNum + 1), delay);
+            } else if (attemptNum < 3) {
+                const delays = [300, 700, 1200];
+                const tid = setTimeout(() => attempt(attemptNum + 1), delays[attemptNum] || 1000);
                 lyricsRetryTimeouts.push(tid);
             } else {
-                // All retries exhausted: explicitly notify bridge that track has no lyrics!
                 clearLyricsRetries();
                 await sendLyrics({
-                    uri: uri,
+                    uri: normUri,
                     source: "none",
                     type: "None",
                     lines: []
@@ -971,8 +863,7 @@
             return;
         }
         sendState(false);
-        syncLyricsForCurrentTrack(false);
-    }, 1000);
+    }, 2000);
 
     sendState(true);
     syncLyricsForCurrentTrack(true);

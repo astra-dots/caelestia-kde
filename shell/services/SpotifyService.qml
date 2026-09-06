@@ -50,9 +50,27 @@ Singleton {
         }
     }
 
+    function normalizeTrackUri(uri: string): string {
+        if (!uri) return "";
+        const m = uri.match(/[0-9a-zA-Z]{22}/);
+        return m ? ("spotify:track:" + m[0]) : uri;
+    }
+
+    Timer {
+        id: requestLyricsDebounce
+        interval: 350
+        onTriggered: {
+            if (!root.isSpotify) return;
+            const uri = root.normalizeTrackUri(Players.active?.trackId ?? root.currentTrackUri);
+            const uriParam = uri ? ("?uri=" + encodeURIComponent(uri)) : "";
+            Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics" + uriParam]);
+            Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/refresh"]);
+        }
+    }
+
     function handleTrackChange(): void {
         if (!root.isSpotify) return;
-        const newUri = Players.active?.trackId ?? "";
+        const newUri = root.normalizeTrackUri(Players.active?.trackId ?? "");
         if (newUri && newUri !== root.currentTrackUri) {
             root.currentTrackUri = newUri;
             root.spicyLyrics = null;
@@ -62,10 +80,7 @@ Singleton {
 
     function requestLyrics(): void {
         if (!root.isSpotify) return;
-        const uri = Players.active?.trackId ?? root.currentTrackUri;
-        const uriParam = uri ? ("?uri=" + encodeURIComponent(uri)) : "";
-        Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics" + uriParam]);
-        Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/refresh"]);
+        requestLyricsDebounce.restart();
     }
 
     onIsSpotifyChanged: {
@@ -185,8 +200,9 @@ Singleton {
                     try {
                         const lyricsData = JSON.parse(line.substring(7));
                         if (lyricsData && lyricsData.lines && lyricsData.lines.length > 0) {
-                            const trackUri = Players.active?.trackId ?? root.currentTrackUri;
-                            if (!lyricsData.uri || !trackUri || lyricsData.uri === trackUri) {
+                            const trackUri = root.normalizeTrackUri(Players.active?.trackId ?? root.currentTrackUri);
+                            const lyricUri = root.normalizeTrackUri(lyricsData.uri ?? "");
+                            if (!lyricUri || !trackUri || lyricUri === trackUri) {
                                 root.spicyLyrics = lyricsData;
                             } else {
                                 root.spicyLyrics = null;
@@ -203,19 +219,23 @@ Singleton {
                         if (state.themeMode) {
                             root.themeMode = state.themeMode;
                         }
-                        const isNewTrack = state.uri && state.uri !== root.currentTrackUri;
+                        const normStateUri = root.normalizeTrackUri(state.uri || "");
+                        const isNewTrack = normStateUri && normStateUri !== root.currentTrackUri;
                         if (isNewTrack) {
                             root.isDebouncing = false;
                             debounceTimer.stop();
                             root.isLiked = Boolean(state.isLiked);
-                            if (root.spicyLyrics && root.spicyLyrics.uri !== state.uri) {
+                            if (root.spicyLyrics && root.normalizeTrackUri(root.spicyLyrics.uri) !== normStateUri) {
                                 root.spicyLyrics = null;
                             }
+                            root.currentTrackUri = normStateUri;
                             root.requestLyrics();
                         } else if (!root.isDebouncing) {
                             root.isLiked = Boolean(state.isLiked);
                         }
-                        root.currentTrackUri = state.uri || "";
+                        if (normStateUri) {
+                            root.currentTrackUri = normStateUri;
+                        }
                         root.upcomingTrack = state.upcoming || null;
                     } catch (e) {}
                 }

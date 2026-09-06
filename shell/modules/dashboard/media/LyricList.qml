@@ -18,9 +18,11 @@ Item {
     property bool flag
     property list<string> lyricList: Lyrics.lyrics
 
-    readonly property bool useSpicy: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics
-    readonly property bool hasLyrics: useSpicy || Lyrics.hasLyrics
-    readonly property bool isStaticLyrics: root.useSpicy && SpotifyService.syncType === "Static"
+    readonly property bool spicyIsSynced: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics && SpotifyService.syncType !== "Static"
+    readonly property bool spicyIsStatic: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics && SpotifyService.syncType === "Static"
+    readonly property bool useSpicy: spicyIsSynced || (spicyIsStatic && !Lyrics.hasLyrics)
+    readonly property bool hasLyrics: spicyIsSynced || Lyrics.hasLyrics || (spicyIsStatic && !Lyrics.loading)
+    readonly property bool isStaticLyrics: useSpicy ? (SpotifyService.syncType === "Static") : false
     property bool isMediaActive: false
 
     onIsMediaActiveChanged: {
@@ -118,7 +120,7 @@ Item {
         flag; // For some reason it doesn't update sometimes, so use this to force an update
         if (root.hasLyrics)
             return "hasLyrics";
-        if (Lyrics.loading && !root.useSpicy)
+        if (Lyrics.loading && !root.spicyIsSynced)
             return "loading";
         return "noLyrics";
     }
@@ -337,7 +339,7 @@ Item {
             currentIndex = Qt.binding(() => {
                 lyrics.model; // Force update when lyrics change
                 if (root.useSpicy) {
-                    if (SpotifyService.syncType === "Static") return -1;
+                    if (root.isStaticLyrics) return -1;
                     return SpotifyService.indexForTime(SpotifyService.effectivePosition);
                 }
                 const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
@@ -387,7 +389,7 @@ Item {
 
             readonly property string lineText: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
             readonly property bool isInterlude: Boolean(modelData?.isInterlude) || (lyricItem.lineText === ". . ." || lyricItem.lineText === "• • •" || lyricItem.lineText === "...")
-            readonly property bool isStaticLyric: root.useSpicy && SpotifyService.syncType === "Static"
+            readonly property bool isStaticLyric: root.isStaticLyrics
             readonly property var syllables: (typeof modelData === "object" && modelData?.syllables) ? modelData.syllables : []
             readonly property bool hasSyllables: syllables.length > 0
             readonly property real lineStartTime: (typeof modelData === "object" && modelData?.startTime !== undefined) ? Number(modelData.startTime) : -1

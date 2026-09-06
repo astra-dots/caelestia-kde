@@ -29,6 +29,13 @@ cached_scheme = {}
 last_scheme_check = 0
 
 
+def normalize_uri(uri):
+    if not uri:
+        return ""
+    m = re.search(r'[0-9a-zA-Z]{22}', str(uri))
+    return f"spotify:track:{m.group(0)}" if m else str(uri)
+
+
 def load_cached_theme_mode():
     global current_theme_mode
     if os.path.exists(THEME_FILE):
@@ -218,9 +225,10 @@ def save_cached_lyrics(data):
 
 
 def find_spicy_lyrics_on_disk(uri):
-    if not uri or not uri.startswith("spotify:track:"):
+    norm_uri = normalize_uri(uri)
+    if not norm_uri or not norm_uri.startswith("spotify:track:"):
         return None
-    track_id = uri.split(":")[2]
+    track_id = norm_uri.split(":")[2]
     cache_base = os.path.expanduser("~/.cache/spotify/Browser/Service Worker/CacheStorage")
     if not os.path.exists(cache_base):
         return None
@@ -341,7 +349,7 @@ def find_spicy_lyrics_on_disk(uri):
                 if type_name != "Static":
                     lines = inject_interludes(lines)
                 return {
-                    "uri": uri,
+                    "uri": norm_uri,
                     "source": "spicy-lyrics",
                     "type": type_name,
                     "lines": lines
@@ -442,14 +450,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     if "isLiked" in data:
                         current_state["isLiked"] = bool(data["isLiked"])
                     if "uri" in data:
-                        current_state["uri"] = str(data["uri"])
+                        current_state["uri"] = normalize_uri(str(data["uri"]))
                     if "upcoming" in data:
                         current_state["upcoming"] = data["upcoming"]
                 except Exception:
                     pass
             elif "liked" in params:
                 current_state["isLiked"] = params.get("liked", ["false"])[0].lower() == "true"
-                current_state["uri"] = params.get("uri", [""])[0]
+                current_state["uri"] = normalize_uri(params.get("uri", [""])[0])
 
             log_debug(f"GET /state -> isLiked={current_state.get('isLiked')} uri={current_state.get('uri')}")
             emit_state(current_state)
@@ -462,9 +470,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
         elif path == "/lyrics" or parsed.path == "/lyrics":
             from urllib.parse import parse_qs
-            req_uri = parse_qs(parsed.query).get("uri", [""])[0]
+            req_uri = normalize_uri(parse_qs(parsed.query).get("uri", [""])[0])
             log_debug(f"GET /lyrics requested (req_uri={req_uri})")
-            target_uri = req_uri or current_state.get("uri") or current_lyrics.get("uri")
+            target_uri = req_uri or normalize_uri(current_state.get("uri")) or normalize_uri(current_lyrics.get("uri"))
             if target_uri:
                 # If target_uri does not match current_lyrics, discard stale lyrics immediately!
                 if current_lyrics.get("uri") and current_lyrics.get("uri") != target_uri:
@@ -581,7 +589,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if "isLiked" in data:
                     current_state["isLiked"] = bool(data["isLiked"])
                 if "uri" in data:
-                    current_state["uri"] = str(data["uri"])
+                    current_state["uri"] = normalize_uri(str(data["uri"]))
                 if "upcoming" in data:
                     current_state["upcoming"] = data["upcoming"]
 
@@ -602,7 +610,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode("utf-8")
                 data = json.loads(body)
-                uri = data.get("uri") or current_state.get("uri")
+                uri = normalize_uri(data.get("uri") or current_state.get("uri"))
                 lines = data.get("lines", [])
 
                 if not lines:
@@ -611,6 +619,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     log_debug(f"POST /lyrics -> explicitly no lyrics for {uri}")
                     emit_lyrics(current_lyrics)
                 else:
+                    data["uri"] = uri
                     if data.get("type") != "Static":
                         data["lines"] = inject_interludes(lines)
                     post_bg_count = sum(1 for l in data.get("lines", []) if l.get("background"))

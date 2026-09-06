@@ -51,19 +51,19 @@ CustomMouseArea {
     }
     function withinPanelHeight(panel: Item, x: real, y: real, span = 100): bool {
         const panelY = panels.topMargin + panel.y;
-        const panelHeight = panel.content ? panel.content.nonAnimHeight : panel.height;
+        const panelHeight = (panel.content?.nonAnimHeight) || (panel.content?.item?.nonAnimHeight) || panel.height;
         const b = spanBounds(panelY - Config.border.rounding - panels.topMargin, panelY + panelHeight + Config.border.rounding + panels.bottomMargin, span);
         return y >= b.x && y <= b.y;
     }
     function withinPanelWidth(panel: Item, x: real, y: real, span = 100): bool {
         const panelX = panels.leftMargin + panel.x;
-        const panelWidth = panel.content ? panel.content.nonAnimWidth : panel.width;
+        const panelWidth = (panel.content?.nonAnimWidth) || (panel.content?.item?.nonAnimWidth) || panel.width;
         const b = spanBounds(panelX - Config.border.rounding - panels.leftMargin, panelX + panelWidth + Config.border.rounding + panels.rightMargin, span);
         return x >= b.x && x <= b.y;
     }
     function inLeftPanel(panel: Item, x: real, y: real): bool {
-        const panelWidth = panel.content ? panel.content.nonAnimWidth : panel.width;
-        const panelHeight = panel.content ? panel.content.nonAnimHeight : panel.height;
+        const panelWidth = (panel.content?.nonAnimWidth) || (panel.content?.item?.nonAnimWidth) || panel.width;
+        const panelHeight = (panel.content?.nonAnimHeight) || (panel.content?.item?.nonAnimHeight) || panel.height;
 
         if (Config.bar.position === "left")
             return x < panels.leftMargin + panel.x + panelWidth && withinPanelHeight(panel, x, y);

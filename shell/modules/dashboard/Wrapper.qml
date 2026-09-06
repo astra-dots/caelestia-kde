@@ -68,22 +68,7 @@ Item {
         focus: root.shouldBeActive
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        asynchronous: true
-        active: true
-        onStatusChanged: {
-            if (status === Loader.Error) {
-                if (asynchronous) {
-                    console.error("[Preload Failsafe] Dashboard failed to load asynchronously. Retrying synchronously...");
-                    active = false;
-                    asynchronous = false;
-                    Qt.callLater(() => { active = true; });
-                } else {
-                    console.error("[Preload Failsafe] Dashboard failed to load synchronously! Giving up.");
-                }
-            } else if (status === Loader.Ready) {
-                console.log("[Preload] Dashboard loaded successfully.");
-            }
-        }
+        active: root.shouldBeActive || root.visible
         sourceComponent: Content {
             visibilities: root.visibilities
             dashState: root.dashState

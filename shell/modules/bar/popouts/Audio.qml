@@ -23,8 +23,8 @@ ColumnLayout {
     readonly property real elementFontOffset: GlobalConfig.bar.perElementFontScale ? (!isNaN(GlobalConfig.bar.previewFontScales.audio) ? GlobalConfig.bar.previewFontScales.audio : 0.0) : 0.0
     readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0) + elementFontOffset)
 
-    implicitWidth: Math.max(285 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
-    spacing: Tokens.spacing.small * scaleOffset
+    implicitWidth: Math.max(270 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
+    spacing: Tokens.spacing.medium * scaleOffset
 
     ButtonGroup {
         id: sinks
@@ -35,7 +35,7 @@ ColumnLayout {
     }
 
     StyledText {
-        Layout.topMargin: Tokens.padding.small * root.scaleOffset
+        Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
         text: qsTr("Audio")
         font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
@@ -43,24 +43,23 @@ ColumnLayout {
 
     StyledRect {
         Layout.fillWidth: true
-        implicitWidth: devicesLayout.implicitWidth + Tokens.padding.small * 2 * root.scaleOffset
-        implicitHeight: devicesLayout.implicitHeight + Tokens.padding.small * 2 * root.scaleOffset
+        implicitWidth: outputLayout.implicitWidth + Tokens.padding.medium * 2 * root.scaleOffset
+        implicitHeight: outputLayout.implicitHeight + Tokens.padding.medium * 2 * root.scaleOffset
         radius: Tokens.rounding.medium * root.scaleOffset
         color: Colours.tPalette.m3surfaceContainer
         clip: true
 
         ColumnLayout {
-            id: devicesLayout
+            id: outputLayout
 
-            width: parent.width - Tokens.padding.small * 2 * root.scaleOffset
-            x: Tokens.padding.small * root.scaleOffset
-            y: Tokens.padding.small * root.scaleOffset
-            spacing: Tokens.spacing.extraSmall * root.scaleOffset
+            width: parent.width - Tokens.padding.medium * 2 * root.scaleOffset
+            x: Tokens.padding.medium * root.scaleOffset
+            y: Tokens.padding.medium * root.scaleOffset
+            spacing: Tokens.spacing.medium * root.scaleOffset
 
             StyledText {
                 text: qsTr("Output device")
-                font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).weight(Font.Medium).build()
-                color: Colours.palette.m3primary
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
             }
 
             Repeater {
@@ -78,22 +77,28 @@ ColumnLayout {
                     font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                 }
             }
+        }
+    }
 
-            Rectangle {
-                visible: Audio.sources.length > 0
-                Layout.fillWidth: true
-                Layout.topMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.bottomMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                implicitHeight: 1
-                color: Colours.palette.m3outlineVariant
-                opacity: 0.25
-            }
+    StyledRect {
+        Layout.fillWidth: true
+        implicitWidth: inputLayout.implicitWidth + Tokens.padding.medium * 2 * root.scaleOffset
+        implicitHeight: inputLayout.implicitHeight + Tokens.padding.medium * 2 * root.scaleOffset
+        radius: Tokens.rounding.medium * root.scaleOffset
+        color: Colours.tPalette.m3surfaceContainer
+        clip: true
+
+        ColumnLayout {
+            id: inputLayout
+
+            width: parent.width - Tokens.padding.medium * 2 * root.scaleOffset
+            x: Tokens.padding.medium * root.scaleOffset
+            y: Tokens.padding.medium * root.scaleOffset
+            spacing: Tokens.spacing.medium * root.scaleOffset
 
             StyledText {
-                visible: Audio.sources.length > 0
                 text: qsTr("Input device")
-                font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).weight(Font.Medium).build()
-                color: Colours.palette.m3primary
+                font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
             }
 
             Repeater {
@@ -115,14 +120,14 @@ ColumnLayout {
     }
 
     StyledText {
-        Layout.topMargin: Tokens.spacing.extraSmall * root.scaleOffset
+        Layout.topMargin: Tokens.spacing.medium * root.scaleOffset
         text: qsTr("Volume (%1)").arg(Audio.muted ? qsTr("Muted") : `${Math.round(Audio.volume * 100)}%`)
-        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).weight(Font.Medium).build()
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     CustomMouseArea {
         Layout.fillWidth: true
-        implicitHeight: Math.round(Tokens.padding.medium * 2.2 * root.scaleOffset)
+        implicitHeight: Tokens.padding.medium * 3 * root.scaleOffset
 
         onWheel: event => {
             if (event.angleDelta.y > 0)
@@ -144,15 +149,15 @@ ColumnLayout {
 
     StyledText {
         visible: Audio.sources.length > 0
-        Layout.topMargin: Tokens.spacing.extraSmall * root.scaleOffset
+        Layout.topMargin: Tokens.spacing.small * root.scaleOffset
         text: qsTr("Microphone (%1)").arg(Audio.sourceMuted ? qsTr("Muted") : `${Math.round(Audio.sourceVolume * 100)}%`)
-        font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).weight(Font.Medium).build()
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     CustomMouseArea {
         visible: Audio.sources.length > 0
         Layout.fillWidth: true
-        implicitHeight: Math.round(Tokens.padding.medium * 2.2 * root.scaleOffset)
+        implicitHeight: Tokens.padding.medium * 3 * root.scaleOffset
 
         onWheel: event => {
             if (event.angleDelta.y > 0)
@@ -175,7 +180,7 @@ ColumnLayout {
         Layout.fillWidth: true
         inactiveColour: Colours.palette.m3primaryContainer
         inactiveOnColour: Colours.palette.m3onPrimaryContainer
-        verticalPadding: Tokens.padding.extraSmall * root.scaleOffset
+        verticalPadding: Tokens.padding.small * root.scaleOffset
         text: qsTr("Open settings")
         icon: "settings"
 
