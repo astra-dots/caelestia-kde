@@ -17,18 +17,18 @@ Slider {
     property int waveDuration: 1000
     property int radius: Tokens.rounding.medium
     property bool interactionOnMove: true
+    property bool animateChanges: true
     readonly property bool dragging: mouse.pressed
 
     property color fgColour: enabled ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3onSurface, 0.38)
     property color bgColour: enabled ? Colours.palette.m3secondaryContainer : Qt.alpha(Colours.palette.m3onSurface, 0.1)
 
     property real pos: visualPosition
-    property real filledWidth
+    readonly property real trackWidth: Math.max(0, width - 4 - (2 * Tokens.spacing.extraSmall))
+    property real filledWidth: Math.max(0, Math.min(trackWidth, trackWidth * pos))
 
     signal interaction(v: real)
     signal released(v: real)
-
-    Component.onCompleted: filledWidth = Qt.binding(() => (width - handle.implicitWidth - handle.anchors.leftMargin) * pos)
 
     implicitWidth: 200
     implicitHeight: 12
@@ -95,7 +95,7 @@ Slider {
 
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            asynchronous: true
+            asynchronous: false
 
             sourceComponent: root.wavy ? waveComp : lineComp
         }
@@ -121,7 +121,7 @@ Slider {
                 lineWidth: root.height * 0.7
                 frequency: root.waveFrequency
                 startX: x
-                fullLength: root.width - handle.implicitWidth - handle.anchors.leftMargin
+                fullLength: root.trackWidth
                 color: root.fgColour
 
                 implicitWidth: root.filledWidth
@@ -158,19 +158,19 @@ Slider {
 
         property real pressStartX
         property real pressStartPos
-        property real dragMovement
+        property real dragMovement: 0
 
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
 
         preventStealing: true
-        implicitHeight: handle.implicitHeight
+        implicitHeight: Math.max(parent.height, 24)
 
         onPressed: e => {
-            widthBehavior.enabled = false;
             pressStartX = e.x;
             pressStartPos = CUtils.clamp(e.x / width, 0, 1);
+            dragMovement = 0;
             if (root.interactionOnMove)
                 root.interaction(pressStartPos);
         }
@@ -180,15 +180,17 @@ Slider {
                 root.interaction(posBinding.value);
         }
         onReleased: e => {
-            root.interaction(posBinding.value);
-            root.released(posBinding.value);
-            widthBehavior.enabled = true;
+            const finalPos = posBinding.value;
+            root.interaction(finalPos);
+            root.released(finalPos);
             dragMovement = 0;
         }
     }
 
     Behavior on filledWidth {
         id: widthBehavior
+
+        enabled: root.animateChanges && !mouse.pressed
 
         Anim {}
     }

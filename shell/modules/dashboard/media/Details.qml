@@ -72,7 +72,7 @@ ColumnLayout {
             id: positionLabel
 
             Layout.preferredWidth: timeMetrics.width
-            text: root.lengthStr(Players.active?.position ?? -1)
+            text: root.lengthStr(positionSlider.isSeeking ? (positionSlider.seekPosition * (Players.active?.length ?? 0)) : (Players.active?.position ?? -1))
             color: Colours.palette.m3onSurfaceVariant
             font: timeMetrics.font
             horizontalAlignment: Text.AlignHCenter
@@ -81,8 +81,19 @@ ColumnLayout {
         StyledSlider {
             id: positionSlider
 
+            property bool isSeeking: false
+            property real seekPosition: 0
+
+            Timer {
+                id: seekTimeoutTimer
+                interval: 350
+                repeat: false
+                onTriggered: positionSlider.isSeeking = false
+            }
+
             Layout.fillWidth: true
-            value: Players.active ? Players.active.position / (Players.active.length || 1) : 0
+            animateChanges: false
+            value: isSeeking ? seekPosition : (Players.active ? Players.active.position / (Players.active.length || 1) : 0)
             enabled: Players.active?.canSeek ?? false
             wavy: true
             animateWave: Players.active?.isPlaying ?? false
@@ -91,8 +102,39 @@ ColumnLayout {
             interactionOnMove: false
             onInteraction: value => {
                 const active = Players.active;
-                if (active?.canSeek && active?.positionSupported)
+                if (active?.canSeek && active?.positionSupported) {
+                    positionSlider.isSeeking = true;
+                    positionSlider.seekPosition = value;
+                    seekTimeoutTimer.restart();
                     active.position = value * active.length;
+                }
+            }
+
+            Connections {
+                target: Players
+                function onActiveChanged() {
+                    positionSlider.isSeeking = false;
+                    seekTimeoutTimer.stop();
+                }
+            }
+
+            Connections {
+                target: Players.active
+                ignoreUnknownSignals: true
+                function onPostTrackChanged() {
+                    positionSlider.isSeeking = false;
+                    seekTimeoutTimer.stop();
+                }
+                function onPositionChanged() {
+                    if (positionSlider.isSeeking) {
+                        const cur = Players.active ? Players.active.position / (Players.active.length || 1) : 0;
+                        const maxDiff = 1.5 / Math.max(1, Players.active?.length ?? 1);
+                        if (Math.abs(cur - positionSlider.seekPosition) <= maxDiff) {
+                            positionSlider.isSeeking = false;
+                            seekTimeoutTimer.stop();
+                        }
+                    }
+                }
             }
 
             Binding {
