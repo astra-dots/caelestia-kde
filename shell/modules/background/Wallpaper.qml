@@ -268,7 +268,7 @@ Item {
                 from: 0
                 to: img.maxRadius
                 type: Anim.EmphasizedExtraLarge
-                duration: 2200
+                duration: 2600
             }
     }
 }
