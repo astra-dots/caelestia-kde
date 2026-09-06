@@ -20,6 +20,42 @@ Item {
 
     readonly property bool useSpicy: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics
     readonly property bool hasLyrics: useSpicy || Lyrics.hasLyrics
+    property bool isMediaActive: false
+
+    onIsMediaActiveChanged: {
+        if (isMediaActive) {
+            if (SpotifyService.isSpotify && !SpotifyService.hasSpicyLyrics) {
+                SpotifyService.requestLyrics();
+            }
+            if (typeof lyrics !== "undefined" && lyrics) {
+                lyrics.userScrolling = false;
+                lyrics.centerCurrent(true);
+                openSettleTimer.ticks = 0;
+                openSettleTimer.restart();
+            }
+        } else {
+            openSettleTimer.stop();
+        }
+    }
+
+    Timer {
+        id: openSettleTimer
+        interval: 40
+        repeat: true
+        property int ticks: 0
+        onTriggered: {
+            ticks++;
+            if (typeof lyrics !== "undefined" && lyrics && lyrics.height > 100) {
+                lyrics.centerCurrent(true);
+            }
+            if (ticks >= 10) {
+                stop();
+                if (typeof lyrics !== "undefined" && lyrics) {
+                    lyrics.centerCurrent(true);
+                }
+            }
+        }
+    }
 
     onVisibleChanged: {
         if (visible) {
@@ -27,7 +63,12 @@ Item {
                 SpotifyService.requestLyrics();
             }
             if (typeof lyrics !== "undefined" && lyrics) {
-                lyrics.scrollToCurrent(true);
+                lyrics.userScrolling = false;
+                lyrics.centerCurrent(true);
+                if (isMediaActive) {
+                    openSettleTimer.ticks = 0;
+                    openSettleTimer.restart();
+                }
             }
         }
     }
@@ -40,7 +81,7 @@ Item {
             Lyrics.clearTrack();
         }
         if (typeof lyrics !== "undefined" && lyrics) {
-            lyrics.scrollToCurrent(true);
+            lyrics.centerCurrent(true);
         }
     }
 
@@ -272,12 +313,13 @@ Item {
             easing.type: Easing.OutCubic
         }
 
-        function scrollToCurrent(instant = false) {
+        function centerCurrent(instant = false) {
             if (count === 0 || height <= 0) return;
 
             if (currentIndex < 0) {
+                scrollAnim.stop();
                 if (instant) {
-                    scrollAnim.stop();
+                    contentY = 0;
                     positionViewAtIndex(0, ListView.Beginning);
                 } else if (!userScrolling) {
                     scrollAnim.stop();
@@ -290,6 +332,14 @@ Item {
             if (instant) {
                 scrollAnim.stop();
                 positionViewAtIndex(currentIndex, ListView.Center);
+                Qt.callLater(() => {
+                    if (currentItem && height > 0) {
+                        const itemCenter = currentItem.y + (currentItem.height / 2);
+                        const maxScroll = Math.max(0, lyrics.contentHeight - lyrics.height);
+                        const targetY = Math.max(0, Math.min(itemCenter - (lyrics.height / 2), maxScroll));
+                        lyrics.contentY = targetY;
+                    }
+                });
                 return;
             }
 
@@ -302,6 +352,14 @@ Item {
                     const targetY = Math.max(0, Math.min(itemCenter - (lyrics.height / 2), maxScroll));
                     if (Math.abs(lyrics.contentY - targetY) > lyrics.height * 2.5) {
                         positionViewAtIndex(currentIndex, ListView.Center);
+                        Qt.callLater(() => {
+                            if (currentItem && !userScrolling) {
+                                const ic = currentItem.y + (currentItem.height / 2);
+                                const ms = Math.max(0, lyrics.contentHeight - lyrics.height);
+                                const ty = Math.max(0, Math.min(ic - (lyrics.height / 2), ms));
+                                lyrics.contentY = ty;
+                            }
+                        });
                     } else {
                         scrollAnim.stop();
                         scrollAnim.to = targetY;
@@ -309,28 +367,40 @@ Item {
                     }
                 } else if (!currentItem && currentIndex >= 0) {
                     positionViewAtIndex(currentIndex, ListView.Center);
+                    Qt.callLater(() => {
+                        if (currentItem && !userScrolling) {
+                            const ic = currentItem.y + (currentItem.height / 2);
+                            const ms = Math.max(0, lyrics.contentHeight - lyrics.height);
+                            const ty = Math.max(0, Math.min(ic - (lyrics.height / 2), ms));
+                            lyrics.contentY = ty;
+                        }
+                    });
                 }
             });
         }
 
+        function scrollToCurrent(instant = false) {
+            centerCurrent(instant);
+        }
+
         function jumpToCurrent(forceInstant = false) {
-            scrollToCurrent(forceInstant);
+            centerCurrent(forceInstant);
         }
 
         onCountChanged: {
-            scrollToCurrent(true);
+            centerCurrent(true);
         }
         onHeightChanged: {
-            if (height > 100) {
-                scrollToCurrent(true);
+            if (height > 100 && !userScrolling) {
+                centerCurrent(true);
             }
         }
         onModelChanged: {
-            scrollToCurrent(true);
+            centerCurrent(true);
         }
         onCurrentIndexChanged: {
-            if (count > 0 && height > 0) {
-                scrollToCurrent(false);
+            if (count > 0 && height > 0 && !userScrolling) {
+                centerCurrent(false);
             }
         }
 
@@ -344,7 +414,7 @@ Item {
                 const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
                 return Lyrics.indexForTime(pos);
             });
-            scrollToCurrent(true);
+            centerCurrent(true);
         }
 
         Timer {
@@ -352,11 +422,12 @@ Item {
             interval: 3500
             onTriggered: {
                 lyrics.userScrolling = false;
-                lyrics.scrollToCurrent(false);
+                lyrics.centerCurrent(false);
             }
         }
 
         onMovementStarted: {
+            openSettleTimer.stop();
             scrollAnim.stop();
             userScrolling = true;
             userScrollTimer.stop();

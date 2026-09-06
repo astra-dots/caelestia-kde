@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import M3Shapes
+import Caelestia
 import Caelestia.Config
 import qs.components
 import qs.components.controls
@@ -12,6 +13,14 @@ Item {
     id: root
 
     required property DrawerVisibilities visibilities
+    property DashboardState dashState: null
+
+    readonly property bool isMediaActive: {
+        if (!visibilities?.dashboard) return false;
+        if (!dashState) return true;
+        const loader = root.parent as Loader;
+        return loader ? (dashState.currentTab === loader.index) : true;
+    }
 
     implicitWidth: Tokens.sizes.dashboard.mediaTabWidth
     implicitHeight: Tokens.sizes.dashboard.mediaTabHeight
@@ -159,6 +168,7 @@ Item {
                     }
 
                     LyricsAndSelector {
+                        isMediaActive: root.isMediaActive
                         Layout.fillHeight: true
                         implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
                     }

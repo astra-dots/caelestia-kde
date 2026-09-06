@@ -8,6 +8,10 @@ import qs.components.controls
 import qs.services
 
 Item {
+    id: root
+
+    property bool isMediaActive: false
+
     ColumnLayout {
         id: layout
 
@@ -36,6 +40,7 @@ Item {
         }
 
         LyricList {
+            isMediaActive: root.isMediaActive
             Layout.fillWidth: true
             Layout.fillHeight: true
         }

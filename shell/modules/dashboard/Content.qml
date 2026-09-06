@@ -206,6 +206,7 @@ Item {
 
                 Media {
                     visibilities: root.visibilities
+                    dashState: root.dashState
                 }
             }
 
