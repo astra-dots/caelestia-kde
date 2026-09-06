@@ -39,6 +39,17 @@ def analyze_wallpaper(image_path):
 
     try:
         img = Image.open(image_path).convert('L')
+    except Exception:
+        fallback = get_current_wallpaper_path()
+        if fallback and fallback != image_path and os.path.isfile(fallback):
+            try:
+                img = Image.open(fallback).convert('L')
+            except Exception:
+                return "top-left"
+        else:
+            return "top-left"
+
+    try:
         # Fast downsample to 160x90 thumbnail
         img_thumb = img.resize((160, 90), Image.Resampling.BILINEAR)
         edges = img_thumb.filter(ImageFilter.FIND_EDGES)

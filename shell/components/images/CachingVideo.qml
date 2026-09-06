@@ -30,6 +30,12 @@ Item {
         const pauseOnFullscreen = GlobalConfig.background.videoWallpaperPauseOnFullscreen;
         const pauseOnTiled = GlobalConfig.background.videoWallpaperPauseOnTiled;
 
+        if (!pauseOnFullscreen && !pauseOnTiled) {
+            if (!mediaPlayer.playing && root.path && !GlobalConfig.background.videoWallpaperPaused)
+                mediaPlayer.play();
+            return;
+        }
+
         let shouldPause = false;
 
         try {
@@ -197,13 +203,22 @@ Item {
     Timer {
         id: checkTimer
 
-        interval: 100
-        running: true
+        interval: 300
+        running: GlobalConfig.background.videoWallpaperPauseOnFullscreen || GlobalConfig.background.videoWallpaperPauseOnTiled
         repeat: true
 
-        onTriggered: {
-            checkPauseState();
-            checkMuteState();
+        onTriggered: checkPauseState()
+    }
+
+    Connections {
+        target: typeof KWinActiveWindowBridge !== "undefined" ? KWinActiveWindowBridge : null
+        function onWindowListChanged() {
+            if (GlobalConfig.background.videoWallpaperPauseOnFullscreen || GlobalConfig.background.videoWallpaperPauseOnTiled)
+                checkPauseState();
+        }
+        function onActiveOutputNameChanged() {
+            if (GlobalConfig.background.videoWallpaperPauseOnFullscreen || GlobalConfig.background.videoWallpaperPauseOnTiled)
+                checkPauseState();
         }
     }
 
