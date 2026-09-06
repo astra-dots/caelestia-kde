@@ -45,31 +45,61 @@ Item {
             Layout.fillHeight: true
         }
 
-        SplitButton {
-            Layout.alignment: Qt.AlignHCenter
+        RowLayout {
+            id: bottomRow
 
-            type: SplitButton.Tonal
-            disabled: !Players.list.length
-            active: menuItems.find(m => m.modelData === Players.active) ?? menuItems[0] ?? null
-            menu.onItemSelected: item => Players.manualActive = (item as PlayerItem).modelData
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.small
 
-            menuItems: playerList.instances
-            fallbackIcon: "music_off"
-            fallbackText: qsTr("No players")
+            IconButton {
+                id: spotifyThemeBtn
 
-            minLeftWidth: layout.width - expandBtn.implicitWidth - spacing
-            label.Layout.maximumWidth: minLeftWidth - iconLabel.implicitWidth - textRow.spacing - textRow.anchors.horizontalCenterOffset / 2 - horizontalPadding * 2
-            label.elide: Text.ElideRight
+                visible: SpotifyService.isSpotify
+                type: IconButton.Tonal
+                isRound: true
+                shapeMorph: true
+                icon: SpotifyService.themeMode === "system" ? "palette" : "music_note"
+                implicitHeight: playerSelector.expandBtn?.implicitHeight ?? (label.implicitHeight + padding * 2)
+                implicitWidth: implicitHeight
+                Layout.alignment: Qt.AlignVCenter
+                onClicked: SpotifyService.toggleThemeMode()
 
-            stateLayer.disabled: true
-            menuOnTop: true
+                Tooltip {
+                    target: spotifyThemeBtn
+                    text: SpotifyService.themeMode === "system"
+                        ? qsTr("Spotify Theme: System Colors\nClick to switch to Song Colors")
+                        : qsTr("Spotify Theme: Song Colors\nClick to switch to System Colors")
+                }
+            }
 
-            Variants {
-                id: playerList
+            SplitButton {
+                id: playerSelector
 
-                model: Players.list
+                Layout.alignment: Qt.AlignVCenter
+                type: SplitButton.Tonal
+                disabled: !Players.list.length
+                active: menuItems.find(m => m.modelData === Players.active) ?? menuItems[0] ?? null
+                menu.onItemSelected: item => Players.manualActive = (item as PlayerItem).modelData
 
-                PlayerItem {}
+                menuItems: playerList.instances
+                fallbackIcon: "music_off"
+                fallbackText: qsTr("No players")
+
+                readonly property real availableWidth: layout.width - (spotifyThemeBtn.visible ? (spotifyThemeBtn.implicitWidth + bottomRow.spacing) : 0)
+                minLeftWidth: Math.max(0, availableWidth - expandBtn.implicitWidth - spacing)
+                label.Layout.maximumWidth: Math.max(0, minLeftWidth - iconLabel.implicitWidth - textRow.spacing - textRow.anchors.horizontalCenterOffset / 2 - horizontalPadding * 2)
+                label.elide: Text.ElideRight
+
+                stateLayer.disabled: true
+                menuOnTop: true
+
+                Variants {
+                    id: playerList
+
+                    model: Players.list
+
+                    PlayerItem {}
+                }
             }
         }
     }

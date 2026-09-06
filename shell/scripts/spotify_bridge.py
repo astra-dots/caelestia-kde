@@ -381,7 +381,9 @@ def kill_stale_bridges():
 
 def emit_state(state):
     try:
-        sys.stdout.write(f"STATE:{json.dumps(state)}\n")
+        st = dict(state)
+        st["themeMode"] = current_theme_mode
+        sys.stdout.write(f"STATE:{json.dumps(st)}\n")
         sys.stdout.flush()
     except (BrokenPipeError, IOError, Exception):
         pass
@@ -690,6 +692,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     scheme = get_caelestia_scheme()
                     log_debug(f"POST /theme-mode -> mode set to {current_theme_mode}")
                     queue_command({"action": "setThemeMode", "mode": current_theme_mode, "scheme": scheme})
+                    emit_state(current_state)
             except Exception as e:
                 log_debug(f"POST /theme-mode error: {e}")
 
@@ -739,6 +742,9 @@ def main():
     t_scheme = threading.Thread(target=scheme_watcher_loop, daemon=True)
     t_scheme.start()
 
+    load_cached_theme_mode()
+    load_cached_lyrics()
+
     log_debug(f"Server ready on port {PORT}")
     try:
         sys.stdout.write(f"READY:{PORT}\n")
@@ -746,8 +752,7 @@ def main():
     except Exception:
         pass
 
-    load_cached_theme_mode()
-    load_cached_lyrics()
+    emit_state(current_state)
 
     try:
         server.serve_forever()

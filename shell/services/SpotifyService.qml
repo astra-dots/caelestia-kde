@@ -25,6 +25,8 @@ Singleton {
     readonly property bool hasUpcoming: root.isSpotify && root.upcomingTitle.length > 0
     property bool isConnected: false
     property bool isDebouncing: false
+    property string themeMode: "song"
+    readonly property bool isThemeModeAvailable: root.isSpotify && root.isConnected
 
     property var spicyLyrics: null
     readonly property bool hasSpicyLyrics: Boolean(root.isSpotify && root.spicyLyrics && root.spicyLyrics.lines && root.spicyLyrics.lines.length > 0)
@@ -69,6 +71,17 @@ Singleton {
     onIsSpotifyChanged: {
         if (root.isSpotify) {
             root.requestLyrics();
+            fetchThemeProc.running = true;
+        }
+    }
+
+    Connections {
+        target: Colours
+        ignoreUnknownSignals: true
+        function onPaletteChanged() {
+            if (root.isSpotify && root.themeMode === "system") {
+                Quickshell.execDetached(["curl", "-s", "-X", "POST", "-H", "Content-Type: application/json", "-d", JSON.stringify({ mode: "system" }), "http://127.0.0.1:8999/theme-mode"]);
+            }
         }
     }
 
@@ -131,6 +144,28 @@ Singleton {
     }
 
     Process {
+        id: fetchThemeProc
+        command: ["curl", "-s", "http://127.0.0.1:8999/theme-mode"]
+        stdout: StdioCollector {
+            id: fetchThemeStdout
+        }
+        onExited: {
+            try {
+                const data = JSON.parse(fetchThemeStdout.text);
+                if (data && data.mode) {
+                    root.themeMode = data.mode;
+                }
+            } catch (e) {}
+        }
+    }
+
+    function toggleThemeMode(): void {
+        const nextMode = (root.themeMode === "system") ? "song" : "system";
+        root.themeMode = nextMode;
+        Quickshell.execDetached(["curl", "-s", "-X", "POST", "-H", "Content-Type: application/json", "-d", JSON.stringify({ mode: nextMode }), "http://127.0.0.1:8999/theme-mode"]);
+    }
+
+    Process {
         id: bridgeProcess
 
         command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/caelestia/scripts/spotify_bridge.py"]
@@ -143,6 +178,7 @@ Singleton {
                     root.isConnected = true;
                     Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/state"]);
                     Quickshell.execDetached(["curl", "-s", "http://127.0.0.1:8999/lyrics"]);
+                    fetchThemeProc.running = true;
                 } else if (line.startsWith("LYRICS:")) {
                     try {
                         const lyricsData = JSON.parse(line.substring(7));
@@ -162,6 +198,9 @@ Singleton {
                 } else if (line.startsWith("STATE:")) {
                     try {
                         const state = JSON.parse(line.substring(6));
+                        if (state.themeMode) {
+                            root.themeMode = state.themeMode;
+                        }
                         const isNewTrack = state.uri && state.uri !== root.currentTrackUri;
                         if (isNewTrack) {
                             root.isDebouncing = false;
