@@ -183,6 +183,8 @@ Slider {
                 root.interaction(pressStartPos);
         }
         onPositionChanged: e => {
+            if (!pressed)
+                return;
             dragMovement = (e.x - pressStartX) / width;
             if (root.interactionOnMove)
                 root.interaction(posBinding.value);
@@ -193,6 +195,7 @@ Slider {
             root.released(finalPos);
             dragMovement = 0;
         }
+        onWheel: wheel => wheel.accepted = false
     }
 
     Behavior on filledWidth {

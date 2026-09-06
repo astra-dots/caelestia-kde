@@ -42,11 +42,15 @@ Singleton {
     }
 
     function incrementVolume(amount: real): void {
-        setVolume(volume + (amount || GlobalConfig.services.audioIncrement));
+        const step = amount || GlobalConfig.services.audioIncrement;
+        const cur = Math.round(volume * 100) / 100;
+        setVolume(Math.round((cur + step) * 100) / 100);
     }
 
     function decrementVolume(amount: real): void {
-        setVolume(volume - (amount || GlobalConfig.services.audioIncrement));
+        const step = amount || GlobalConfig.services.audioIncrement;
+        const cur = Math.round(volume * 100) / 100;
+        setVolume(Math.round((cur - step) * 100) / 100);
     }
 
     function setSourceVolume(newVolume: real): void {
@@ -57,11 +61,15 @@ Singleton {
     }
 
     function incrementSourceVolume(amount: real): void {
-        setSourceVolume(sourceVolume + (amount || GlobalConfig.services.audioIncrement));
+        const step = amount || GlobalConfig.services.audioIncrement;
+        const cur = Math.round(sourceVolume * 100) / 100;
+        setSourceVolume(Math.round((cur + step) * 100) / 100);
     }
 
     function decrementSourceVolume(amount: real): void {
-        setSourceVolume(sourceVolume - (amount || GlobalConfig.services.audioIncrement));
+        const step = amount || GlobalConfig.services.audioIncrement;
+        const cur = Math.round(sourceVolume * 100) / 100;
+        setSourceVolume(Math.round((cur - step) * 100) / 100);
     }
 
     function setAudioSink(newSink: PwNode): void {

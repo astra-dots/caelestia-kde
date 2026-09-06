@@ -282,10 +282,11 @@ ColumnLayout {
                 if (!Players.active)
                     return;
                 const step = 0.05;
+                const cur = Math.round((Players.active.volume ?? 0) * 100) / 100;
                 if (event.angleDelta.y > 0)
-                    Players.active.volume = Math.min(1.0, (Players.active.volume ?? 0) + step);
+                    Players.active.volume = Math.min(1.0, Math.round((cur + step) * 100) / 100);
                 else if (event.angleDelta.y < 0)
-                    Players.active.volume = Math.max(0.0, (Players.active.volume ?? 0) - step);
+                    Players.active.volume = Math.max(0.0, Math.round((cur - step) * 100) / 100);
             }
 
             StyledSlider {
@@ -297,7 +298,7 @@ ColumnLayout {
                 value: Players.active?.volume ?? 0
                 onInteraction: v => {
                     if (Players.active)
-                        Players.active.volume = Math.max(0, Math.min(1, v));
+                        Players.active.volume = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
                 }
             }
         }

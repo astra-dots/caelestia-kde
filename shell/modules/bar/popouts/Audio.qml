@@ -220,9 +220,9 @@ ColumnLayout {
 
                 onWheel: event => {
                     if (event.angleDelta.y > 0)
-                        Audio.incrementVolume();
+                        Audio.incrementVolume(0.05);
                     else if (event.angleDelta.y < 0)
-                        Audio.decrementVolume();
+                        Audio.decrementVolume(0.05);
                 }
 
                 StyledSlider {
@@ -232,7 +232,7 @@ ColumnLayout {
                     implicitHeight: Math.round(10 * root.scaleOffset)
 
                     value: Audio.volume
-                    onInteraction: v => Audio.setVolume(v)
+                    onInteraction: v => Audio.setVolume(Math.round(v * 100) / 100)
                     onReleased: v => Audio.playEffectTick()
                 }
             }
@@ -257,9 +257,9 @@ ColumnLayout {
 
                 onWheel: event => {
                     if (event.angleDelta.y > 0)
-                        Audio.incrementSourceVolume();
+                        Audio.incrementSourceVolume(0.05);
                     else if (event.angleDelta.y < 0)
-                        Audio.decrementSourceVolume();
+                        Audio.decrementSourceVolume(0.05);
                 }
 
                 StyledSlider {
@@ -269,7 +269,7 @@ ColumnLayout {
                     implicitHeight: Math.round(10 * root.scaleOffset)
 
                     value: Audio.sourceVolume
-                    onInteraction: v => Audio.setSourceVolume(v)
+                    onInteraction: v => Audio.setSourceVolume(Math.round(v * 100) / 100)
                 }
             }
         }
