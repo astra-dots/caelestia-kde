@@ -17,6 +17,7 @@ Item {
 
     required property DrawerVisibilities visibilities
     required property var panels
+    required property real maxWidth
     required property real maxHeight
 
     readonly property int padding: Tokens.padding.large
@@ -34,9 +35,10 @@ Item {
             Quickshell.execDetached(command);
     }
 
-    Connections {
-        target: Clipboard
+    implicitWidth: listWrapper.width + padding * 2
+    implicitHeight: listWrapper.height + sessionFooter.height + searchWrapper.height + listWrapper.anchors.bottomMargin + sessionFooter.anchors.bottomMargin + searchWrapper.anchors.bottomMargin
 
+    Connections {
         function onClearHistoryFinished(success: bool): void {
             if (success) {
                 if (GlobalConfig.utilities.toasts.clipboardChanged)
@@ -45,11 +47,9 @@ Item {
                 Toaster.toast(qsTr("Failed to clear clipboard history"), "", "error");
             }
         }
+
+        target: Clipboard
     }
-
-    implicitWidth: listWrapper.width + padding * 2
-
-    implicitHeight: listWrapper.height + sessionFooter.height + searchWrapper.height + listWrapper.anchors.bottomMargin + sessionFooter.anchors.bottomMargin + searchWrapper.anchors.bottomMargin
 
     Item {
         id: listWrapper
@@ -67,6 +67,7 @@ Item {
             content: root
             visibilities: root.visibilities
             panels: root.panels
+            maxWidth: root.maxWidth - root.padding * 2
             maxHeight: root.maxHeight - searchWrapper.implicitHeight - sessionFooter.implicitHeight - root.padding * 2 - (sessionFooter.visible ? root.footerSpacing * 2 : root.footerSpacing)
             search: search
             padding: root.padding
@@ -187,6 +188,10 @@ Item {
             placeholderText: qsTr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
             onAccepted: {
+                if (list.showAppsBrowser) {
+                    list.currentList?.activateCurrent();
+                    return;
+                }
                 if (list.showPinned && list.currentList?.launchCurrent) {
                     list.currentList.launchCurrent();
                     root.visibilities.launcher = false;
@@ -243,6 +248,9 @@ Item {
                 } else if (list.showPinned && list.currentList?.moveLeft) {
                     list.currentList.moveLeft();
                     event.accepted = true;
+                } else if (list.showAppsBrowser) {
+                    list.currentList?.moveLeft();
+                    event.accepted = true;
                 } else {
                     event.accepted = false;
                 }
@@ -257,6 +265,9 @@ Item {
                 } else if (list.showPinned && list.currentList?.moveRight) {
                     list.currentList.moveRight();
                     event.accepted = true;
+                } else if (list.showAppsBrowser) {
+                    list.currentList?.moveRight();
+                    event.accepted = true;
                 } else {
                     event.accepted = false;
                 }
@@ -269,6 +280,9 @@ Item {
                 } else if (list.showWallpapers) {
                     list.cycleWallpaperTab(false);
                     event.accepted = true;
+                } else if (list.showAppsBrowser) {
+                    list.currentList?.toggleFocus();
+                    event.accepted = true;
                 }
             }
 
@@ -278,6 +292,9 @@ Item {
                     event.accepted = true;
                 } else if (list.showWallpapers) {
                     list.cycleWallpaperTab(true);
+                    event.accepted = true;
+                } else if (list.showAppsBrowser) {
+                    list.currentList?.toggleFocus();
                     event.accepted = true;
                 }
             }
@@ -296,6 +313,7 @@ Item {
                 if (list.showEmojis && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                     list.currentList?.activateSelected();
                     event.accepted = true;
+                    return;
                 } else if (list.showWallpapers && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                     const currentItem = list.currentList?.currentItem;
                     if (currentItem && currentItem.modelData) {
@@ -306,15 +324,23 @@ Item {
                         event.accepted = true;
                         return;
                     }
-                }
-
-                if (list.showPinned && search.text.length === 0 && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                } else if (list.showPinned && search.text.length === 0 && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
                     if (list.currentList?.launchCurrent) {
                         list.currentList.launchCurrent();
                         root.visibilities.launcher = false;
                         event.accepted = true;
                         return;
                     }
+                } else if (list.showAppsBrowser && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                    if (list.currentList?.activateCurrent) {
+                        list.currentList.activateCurrent();
+                        event.accepted = true;
+                        return;
+                    }
+                } else if (list.showAppsBrowser && event.key === Qt.Key_Tab) {
+                    list.currentList?.toggleFocus();
+                    event.accepted = true;
+                    return;
                 }
 
                 if (!GlobalConfig.launcher.vimKeybinds)

@@ -6,7 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Caelestia
 import Caelestia.Config
-import Caelestia.Internal
+import Caelestia.Services
 import Caelestia.Services
 import qs.components.misc
 import qs.services
@@ -121,7 +121,6 @@ Singleton {
     readonly property string defaultKbLayout: ""
     readonly property string kbLayoutFull: KbLayout.activeLabel
     readonly property string kbLayout: KbLayout.activeShortLabel
-    readonly property var kbMap: new Map()
 
     readonly property alias extras: extras
     readonly property alias options: extras.options
@@ -232,29 +231,52 @@ Singleton {
             return false;
 
         const wins = KWinActiveWindowBridge.windowList || [];
-        const activeWsId = (typeof KWinWorkspaceState !== "undefined") ? KWinWorkspaceState.activeId : -1;
-        const activeAddr = focusedOnly ? String(KWinActiveWindowBridge.activeWindow?.address ?? "") : "";
+        const activeWindow = KWinActiveWindowBridge.activeWindow;
+        const activeAddr = activeWindow ? String(activeWindow.address ?? "") : "";
 
-        // Nothing focused means nothing to dodge, rather than everything.
-        if (focusedOnly && !activeAddr)
-            return false;
+        // Resolve the workspace currently visible on this specific screen.
+        // activeByOutput is populated by the workspace-tracker KWin effect and
+        // gives each screen's desktop independently. Fall back to the global
+        // activeId (which follows the focused output) when the effect hasn't
+        // connected yet — imperfect for per-monitor setups but safe.
+        let screenWsId = -1;
+        if (typeof KWinWorkspaceState !== "undefined") {
+            const byOutput = KWinWorkspaceState.activeByOutput;
+            if (byOutput && byOutput[screenName] !== undefined)
+                screenWsId = byOutput[screenName];
+            else
+                screenWsId = KWinWorkspaceState.activeId;
+        }
+
+        // If dodging only focused windows, only apply that filter on the screen
+        // that currently has focus. On other screens, fall back to checking all
+        // visible windows — a maximized window on an inactive screen should still
+        // trigger the dodge there.
+        const isActiveScreen = screenName && activeWindow && activeWindow.output === screenName;
+        const applyFocusedOnly = focusedOnly && isActiveScreen && activeAddr.length > 0;
 
         for (let i = 0; i < wins.length; i++) {
             const win = wins[i];
             if (win.minimized === true)
                 continue;
-            if (focusedOnly && String(win.address) !== activeAddr)
+            // Skip windows on a different workspace than what this screen is
+            // currently showing. Sticky windows (workspace.id === -1) are visible
+            // on all desktops and are never skipped.
+            const winWsId = win.workspace?.id ?? -1;
+            if (screenWsId !== -1 && winWsId !== -1 && winWsId !== screenWsId)
                 continue;
-            if (screenName && win.output !== screenName)
+            if (applyFocusedOnly && String(win.address) !== activeAddr)
                 continue;
-            if (activeWsId !== -1 && win.workspace?.id !== activeWsId)
-                continue;
-            // Touching edges are not an overlap, hence the strict comparisons.
+            // AABB intersection: dodgeRect is in absolute multi-monitor coordinates,
+            // exactly matching the coordinates KWin reports for window geometry.
+            // A window that doesn't physically cover this bar's strip cannot affect it.
             if (win.x < x + width && win.x + win.width > x && win.y < y + height && win.y + win.height > y)
                 return true;
         }
         return false;
     }
+
+
 
     function dispatch(request: string): void {
         const isKDE = typeof KWinActiveWindowBridge !== "undefined";
@@ -416,41 +438,6 @@ Singleton {
             Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayoutFull), "keyboard");
 
         hadKeyboard = kbLayoutFull.length > 0;
-    }
-
-
-
-    FileView {
-        id: kbLayoutFile
-
-        path: Quickshell.env("CAELESTIA_XKB_RULES_PATH") || "/usr/share/X11/xkb/rules/base.lst"
-        onLoaded: {
-            const layoutMatch = text().match(/! layout\n([\s\S]*?)\n\n/);
-            if (layoutMatch) {
-                const lines = layoutMatch[1].split("\n");
-                for (const line of lines) {
-                    if (!line.trim() || line.trim().startsWith("!"))
-                        continue;
-
-                    const match = line.match(/^\s*([a-z]{2,})\s+([a-zA-Z() ]+)$/);
-                    if (match)
-                        root.kbMap.set(match[2], match[1]);
-                }
-            }
-
-            const variantMatch = text().match(/! variant\n([\s\S]*?)\n\n/);
-            if (variantMatch) {
-                const lines = variantMatch[1].split("\n");
-                for (const line of lines) {
-                    if (!line.trim() || line.trim().startsWith("!"))
-                        continue;
-
-                    const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s+([a-z]{2,}): (.+)$/);
-                    if (match)
-                        root.kbMap.set(match[3], match[2]);
-                }
-            }
-        }
     }
 
     IpcHandler {

@@ -104,7 +104,7 @@ Item {
             closeTray();
 
         if (!ch) {
-            if (popouts.hasCurrent && (popouts.currentName === "dockcontext" || popouts.currentName === "dockhover" || popouts.currentName === "activewindow")) return;
+            if (popouts.hasCurrent && (popouts.currentName === "dockcontext" || popouts.currentName === "dockhover" || popouts.currentName === "greeter" || popouts.currentName === "greetercontext" || popouts.currentName === "activewindow")) return;
             if (!Config.bar.popouts.tray && popouts.currentName.startsWith("traymenu")) return;
             // skip hover-driven tray recalculation in click mode
             popouts.hasCurrent = false;
@@ -170,23 +170,27 @@ Item {
             } else {
                 popouts.hasCurrent = false;
             }
-        } else if (id === "activeWindow" && Config.bar.popouts.activeWindow && Config.bar.activeWindow.showOnHover) {
+        } else if ((id === "greeter" || id === "activeWindow") && (Config.bar.popouts.greeter ?? Config.bar.popouts.activeWindow) && (Config.bar.greeter.showOnHover ?? Config.bar.activeWindow.showOnHover)) {
             const item = ch.item as Item;
             if (item) {
                 const relPos = pos - top;
                 const inside = isHorizontal ? (relPos >= 0 && relPos <= item.implicitWidth) : (relPos >= 0 && relPos <= item.implicitHeight);
                 if (inside) {
-                    popouts.currentName = id.toLowerCase();
-                    popouts.currentCenter = isHorizontal ? item.mapToItem(null, item.implicitWidth / 2, 0).x : (item.mapToItem(null, 0, item.implicitHeight / 2).y ?? 0);
-                    popouts.hasCurrent = true;
+                    if (!popouts.hasCurrent || popouts.currentName !== "greetercontext") {
+                        popouts.currentName = "greeter";
+                        popouts.currentCenter = isHorizontal ? item.mapToItem(null, item.implicitWidth / 2, 0).x : (item.mapToItem(null, 0, item.implicitHeight / 2).y ?? 0);
+                        popouts.hasCurrent = true;
+                    }
                 } else {
-                    popouts.hasCurrent = false;
+                    if (popouts.currentName !== "greetercontext") {
+                        popouts.hasCurrent = false;
+                    }
                 }
             } else {
                 popouts.hasCurrent = false;
             }
         } else if (id === "dock") {
-            if (popouts.hasCurrent && (popouts.currentName === "dockcontext" || popouts.currentName === "activewindow")) return;
+            if (popouts.hasCurrent && (popouts.currentName === "dockcontext" || popouts.currentName === "greeter" || popouts.currentName === "greetercontext" || popouts.currentName === "activewindow")) return;
             
             const item = ch.item;
             if (item && typeof item.handleHover === "function") {
@@ -264,11 +268,10 @@ Item {
         const ch = getLoaderAt(isHorizontal ? pos : width / 2, isHorizontal ? height / 2 : pos) as WrappedLoader;
         
         if (ch?.id === "dock") {
-            let mappedChPos = mapFromItem(ch, 0, 0);
-            const top = isHorizontal ? mappedChPos.x : mappedChPos.y;
-            const relPos = pos - top;
-            const dockHit = ch.item ? ch.item.childAt(isHorizontal ? relPos : ch.width / 2, isHorizontal ? ch.height / 2 : relPos) : null;
-            if (dockHit) return;
+            if (ch.item && typeof ch.item.handleWheel === "function") {
+                ch.item.handleWheel(angleDelta);
+            }
+            return;
         }
 
         if (ch?.id === "workspaces" && Config.bar.scrollActions.workspaces) {
@@ -418,6 +421,15 @@ Item {
                 delegate: WrappedLoader {
                     sourceComponent: Dock {
                         bar: root
+                    }
+                }
+            }
+            DelegateChoice {
+                roleValue: "greeter"
+                delegate: WrappedLoader {
+                    sourceComponent: Greeter {
+                        bar: root
+                        monitor: Brightness.getMonitorForScreen(root.screen)
                     }
                 }
             }

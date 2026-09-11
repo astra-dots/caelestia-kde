@@ -75,7 +75,6 @@ MouseArea {
 
     opacity: expanded ? 1 : 0
     visible: opacity > 0
-    onExpandedChanged: { console.log("Menu expanded:", expanded, "opacity:", opacity, "x:", menu.x, "y:", menu.y, "w:", menu.width, "h:", menu.height, "enabled:", enabled); }
 
     Behavior on opacity {
         Anim {
@@ -150,10 +149,10 @@ MouseArea {
             // would animate RGB through black via StyledRect's inherited
             // Behavior on color.
             color: root.transparentBackground
-                ? Qt.alpha(Colours.palette.m3surfaceContainerHigh, 0)
+                ? Qt.alpha(Colours.palette.m3surfaceContainerLow, 0)
                 : (GlobalConfig.appearance.pitchBlack
                     ? "#000000"
-                    : Colours.palette.m3surfaceContainerHigh)
+                    : Colours.palette.m3surfaceContainerLow)
 
             Flickable {
                 id: flickable
@@ -188,7 +187,7 @@ MouseArea {
                         required property MenuItem modelData
                         readonly property bool active: modelData === root?.active
 
-                        visible: modelData.visible
+                        visible: modelData?.visible ?? false
 
                         Layout.fillWidth: true
                         implicitWidth: menuOptionRow.implicitWidth + Tokens.padding.medium * 2

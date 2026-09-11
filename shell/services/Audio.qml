@@ -12,12 +12,23 @@ import Caelestia.Services
 Singleton {
     id: root
 
+    property bool showInactiveDevices: false
+    property var cards: AudioBackend.cards
+
     property string previousSinkName: ""
     property string previousSourceName: ""
 
     property list<PwNode> sinks: []
     property list<PwNode> sources: []
     property list<PwNode> streams: []
+
+    // One representative stream per application, so no app ever appears twice
+    // in the "Now playing" lists even when it opens multiple PipeWire streams.
+    property list<PwNode> appStreams: []
+
+    // The shell's own audio is already represented by the system volume, so it
+    // must never show up as a separate app in the "Now playing" lists.
+    readonly property string selfAppName: "caelestia-shell"
 
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
@@ -33,6 +44,8 @@ Singleton {
     // build without Cava doesn't fail this whole singleton's component load.
     property var cava: null
     readonly property alias beatTracker: beatTracker
+
+    property var _sfxCache: ({})
 
     function setVolume(newVolume: real): void {
         if (sink?.ready && sink?.audio) {
@@ -80,6 +93,10 @@ Singleton {
         Pipewire.preferredDefaultAudioSource = newSource;
     }
 
+    function getNodeDisplayName(node: PwNode): string {
+        return node?.properties?.["node.nick"] || node?.description || node?.name || qsTr("Unknown Device");
+    }
+
     function cycleNextAudioOutput(): void {
         if (sinks.length === 0)
             return;
@@ -117,13 +134,62 @@ Singleton {
         return stream.properties["application.name"] || stream.description || stream.name || qsTr("Unknown Application");
     }
 
+    // App-level controls operate on every stream sharing the same app name, so a
+    // single "caelestia-shell" row adjusts all of its streams together.
+    function getAppVolume(stream: PwNode): real {
+        if (!stream)
+            return 0;
+
+        const name = getStreamName(stream);
+        let volume = 0;
+        for (const s of root.streams) {
+            if (getStreamName(s) === name && s?.audio)
+                volume = Math.max(volume, s.audio.volume ?? 0);
+        }
+        return volume;
+    }
+
+    function getAppMuted(stream: PwNode): bool {
+        if (!stream)
+            return true;
+
+        const name = getStreamName(stream);
+        let hasStream = false;
+        let allMuted = true;
+        for (const s of root.streams) {
+            if (getStreamName(s) !== name || !s?.audio)
+                continue;
+            hasStream = true;
+            if (!s.audio.muted)
+                allMuted = false;
+        }
+        return hasStream && allMuted;
+    }
+
+    function setAppVolume(stream: PwNode, newVolume: real): void {
+        const name = getStreamName(stream);
+        const clamped = Math.max(0, Math.min(GlobalConfig.services.maxVolume, newVolume));
+        for (const s of root.streams) {
+            if (getStreamName(s) === name && s?.ready && s?.audio) {
+                s.audio.muted = false;
+                s.audio.volume = clamped;
+            }
+        }
+    }
+
+    function setAppMuted(stream: PwNode, muted: bool): void {
+        const name = getStreamName(stream);
+        for (const s of root.streams) {
+            if (getStreamName(s) === name && s?.ready && s?.audio)
+                s.audio.muted = muted;
+        }
+    }
+
     Component {
         id: sfxComponent
 
         SoundEffect {}
     }
-
-    property var _sfxCache: ({})
 
     function playSoundSource(sourcePath: string, enabled: bool, volume: real): void {
         if (!GlobalConfig.audio.sounds.enabled || !enabled)
@@ -176,40 +242,72 @@ Singleton {
     }
 
     function refreshNodes(): void {
-        const sinkMap = {};
-        const sourceMap = {};
         const newStreams = [];
+        const newAppStreams = [];
+        const seenApps = new Set();
+        const seenSinks = new Map();
+        const seenSources = new Map();
 
         for (const node of Pipewire.nodes.values) {
             if (!node.isStream) {
                 if (node.isSink) {
-                    const key = node.name || node.description || String(node.id);
-                    const existing = sinkMap[key];
-                    if (!existing || node.id === root.sink?.id || (existing.id !== root.sink?.id && node.id > existing.id)) {
-                        sinkMap[key] = node;
+                    if (root.showInactiveDevices || !AudioBackend.isSinkInactive(node.name)) {
+                        const key = node.name || node.description || String(node.id);
+                        if (!seenSinks.has(key)) {
+                            seenSinks.set(key, node);
+                        } else {
+                            const existing = seenSinks.get(key);
+                            if (node === Pipewire.defaultAudioSink || (existing !== Pipewire.defaultAudioSink && node.id > existing.id)) {
+                                seenSinks.set(key, node);
+                            }
+                        }
                     }
-                } else if (node.audio) {
-                    const key = node.name || node.description || String(node.id);
-                    const existing = sourceMap[key];
-                    if (!existing || node.id === root.source?.id || (existing.id !== root.source?.id && node.id > existing.id)) {
-                        sourceMap[key] = node;
+                }
+                else if (node.audio) {
+                    if (root.showInactiveDevices || !AudioBackend.isSourceInactive(node.name)) {
+                        const key = node.name || node.description || String(node.id);
+                        if (!seenSources.has(key)) {
+                            seenSources.set(key, node);
+                        } else {
+                            const existing = seenSources.get(key);
+                            if (node === Pipewire.defaultAudioSource || (existing !== Pipewire.defaultAudioSource && node.id > existing.id)) {
+                                seenSources.set(key, node);
+                            }
+                        }
                     }
                 }
             } else if (node.audio) {
                 newStreams.push(node);
+
+                const name = getStreamName(node);
+                const nameLower = name.toLowerCase();
+                if (name === root.selfAppName || nameLower.includes("caelestia") || nameLower.includes("quickshell"))
+                    continue;
+                if (!seenApps.has(name)) {
+                    seenApps.add(name);
+                    newAppStreams.push(node);
+                }
             }
         }
 
-        root.sinks = Object.values(sinkMap);
-        root.sources = Object.values(sourceMap);
+        // Assign appStreams before streams so listeners of streamsChanged already
+        // observe the deduplicated app list.
+        root.appStreams = newAppStreams;
+        root.sinks = [...seenSinks.values()];
+        root.sources = [...seenSources.values()];
         root.streams = newStreams;
+    }
+
+    onShowInactiveDevicesChanged: {
+        AudioBackend.showInactiveDevices = showInactiveDevices;
+        refreshNodes();
     }
 
     onSinkChanged: {
         if (!sink?.ready)
             return;
 
-        const newSinkName = sink.description || sink.name || qsTr("Unknown Device");
+        const newSinkName = root.getNodeDisplayName(sink);
 
         if (previousSinkName && previousSinkName !== newSinkName && GlobalConfig.utilities.toasts.audioOutputChanged)
             Toaster.toast(qsTr("Audio output changed"), qsTr("Now using: %1").arg(newSinkName), "volume_up");
@@ -221,7 +319,7 @@ Singleton {
         if (!source?.ready)
             return;
 
-        const newSourceName = source.description || source.name || qsTr("Unknown Device");
+        const newSourceName = root.getNodeDisplayName(source);
 
         if (previousSourceName && previousSourceName !== newSourceName && GlobalConfig.utilities.toasts.audioInputChanged)
             Toaster.toast(qsTr("Audio input changed"), qsTr("Now using: %1").arg(newSourceName), "mic");
@@ -232,9 +330,10 @@ Singleton {
     // Populate immediately: Pipewire.nodes may already be filled by the time this
     // lazily-loaded singleton is created, so onValuesChanged would never fire.
     Component.onCompleted: {
+        AudioBackend.showInactiveDevices = root.showInactiveDevices;
         refreshNodes();
-        previousSinkName = sink?.description || sink?.name || qsTr("Unknown Device");
-        previousSourceName = source?.description || source?.name || qsTr("Unknown Device");
+        previousSinkName = root.getNodeDisplayName(sink);
+        previousSourceName = root.getNodeDisplayName(source);
 
         // CavaProvider is only registered when the plugin was built with
         // libcava available (see shell/plugin/CMakeLists.txt); create it
@@ -254,6 +353,14 @@ Singleton {
         }
 
         target: Pipewire.nodes
+    }
+
+    Connections {
+        function onDevicesChanged(): void {
+            root.refreshNodes();
+        }
+
+        target: AudioBackend
     }
 
     // Always track the current defaults so volume/mute bind even if the lists

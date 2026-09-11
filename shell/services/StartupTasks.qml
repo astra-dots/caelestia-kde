@@ -16,7 +16,6 @@ Item {
             touch "$STATE_FILE"
             
             MODIFIED=false
-            RAN_TASKS=""
             
             TASKS=(
                 "01-magic-lamp"
@@ -33,7 +32,6 @@ Item {
                             MODIFIED=true
                         fi
                         echo "$script_name" >> "$STATE_FILE"
-                        RAN_TASKS="$RAN_TASKS\\n- $script_name"
                     fi
                 fi
             done
