@@ -21,6 +21,7 @@ Item {
     property bool alwaysScroll: false
 
     readonly property bool isHovered: hoverHandler.hovered || root.externalHovered
+    readonly property bool isWindowVisible: root.Window.window ? root.Window.window.visible : true
     readonly property real textWidth: Math.max(textMeasurer.width, mainText.implicitWidth)
     readonly property real textHeight: Math.max(textMeasurer.height, mainText.implicitHeight, 18)
     readonly property bool isOverflowing: textWidth > root.width && root.width > 0
@@ -87,7 +88,7 @@ Item {
         id: animator
         property real scrollOffset: 0
 
-        readonly property bool shouldScroll: root.scrollEnabled && root.isOverflowing && (root.alwaysScroll || root.isHovered || (Players.active?.isPlaying ?? false))
+        readonly property bool shouldScroll: root.visible && root.isWindowVisible && root.scrollEnabled && root.isOverflowing && (root.alwaysScroll || root.isHovered || (Players.active?.isPlaying ?? false))
 
         SequentialAnimation on scrollOffset {
             id: marqueeAnim

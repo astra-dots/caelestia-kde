@@ -62,21 +62,13 @@ Item {
         event.accepted = true;
     }
 
-    property bool loaded: false
-
-    Component.onCompleted: {
-        Qt.callLater(() => {
-            root.loaded = true;
-        });
-    }
-
     Loader {
         id: content
 
         focus: root.shouldBeActive
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        active: root.loaded || root.shouldBeActive || root.visible
+        active: root.shouldBeActive || root.visible
         sourceComponent: Content {
             visibilities: root.visibilities
             dashState: root.dashState

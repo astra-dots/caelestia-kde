@@ -309,13 +309,25 @@ CustomMouseArea {
         }
 
         // Show utilities on hover
-        // When closed, hover area is on the right half of the screen (or left half if bar is on the right), avoiding window controls when at the top
+        // When closed, hover area spans the width of the quick settings panel,
+        // leaving a small margin on the right end so clicking window titlebar buttons
+        // (min/max/close) doesn't accidentally trigger it.
         const isUtilitiesOnLeft = Config.bar.position === "right";
-        const inUtilitiesAreaClosed = isUtilitiesOnLeft ? x <= (screen.width / 2) : (x >= (screen.width / 2) && (Config.bar.position === "bottom" ? x <= (screen.width - 200) : true));
-        const inUtilitiesAreaOpen = x >= 0 && x <= screen.width;
+        const utilLeft = panels.leftMargin + panels.utilities.x;
+        const windowControlsMargin = 120;
+        const inUtilitiesAreaClosed = isUtilitiesOnLeft
+            ? x <= (screen.width / 2)
+            : (Config.bar.position === "bottom"
+                ? (x >= utilLeft && x <= (screen.width - windowControlsMargin))
+                : (x >= (screen.width / 2)));
+        const inUtilitiesAreaOpen = isUtilitiesOnLeft
+            ? x <= (panels.leftMargin + panels.utilities.x + panels.utilities.width)
+            : (Config.bar.position === "bottom"
+                ? (x >= utilLeft && x <= screen.width)
+                : (x >= 0 && x <= screen.width));
         
         const inUtilitiesArea = Config.bar.position === "bottom"
-            ? inTopPanel(panels.utilities, x, y, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && (root.visibilities.utilities ? inUtilitiesAreaOpen : inUtilitiesAreaClosed)
+            ? inTopPanel(panels.utilities, x, y, Config.utilities.hoverThickness, 100) && (root.visibilities.utilities ? inUtilitiesAreaOpen : inUtilitiesAreaClosed)
             : inBottomPanel(panels.utilities, x, y, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && (root.visibilities.utilities ? inUtilitiesAreaOpen : inUtilitiesAreaClosed);
         const showUtilities = Config.utilities.showOnHover && !popouts.hasCurrent && panels.popoutsWrapper.offsetScale > 0.99 && inUtilitiesArea;
 
@@ -354,7 +366,7 @@ CustomMouseArea {
         // Instead, if it leaves the area, we exit shortcut mode
         if (utilitiesShortcutActive) {
             const inUtilitiesAreaOpen = x >= 0 && x <= screen.width;
-            const stillInUtilitiesArea = Config.bar.position === "bottom" ? inTopPanel(panels.utilities, x, y, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && inUtilitiesAreaOpen : inBottomPanel(panels.utilities, x, y, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && inUtilitiesAreaOpen;
+            const stillInUtilitiesArea = Config.bar.position === "bottom" ? inTopPanel(panels.utilities, x, y, Config.utilities.hoverThickness, 100) && inUtilitiesAreaOpen : inBottomPanel(panels.utilities, x, y, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && inUtilitiesAreaOpen;
             if (!stillInUtilitiesArea) {
                 utilitiesShortcutActive = false;
             }
@@ -449,9 +461,11 @@ CustomMouseArea {
         }
         function onUtilitiesChanged() {
             if (root.visibilities.utilities) {
-                // Utilities became visible, immediately check if this should be shortcut mode
-                const margin = (root.visibilities.utilities || Config.bar.position !== "bottom") ? 0 : 200;
-                const inUtilitiesArea = Config.bar.position === "bottom" ? root.inTopPanel(root.panels.utilities, root.mouseX, root.mouseY, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && root.mouseX >= margin && root.mouseX <= screen.width - margin : root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && root.mouseX >= margin && root.mouseX <= screen.width - margin;
+                const utilLeft = root.panels.leftMargin + root.panels.utilities.x;
+                const windowControlsMargin = 120;
+                const inUtilitiesArea = Config.bar.position === "bottom"
+                    ? root.inTopPanel(root.panels.utilities, root.mouseX, root.mouseY, Config.utilities.hoverThickness, 100) && root.mouseX >= utilLeft && root.mouseX <= (screen.width - windowControlsMargin)
+                    : root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && root.mouseX >= (screen.width / 2) && root.mouseX <= screen.width;
                 if (!inUtilitiesArea) {
                     root.utilitiesShortcutActive = true;
                 }

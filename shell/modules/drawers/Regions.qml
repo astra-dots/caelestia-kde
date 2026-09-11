@@ -69,6 +69,7 @@ Region {
     R {
         panel: root.panels.utilities
         y: root.Config.bar.position === "bottom" ? 0 : root.win.height - height
+        width: (root.Config.bar.position === "bottom" && !root.panels.visibilities.utilities) ? Math.max(0, panel.width - 120) : panel.width
         height: panel.height * (1 - root.panels.utilities.offsetScale) + root.edgeExtent(root.Config.utilities.hoverThickness)
     }
     R {
