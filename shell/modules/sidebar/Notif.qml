@@ -63,6 +63,7 @@ StyledRect {
         width: parent.width
         text: root.modelData?.summary ?? ""
         color: root.modelData?.urgency === "critical" ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+        font: Tokens.font.body.builders.small.scale(0.95).weight(Font.Medium).build()
         elide: Text.ElideRight
         wrapMode: Text.WordWrap
         maximumLineCount: 1
@@ -75,6 +76,7 @@ StyledRect {
         anchors.left: parent.left
 
         visible: false
+        font: summary.font
         text: root.modelData?.summary ?? ""
     }
 
@@ -90,6 +92,7 @@ StyledRect {
         sourceComponent: StyledText {
             text: String(root.modelData?.body ?? "").replace(/\n/g, " ")
             color: root.modelData?.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.body.builders.small.scale(0.88).build()
             elide: Text.ElideRight
         }
     }
@@ -105,7 +108,7 @@ StyledRect {
             animate: true
             text: root.modelData?.timeStr ?? ""
             color: Colours.palette.m3onSurfaceVariant
-            font: Tokens.font.body.small
+            font: Tokens.font.label.builders.small.scale(0.9).build()
         }
     }
 
@@ -137,6 +140,7 @@ StyledRect {
             textFormat: Text.MarkdownText
             text: String(root.modelData?.body ?? "").replace(/(.)\n(?!\n)/g, "$1\n\n") || qsTr("No body here! :/")
             color: root.modelData?.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.body.builders.small.scale(0.88).build()
             wrapMode: Text.WordWrap
 
             onLinkActivated: link => {

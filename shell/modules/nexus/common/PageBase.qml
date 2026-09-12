@@ -56,7 +56,7 @@ ColumnLayout {
             StyledText {
                 Layout.fillWidth: true
                 text: root.title
-                font: Tokens.font.title.large
+                font: Tokens.font.title.builders.large.scale(0.85).weight(Font.Medium).build()
                 elide: Text.ElideRight
             }
 

@@ -56,7 +56,7 @@ StyledRect {
             placeholderText: qsTr("Search settings")
             placeholderTextColor: Colours.palette.m3onSurfaceVariant
             color: Colours.palette.m3onSurfaceVariant
-            font: Tokens.font.body.large
+            font: Tokens.font.body.builders.medium.scale(0.9).build()
             onTextChanged: root.nState.searchQuery = text
 
             Keys.onReturnPressed: {

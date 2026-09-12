@@ -407,7 +407,7 @@ ColumnLayout {
                     Layout.topMargin: Tokens.padding.large * root.scaleOffset
                     Layout.bottomMargin: Tokens.padding.large * root.scaleOffset
                     spacing: Tokens.spacing.small * root.scaleOffset
-                    visible: Audio.streams.length === 0
+                    visible: Audio.appStreams.length === 0
 
                     MaterialIcon {
                         Layout.alignment: Qt.AlignHCenter
@@ -442,7 +442,7 @@ ColumnLayout {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: Audio.streams.length > 0
+                    visible: Audio.appStreams.length > 0
 
                     ScrollBar.vertical: StyledScrollBar {
                         flickable: streamFlickable
@@ -455,7 +455,7 @@ ColumnLayout {
                         spacing: Tokens.spacing.medium * root.scaleOffset
 
                         Repeater {
-                            model: Audio.streams
+                            model: Audio.appStreams
 
                             ColumnLayout {
                                 id: streamDelegate
@@ -495,7 +495,7 @@ ColumnLayout {
                                     }
 
                                     StyledText {
-                                        text: streamDelegate.modelData?.audio?.muted ? qsTr("Muted") : `${Math.round((streamDelegate.modelData?.audio?.volume ?? 0) * 100)}%`
+                                        text: Audio.getAppMuted(streamDelegate.modelData) ? qsTr("Muted") : `${Math.round(Audio.getAppVolume(streamDelegate.modelData) * 100)}%`
                                         font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                                         color: Colours.palette.m3onSurfaceVariant
                                     }
@@ -509,14 +509,11 @@ ColumnLayout {
                                     IconButton {
                                         type: IconButton.Text
                                         isRound: true
-                                        icon: Icons.getVolumeIcon(streamDelegate.modelData?.audio?.volume ?? 0, streamDelegate.modelData?.audio?.muted ?? false)
+                                        icon: Icons.getVolumeIcon(Audio.getAppVolume(streamDelegate.modelData), Audio.getAppMuted(streamDelegate.modelData))
                                         font: Tokens.font.icon.builders.medium.size(Tokens.font.icon.medium.pointSize * root.fontScale).build()
                                         implicitWidth: Math.round(26 * root.scaleOffset)
                                         implicitHeight: Math.round(26 * root.scaleOffset)
-                                        onClicked: {
-                                            if (streamDelegate.modelData?.audio)
-                                                Audio.setStreamMuted(streamDelegate.modelData, !streamDelegate.modelData.audio.muted);
-                                        }
+                                        onClicked: Audio.setAppMuted(streamDelegate.modelData, !Audio.getAppMuted(streamDelegate.modelData))
                                     }
 
                                     CustomMouseArea {
@@ -524,13 +521,12 @@ ColumnLayout {
                                         implicitHeight: Math.round(26 * root.scaleOffset)
 
                                         onWheel: event => {
-                                            if (!streamDelegate.modelData?.audio) return;
-                                            const cur = Math.round((streamDelegate.modelData.audio.volume ?? 0) * 100) / 100;
+                                            const cur = Math.round(Audio.getAppVolume(streamDelegate.modelData) * 100) / 100;
                                             const step = 0.05;
                                             if (event.angleDelta.y > 0)
-                                                Audio.setStreamVolume(streamDelegate.modelData, Math.min(1.0, Math.round((cur + step) * 100) / 100));
+                                                Audio.setAppVolume(streamDelegate.modelData, Math.min(1.0, Math.round((cur + step) * 100) / 100));
                                             else if (event.angleDelta.y < 0)
-                                                Audio.setStreamVolume(streamDelegate.modelData, Math.max(0.0, Math.round((cur - step) * 100) / 100));
+                                                Audio.setAppVolume(streamDelegate.modelData, Math.max(0.0, Math.round((cur - step) * 100) / 100));
                                         }
 
                                         StyledSlider {
@@ -539,8 +535,8 @@ ColumnLayout {
                                             anchors.verticalCenter: parent.verticalCenter
                                             implicitHeight: Math.round(10 * root.scaleOffset)
 
-                                            value: streamDelegate.modelData?.audio?.volume ?? 0
-                                            onInteraction: v => Audio.setStreamVolume(streamDelegate.modelData, Math.round(v * 100) / 100)
+                                            value: Audio.getAppVolume(streamDelegate.modelData)
+                                            onInteraction: v => Audio.setAppVolume(streamDelegate.modelData, Math.round(v * 100) / 100)
                                         }
                                     }
                                 }
@@ -549,8 +545,8 @@ ColumnLayout {
 
                         Item {
                             Layout.fillWidth: true
-                            implicitHeight: Math.round(Tokens.padding.small * root.scaleOffset)
-                            visible: Audio.streams.length > 0
+                            implicitHeight: Math.round(2 * root.scaleOffset)
+                            visible: Audio.appStreams.length > 0
                         }
                     }
                 }

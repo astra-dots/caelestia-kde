@@ -116,11 +116,11 @@ Popup {
     contentItem: StyledRect {
         id: tooltipRect
 
-        implicitWidth: tooltipText.implicitWidth + Tokens.padding.medium * 2
-        implicitHeight: tooltipText.implicitHeight + Tokens.padding.large
+        implicitWidth: tooltipText.implicitWidth + Tokens.padding.small * 2
+        implicitHeight: tooltipText.implicitHeight + Tokens.padding.small
 
         color: Colours.palette.m3surfaceContainerHighest
-        radius: Tokens.rounding.medium
+        radius: Tokens.rounding.small
         antialiasing: true
 
         // Add elevation for depth
@@ -138,7 +138,7 @@ Popup {
 
             text: root.text
             color: Colours.palette.m3onSurface
-            font: Tokens.font.body.small
+            font: Tokens.font.label.builders.small.scale(0.9).build()
         }
     }
 

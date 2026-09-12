@@ -127,7 +127,7 @@ StyledRect {
                     
                     StyledText {
                         text: root.titleText
-                        font: Tokens.font.body.medium
+                        font: Tokens.font.body.builders.small.scale(0.95).weight(Font.Medium).build()
                         color: Colours.palette.m3onSurface
                         elide: Text.ElideRight
                     }
@@ -145,7 +145,7 @@ StyledRect {
                             anchors.centerIn: parent
                             text: "v" + root.versionText
                             color: Colours.palette.m3onSurfaceVariant
-                            font: Tokens.font.label.small
+                            font: Tokens.font.label.builders.small.scale(0.85).build()
                         }
                     }
 
@@ -155,7 +155,7 @@ StyledRect {
                 StyledText {
                     Layout.fillWidth: true
                     text: root.descriptionText
-                    font: Tokens.font.label.small
+                    font: Tokens.font.label.builders.small.scale(0.9).build()
                     color: Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight
                     wrapMode: root.isExpanded ? Text.Wrap : Text.NoWrap

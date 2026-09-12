@@ -281,7 +281,7 @@ Singleton {
 
                 const name = getStreamName(node);
                 const nameLower = name.toLowerCase();
-                if (name === root.selfAppName || nameLower.includes("caelestia") || nameLower.includes("quickshell"))
+                if (name === root.selfAppName || nameLower.includes("caelestia") || nameLower.includes("quickshell") || nameLower.includes("speech-dispatcher") || nameLower.includes("speech dispatcher"))
                     continue;
                 if (!seenApps.has(name)) {
                     seenApps.add(name);

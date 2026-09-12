@@ -176,10 +176,10 @@ QtObject {
         {
             label: qsTr("Plugins"),
             icon: "extension",
-            description: qsTr("Plugin support is not available yet"),
+            description: qsTr("Browse and manage installed plugins"),
             category: "system",
             settings: [
-                { label: qsTr("Plugin support"), description: qsTr("Not available yet"), keywords: ["extensions", "addons", "plugins"] }
+                { label: qsTr("Plugin Store"), description: qsTr("Browse & install plugins"), keywords: ["extensions", "addons", "plugins", "store"] }
             ]
         },
         {

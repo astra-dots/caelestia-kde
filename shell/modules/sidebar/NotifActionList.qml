@@ -182,6 +182,7 @@ Item {
                         StyledText {
                             text: action.modelData.text
                             color: Colours.palette.m3onSurfaceVariant
+                            font: Tokens.font.label.builders.small.scale(0.95).weight(Font.Medium).build()
                         }
                     }
 

@@ -243,7 +243,7 @@ StyledRect {
                 text: appNameMetrics.elidedText
                 maximumLineCount: 1
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.label.medium
+                font: Tokens.font.label.builders.small.scale(0.95).weight(Font.Medium).build()
 
                 opacity: root.expanded ? 1 : 0
 
@@ -272,6 +272,7 @@ StyledRect {
 
                 animate: true
                 text: summaryMetrics.elidedText
+                font: Tokens.font.body.builders.small.scale(0.95).weight(Font.Medium).build()
                 maximumLineCount: 1
                 height: implicitHeight
 
@@ -326,7 +327,7 @@ StyledRect {
 
                 text: "•"
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.small
+                font: Tokens.font.label.builders.small.scale(0.9).build()
 
                 states: State {
                     name: "expanded"
@@ -354,7 +355,7 @@ StyledRect {
                 horizontalAlignment: Text.AlignLeft
                 text: root.modelData?.timeStr ?? ""
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.small
+                font: Tokens.font.label.builders.small.scale(0.9).build()
             }
 
             Item {
@@ -404,7 +405,7 @@ StyledRect {
                 textFormat: root.bodyTextFormat
                 text: bodyPreviewMetrics.elidedText
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.small
+                font: Tokens.font.body.builders.small.scale(0.88).build()
 
                 opacity: root.expanded ? 0 : 1
 
@@ -436,7 +437,7 @@ StyledRect {
                 textFormat: root.bodyTextFormat
                 text: root.modelData?.body ?? ""
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.small
+                font: Tokens.font.body.builders.small.scale(0.88).build()
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                 height: text ? implicitHeight : 0
 
@@ -532,6 +533,7 @@ StyledRect {
                         fillWidth: true
                         inactiveColour: root.modelData?.urgency === NotificationUrgency.Critical ? Colours.palette.m3secondary : Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
                         inactiveOnColour: root.modelData?.urgency === NotificationUrgency.Critical ? Colours.palette.m3onSecondary : Colours.palette.m3onSurfaceVariant
+                        font: Tokens.font.label.builders.small.scale(0.95).weight(Font.Medium).build()
                         text: modelData?.text ?? ""
                         onClicked: modelData?.invoke()
 
