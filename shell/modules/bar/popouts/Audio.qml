@@ -309,31 +309,10 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 spacing: Tokens.spacing.small * root.scaleOffset
 
-                RowLayout {
-                    Layout.fillWidth: true
+                StyledText {
                     Layout.topMargin: Tokens.spacing.small * root.scaleOffset
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: qsTr("Volume (%1)").arg(Audio.muted ? qsTr("Muted") : `${Math.round(Audio.volume * 100)}%`)
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
-                    }
-
-                    IconButton {
-                        id: mixerPillBtn
-                        type: IconButton.Text
-                        isRound: true
-                        icon: "tune"
-                        font: Tokens.font.icon.builders.small.size(Tokens.font.icon.small.pointSize * root.fontScale).build()
-                        implicitWidth: Math.round(22 * root.scaleOffset)
-                        implicitHeight: Math.round(22 * root.scaleOffset)
-                        onClicked: root.showAppVolumes = true
-
-                        Tooltip {
-                            target: mixerPillBtn
-                            text: qsTr("App volumes")
-                        }
-                    }
+                    text: qsTr("Volume (%1)").arg(Audio.muted ? qsTr("Muted") : `${Math.round(Audio.volume * 100)}%`)
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
                 }
 
                 CustomMouseArea {
@@ -403,7 +382,6 @@ ColumnLayout {
         id: appVolumesView
 
         Layout.fillWidth: true
-        Layout.bottomMargin: Tokens.padding.large * root.scaleOffset
         spacing: Tokens.spacing.medium * root.scaleOffset
         visible: root.showAppVolumes
 
@@ -474,7 +452,6 @@ ColumnLayout {
                         id: streamListCol
 
                         width: streamFlickable.width
-                        Layout.bottomMargin: Tokens.padding.small * root.scaleOffset
                         spacing: Tokens.spacing.medium * root.scaleOffset
 
                         Repeater {
@@ -568,6 +545,12 @@ ColumnLayout {
                                     }
                                 }
                             }
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                            implicitHeight: Math.round(Tokens.padding.small * root.scaleOffset)
+                            visible: Audio.streams.length > 0
                         }
                     }
                 }
