@@ -197,6 +197,7 @@ Item {
                 anchors.bottom: parent.bottom
 
                 text: tab.text
+                font: Tokens.font.label.builders.medium.weight(Font.Medium).build()
                 color: tab.current ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
             }
         }

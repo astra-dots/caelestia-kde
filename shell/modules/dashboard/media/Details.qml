@@ -362,26 +362,26 @@ ColumnLayout {
 
                 MaterialIcon {
                     text: "queue_music"
-                    fontStyle: Tokens.font.icon.small
+                    fontStyle: Tokens.font.icon.builders.small.scale(0.85).build()
                     color: Colours.palette.m3primary
                 }
 
                 StyledText {
                     text: qsTr("Up Next:")
-                    font: Tokens.font.label.small
+                    font: Tokens.font.label.builders.small.scale(0.85).build()
                     color: Colours.palette.m3primary
                 }
 
                 MarqueeText {
                     Layout.fillWidth: true
                     text: `${SpotifyService.upcomingTitle} • ${SpotifyService.upcomingArtist}`
-                    font: Tokens.font.label.small
+                    font: Tokens.font.label.builders.small.scale(0.85).build()
                     color: Colours.palette.m3onSurfaceVariant
                 }
 
                 MaterialIcon {
                     text: "expand_more"
-                    fontStyle: Tokens.font.icon.small
+                    fontStyle: Tokens.font.icon.builders.small.scale(0.85).build()
                     color: Colours.palette.m3onSurfaceVariant
                 }
             }

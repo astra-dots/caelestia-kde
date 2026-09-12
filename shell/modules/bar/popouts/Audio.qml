@@ -403,6 +403,7 @@ ColumnLayout {
         id: appVolumesView
 
         Layout.fillWidth: true
+        Layout.bottomMargin: Tokens.padding.large * root.scaleOffset
         spacing: Tokens.spacing.medium * root.scaleOffset
         visible: root.showAppVolumes
 
@@ -473,6 +474,7 @@ ColumnLayout {
                         id: streamListCol
 
                         width: streamFlickable.width
+                        Layout.bottomMargin: Tokens.padding.small * root.scaleOffset
                         spacing: Tokens.spacing.medium * root.scaleOffset
 
                         Repeater {

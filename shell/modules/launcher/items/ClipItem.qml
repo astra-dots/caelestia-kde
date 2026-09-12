@@ -14,19 +14,39 @@ import qs.modules.launcher.services
 Item {
     id: root
 
+    required property int index
     required property var modelData
     required property var list
 
     readonly property bool isPinned: root.modelData?.isPinned ?? false
     readonly property bool isImage: root.modelData?.isImage ?? false
-    property bool isExpanded: false
+    readonly property bool isExpanded: root.list ? (root.list.expandedIndex === root.index) : false
     property string fullText: ""
     property bool isTextLoaded: false
 
-    function toggleExpand() {
-        root.isExpanded = !root.isExpanded;
+    onIsExpandedChanged: {
         if (root.isExpanded && !root.isImage && !root.isTextLoaded) {
             decodeProc.running = true;
+        }
+        if (root.list && root.list.expandedIndex === root.index) {
+            root.list.expandedItemHeight = root.implicitHeight;
+        }
+    }
+
+    onImplicitHeightChanged: {
+        if (root.isExpanded && root.list && root.list.expandedIndex === root.index) {
+            root.list.expandedItemHeight = root.implicitHeight;
+        }
+    }
+
+    function toggleExpand() {
+        if (root.list) {
+            if (root.list.expandedIndex === root.index) {
+                root.list.expandedIndex = -1;
+            } else {
+                root.list.expandedIndex = root.index;
+                root.list.currentIndex = root.index;
+            }
         }
     }
 

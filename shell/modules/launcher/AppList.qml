@@ -20,6 +20,17 @@ StyledListView {
     property var parentList: null
 
     property string displayText
+    property int expandedIndex: -1
+    property real expandedItemHeight: 0
+
+    onExpandedIndexChanged: {
+        if (expandedIndex === -1)
+            expandedItemHeight = 0;
+    }
+
+    onDisplayTextChanged: {
+        root.expandedIndex = -1;
+    }
 
     header: Item {
         visible: root.parentList?.showAllApps && root.search.text.length === 0
@@ -133,14 +144,23 @@ StyledListView {
                 return 0;
 
             let totalH = 0;
+            let expandedHandled = false;
             for (let i = 0; i < maxItems && i < res.length; i++) {
                 const item = res[i];
                 const isImg = item && (item.isImage === true || (typeof item.preview === "string" && item.preview.indexOf("[[ binary data") !== -1));
                 let itemH = isImg ? (Tokens.sizes.launcher.itemHeight * 2) : Tokens.sizes.launcher.itemHeight;
-                if (root.currentIndex === i && root.currentItem && root.currentItem.isExpanded) {
-                    itemH = root.currentItem.implicitHeight;
+                if (root.expandedIndex === i) {
+                    itemH = root.expandedItemHeight > 0 ? root.expandedItemHeight : (isImg ? 300 : (Tokens.sizes.launcher.itemHeight + 120));
+                    expandedHandled = true;
                 }
                 totalH += itemH + root.spacing;
+            }
+            if (!expandedHandled && root.expandedIndex >= 0 && root.expandedIndex < res.length) {
+                const expItem = res[root.expandedIndex];
+                const isImg = expItem && (expItem.isImage === true || (typeof expItem.preview === "string" && expItem.preview.indexOf("[[ binary data") !== -1));
+                const baseH = isImg ? (Tokens.sizes.launcher.itemHeight * 2) : Tokens.sizes.launcher.itemHeight;
+                const fullH = root.expandedItemHeight > 0 ? root.expandedItemHeight : (isImg ? 300 : (Tokens.sizes.launcher.itemHeight + 120));
+                totalH += Math.max(0, fullH - baseH);
             }
             return Math.max(0, totalH - root.spacing);
         }
@@ -485,6 +505,8 @@ StyledListView {
     Connections {
         function onLauncherChanged() {
             root.syncDisplayText();
+            if (!root.visibilities.launcher)
+                root.expandedIndex = -1;
         }
 
         target: root.visibilities

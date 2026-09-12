@@ -49,30 +49,31 @@ CustomMouseArea {
         const centre = (near + far) / 2;
         return Qt.point(centre - half, centre + half);
     }
-    function withinPanelHeight(panel: Item, x: real, y: real, span = 100): bool {
+    function withinPanelHeight(panel: Item, x: real, y: real, span = 100, extra = 0): bool {
         const panelY = panels.topMargin + panel.y;
         const panelHeight = (panel.content?.nonAnimHeight) || (panel.content?.item?.nonAnimHeight) || panel.height;
-        const b = spanBounds(panelY - Config.border.rounding - panels.topMargin, panelY + panelHeight + Config.border.rounding + panels.bottomMargin, span);
+        const b = spanBounds(panelY - Config.border.rounding - panels.topMargin - extra, panelY + panelHeight + Config.border.rounding + panels.bottomMargin + extra, span);
         return y >= b.x && y <= b.y;
     }
-    function withinPanelWidth(panel: Item, x: real, y: real, span = 100): bool {
+    function withinPanelWidth(panel: Item, x: real, y: real, span = 100, extra = 0): bool {
         const panelX = panels.leftMargin + panel.x;
         const panelWidth = (panel.content?.nonAnimWidth) || (panel.content?.item?.nonAnimWidth) || panel.width;
-        const b = spanBounds(panelX - Config.border.rounding - panels.leftMargin, panelX + panelWidth + Config.border.rounding + panels.rightMargin, span);
+        const b = spanBounds(panelX - Config.border.rounding - panels.leftMargin - extra, panelX + panelWidth + Config.border.rounding + panels.rightMargin + extra, span);
         return x >= b.x && x <= b.y;
     }
     function inLeftPanel(panel: Item, x: real, y: real): bool {
         const panelWidth = (panel.content?.nonAnimWidth) || (panel.content?.item?.nonAnimWidth) || panel.width;
         const panelHeight = (panel.content?.nonAnimHeight) || (panel.content?.item?.nonAnimHeight) || panel.height;
+        const tolerance = popouts.hasCurrent ? 24 : 0;
 
         if (Config.bar.position === "left")
-            return x < panels.leftMargin + panel.x + panelWidth && withinPanelHeight(panel, x, y);
+            return x < panels.leftMargin + panel.x + panelWidth + tolerance && withinPanelHeight(panel, x, y, 100, tolerance);
         if (Config.bar.position === "right")
-            return x > screen.width - panels.rightMargin - panelWidth && withinPanelHeight(panel, x, y);
+            return x > screen.width - panels.rightMargin - panelWidth - tolerance && withinPanelHeight(panel, x, y, 100, tolerance);
         if (Config.bar.position === "top")
-            return y < panels.topMargin + panel.y + panelHeight && withinPanelWidth(panel, x, y);
+            return y < panels.topMargin + panel.y + panelHeight + tolerance && withinPanelWidth(panel, x, y, 100, tolerance);
         if (Config.bar.position === "bottom")
-            return y > screen.height - panels.bottomMargin - panelHeight && withinPanelWidth(panel, x, y);
+            return y > screen.height - panels.bottomMargin - panelHeight - tolerance && withinPanelWidth(panel, x, y, 100, tolerance);
         return false;
     }
     // Two independent measurements of the trigger area, both of which used to be
@@ -315,16 +316,17 @@ CustomMouseArea {
         const isUtilitiesOnLeft = Config.bar.position === "right";
         const utilLeft = panels.leftMargin + panels.utilities.x;
         const windowControlsMargin = 120;
+        const leftReduction = 60;
         const inUtilitiesAreaClosed = isUtilitiesOnLeft
-            ? x <= (screen.width / 2)
+            ? (x >= leftReduction && x <= (screen.width / 2))
             : (Config.bar.position === "bottom"
-                ? (x >= utilLeft && x <= (screen.width - windowControlsMargin))
-                : (x >= (screen.width / 2)));
+                ? (x >= (utilLeft + leftReduction) && x <= (screen.width - windowControlsMargin))
+                : (x >= (utilLeft + leftReduction) && x <= screen.width));
         const inUtilitiesAreaOpen = isUtilitiesOnLeft
             ? x <= (panels.leftMargin + panels.utilities.x + panels.utilities.width)
             : (Config.bar.position === "bottom"
                 ? (x >= utilLeft && x <= screen.width)
-                : (x >= 0 && x <= screen.width));
+                : (x >= utilLeft && x <= screen.width));
         
         const inUtilitiesArea = Config.bar.position === "bottom"
             ? inTopPanel(panels.utilities, x, y, Config.utilities.hoverThickness, 100) && (root.visibilities.utilities ? inUtilitiesAreaOpen : inUtilitiesAreaClosed)
@@ -390,7 +392,7 @@ CustomMouseArea {
     Timer {
         id: popoutHideTimer
 
-        interval: 150
+        interval: 350
         onTriggered: {
             if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
                 popouts.hasCurrent = false;
@@ -463,9 +465,10 @@ CustomMouseArea {
             if (root.visibilities.utilities) {
                 const utilLeft = root.panels.leftMargin + root.panels.utilities.x;
                 const windowControlsMargin = 120;
+                const leftReduction = 60;
                 const inUtilitiesArea = Config.bar.position === "bottom"
-                    ? root.inTopPanel(root.panels.utilities, root.mouseX, root.mouseY, Config.utilities.hoverThickness, 100) && root.mouseX >= utilLeft && root.mouseX <= (screen.width - windowControlsMargin)
-                    : root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && root.mouseX >= (screen.width / 2) && root.mouseX <= screen.width;
+                    ? root.inTopPanel(root.panels.utilities, root.mouseX, root.mouseY, Config.utilities.hoverThickness, 100) && root.mouseX >= (utilLeft + leftReduction) && root.mouseX <= (screen.width - windowControlsMargin)
+                    : root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY, true, Config.utilities.hoverThickness, Config.utilities.hoverWidth) && root.mouseX >= (utilLeft + leftReduction) && root.mouseX <= screen.width;
                 if (!inUtilitiesArea) {
                     root.utilitiesShortcutActive = true;
                 }

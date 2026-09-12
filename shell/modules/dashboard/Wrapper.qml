@@ -39,7 +39,9 @@ Item {
     opacity: 1 - offsetScale
 
     Behavior on offsetScale {
-        Anim {}
+        Anim {
+            type: Anim.FastSpatial
+        }
     }
     focus: root.shouldBeActive
 
