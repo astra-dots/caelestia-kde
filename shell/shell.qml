@@ -13,7 +13,6 @@ import "services" as Services
 import "modules"
 import "modules/drawers"
 import "modules/background"
-import "modules/shimeji"
 import "modules/areapicker"
 import "modules/lock"
 import "modules/polkit"
@@ -25,13 +24,35 @@ import "modules/welcome" as Welcome
 import QtQml
 import Quickshell
 import Quickshell.Io
+import Caelestia
 import Caelestia.Config
 import qs.components.containers
 import qs.services
 import qs.utils
 
 ShellRoot {
+    id: root
+
     settings.watchFiles: false
+
+    Binding {
+        target: ShellState
+        property: "shellRoot"
+        value: root
+    }
+
+    // UI translations
+    Binding {
+        target: Translations
+        property: "extraSearchPaths"
+        value: [Qt.resolvedUrl("translations")]
+    }
+
+    Binding {
+        target: Translations
+        property: "language"
+        value: GlobalConfig.general.language
+    }
 
     // Several QtCore.Settings {} elements throughout the codebase (BlurOffsets,
     // ContentWindow, UpdateChecker) rely on QCoreApplication's organization/app
@@ -51,6 +72,7 @@ ShellRoot {
     })()
 
     GSFLoader {}
+    ServiceLoader {}
 
     Background {}
     BadAppleOverlay {}
@@ -93,20 +115,13 @@ ShellRoot {
         }
     }
 
-    Variants {
-        model: Quickshell.screens.filter(s => (GlobalConfig.shimeji?.enabled ?? false) && (GlobalConfig.shimeji?.path?.length ?? 0) > 0 && !Strings.testRegexList(GlobalConfig.shimeji?.excludedScreens ?? [], s.name))
-
-        Shimeji {
-            shimejiCount: GlobalConfig.shimeji?.count ?? 1
-        }
-    }
-
     ConfigToasts {}
     Shortcuts {}
     ScreenCorners {}
 
     Component.onCompleted: {
         Qt.callLater(() => { Weather.reload(); });
+        PluginLoader.loadPlugins();
     }
 
     Services.StartupTasks {}

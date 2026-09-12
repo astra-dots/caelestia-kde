@@ -1,6 +1,7 @@
 #pragma once
 
-#include "configobject.hpp"
+#include "../Settings/objectnode.hpp"
+#include "common.hpp"
 
 #include <qdir.h>
 #include <qstandardpaths.h>
@@ -9,24 +10,20 @@
 namespace caelestia::config {
 
 using Qt::StringLiterals::operator""_s;
+using settings::vmap;
 
-class UserPaths : public ConfigObject {
-    Q_OBJECT
-    QML_ANONYMOUS
+class UserPaths : public settings::ObjectNode {
+    CONFIG_NODE(UserPaths, settings::ObjectNode)
 
     CONFIG_GLOBAL_PROPERTY(
         QString, wallpaperDir, QStandardPaths::writableLocation(QStandardPaths::PicturesLocation) + u"/Wallpapers"_s)
     CONFIG_PROPERTY(QString, cacheDir, QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + u"/caelestia"_s)
     CONFIG_GLOBAL_PROPERTY(
         QString, lyricsDir, QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + u"/Lyrics/"_s)
-    CONFIG_PROPERTY(QString, sessionGif, u"root:/assets/kurukuru.gif"_s)
+    CONFIG_PROPERTY(QString, sessionGif, u""_s)
     CONFIG_PROPERTY(QString, mediaGif, u"root:/assets/bongocat.gif"_s)
     CONFIG_PROPERTY(QString, noNotifsPic, u"root:/assets/dino.png"_s)
     CONFIG_PROPERTY(QString, lockNoNotifsPic, u"root:/assets/dino.png"_s)
-
-public:
-    explicit UserPaths(QObject* parent = nullptr)
-        : ConfigObject(parent) {}
 };
 
 } // namespace caelestia::config

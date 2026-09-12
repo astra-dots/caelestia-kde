@@ -9,6 +9,14 @@ import qs.services
 TextField {
     id: root
 
+    property string leadingIcon: ""
+    property string trailingIcon: ""
+    property string supportingText: ""
+    property string errorText: ""
+    property var validate: null
+    readonly property bool isError: Boolean(validate && text.length > 0 && !validate.test(text))
+    readonly property string effectiveSupportingText: isError ? errorText : supportingText
+
     color: Colours.palette.m3onSurface
     placeholderTextColor: Colours.palette.m3outline
     font: Tokens.font.body.small
