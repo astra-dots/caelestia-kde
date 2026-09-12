@@ -6,7 +6,6 @@ import Caelestia.Config
 import Caelestia.Services
 import qs.components.misc
 import qs.services
-import qs.services.api
 import qs.modules.nexus
 import qs.modules.launcher.services
 
@@ -257,14 +256,6 @@ Scope {
         name: "wallpaper"
         description: "Open wallpaper picker"
         onPressed: {
-            const plugin = PluginLoader.pluginInstances["wallpaper-selector"];
-            if (plugin) {
-                if (typeof CaelestiaApi !== "undefined" && CaelestiaApi.windows && CaelestiaApi.windows.kwin) {
-                    plugin.activeScreen = CaelestiaApi.windows.kwin.cursorOutputName() || "";
-                }
-                plugin.showing = !plugin.showing;
-                return;
-            }
             Visibilities.launcherInitialSearch = `${GlobalConfig.launcher.actionPrefix}wallpaper `;
             const visibilities = Visibilities.getForActive();
             visibilities.launcher = true;

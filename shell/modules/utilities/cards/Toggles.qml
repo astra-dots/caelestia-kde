@@ -11,7 +11,6 @@ import qs.components
 import qs.components.controls
 import qs.components.effects
 import qs.services
-import qs.services.api
 import qs.utils
 import qs.modules.nexus
 import qs.modules.bar.popouts as BarPopouts
@@ -516,15 +515,6 @@ StyledRect {
                         isToggle: false
                         inactiveOnColour: Colours.palette.m3onSurfaceVariant
                         onClicked: {
-                            const plugin = PluginLoader.pluginInstances["wallpaper-selector"];
-                            if (plugin) {
-                                if (typeof CaelestiaApi !== "undefined" && CaelestiaApi.windows && CaelestiaApi.windows.kwin) {
-                                    plugin.activeScreen = CaelestiaApi.windows.kwin.cursorOutputName() || "";
-                                }
-                                plugin.showing = true;
-                                root.visibilities.utilities = false;
-                                return;
-                            }
                             Visibilities.launcherInitialSearch = `${GlobalConfig.launcher.actionPrefix}wallpaper `;
                             const visibilities = Visibilities.getForActive();
                             visibilities.launcher = true;
