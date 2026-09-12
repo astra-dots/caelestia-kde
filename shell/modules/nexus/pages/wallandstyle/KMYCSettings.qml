@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 
-import "../../../../utils/scripts/solartime.js" as Solar
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -14,18 +13,9 @@ import qs.modules.nexus.common
 
 PageBase {
     id: root
-
-    readonly property list<MenuItem> autoSchemeItems: [
-        MenuItem {
-            text: qsTr("Sunrise and sunset")
-        },
-        MenuItem {
-            text: qsTr("Fixed times")
-        }
-    ]
-    readonly property list<string> autoSchemeValues: ["solar", "fixed"]
-
-    property bool showAdvanced: false
+    
+    title: "Advanced Colors"
+    isSubPage: true
 
     property bool pywal: false
 
@@ -83,26 +73,12 @@ PageBase {
 
     property bool kdeRoundedCornersEffectOutline: false
 
-    /// The hour of an "HH:MM" config value, for the steppers.
-    function schemeHour(time: string): int {
-        const minutes = Solar.parseTime(time);
-        return minutes < 0 ? 0 : Math.floor(minutes / 60);
-    }
-
-    /// Replaces only the hour, so minutes set by hand in the config file are
-    /// not thrown away by touching the stepper.
-    function withHour(time: string, hour: int): string {
-        const minutes = Solar.parseTime(time);
-        const mins = minutes < 0 ? 0 : minutes % 60;
-        return `${String(hour).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-    }
-
     function parseConfig(text: string): void {
         const lines = text.split('\n');
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith('#') || line === '' || line.startsWith('[')) continue;
-
+            
             const parts = line.split('=');
             if (parts.length >= 2) {
                 const key = parts[0].trim();
@@ -110,7 +86,7 @@ PageBase {
                 const bVal = value.toLowerCase() === "true";
                 const fVal = parseFloat(value);
                 const iVal = parseInt(value, 10);
-
+                
                 switch (key) {
                     case "pywal": root.pywal = bVal; break;
                     case "pywal_light": root.pywalLight = bVal; break;
@@ -150,9 +126,6 @@ PageBase {
         Quickshell.execDetached(["bash", scriptPath, "--set", key, value]);
     }
 
-    title: qsTr("Advanced Colors")
-    isSubPage: true
-
     ColumnLayout {
         id: contentLayout
 
@@ -164,7 +137,7 @@ PageBase {
         FileView {
             id: configFile
 
-            path: `${Quickshell.env("XDG_CONFIG_HOME") || `${Paths.home}/.config`}/kde-material-you-colors/config.conf`
+            path: `${Paths.config}/kde-material-you-colors/config.conf`
             watchChanges: true
             onLoaded: root.parseConfig(text())
             onFileChanged: reload()
@@ -175,61 +148,7 @@ PageBase {
         }
 
         SectionHeader {
-            text: qsTr("Theme Automation")
-        }
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 0
-
-            ToggleRow {
-                first: true
-                text: qsTr("Smart color scheme")
-                subtext: qsTr("Disable this to set Variants manually")
-                checked: GlobalConfig.services.smartScheme
-                onToggled: GlobalConfig.services.smartScheme = checked
-            }
-
-            ToggleRow {
-                Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("Automatic light and dark")
-                subtext: qsTr("Switch the theme mode on a schedule")
-                checked: GlobalConfig.services.autoSchemeEnabled
-                onToggled: GlobalConfig.services.autoSchemeEnabled = checked
-            }
-
-            SelectRow {
-                Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Schedule")
-                subtext: AutoScheme.coords ? qsTr("Sunrise and sunset use your weather location") : qsTr("Set a weather location to use sunrise and sunset")
-                menuItems: root.autoSchemeItems
-                active: root.autoSchemeItems[Math.max(0, root.autoSchemeValues.indexOf(GlobalConfig.services.autoSchemeMode))]
-                onSelected: item => GlobalConfig.services.autoSchemeMode = root.autoSchemeValues[root.autoSchemeItems.indexOf(item)]
-            }
-
-            StepperRow {
-                Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Light mode hour")
-                subtext: qsTr("Switches at %1").arg(GlobalConfig.services.autoSchemeLightTime)
-                value: root.schemeHour(GlobalConfig.services.autoSchemeLightTime)
-                from: 0
-                to: 23
-                onMoved: h => GlobalConfig.services.autoSchemeLightTime = root.withHour(GlobalConfig.services.autoSchemeLightTime, h)
-            }
-
-            StepperRow {
-                Layout.topMargin: Tokens.spacing.extraSmall / 2
-                last: true
-                label: qsTr("Dark mode hour")
-                subtext: qsTr("Switches at %1, also used when sunrise and sunset are unavailable").arg(GlobalConfig.services.autoSchemeDarkTime)
-                value: root.schemeHour(GlobalConfig.services.autoSchemeDarkTime)
-                from: 0
-                to: 23
-                onMoved: h => GlobalConfig.services.autoSchemeDarkTime = root.withHour(GlobalConfig.services.autoSchemeDarkTime, h)
-            }
-        }
-
-        SectionHeader {
-            text: qsTr("Konsole & Pywal Integrations")
+            text: "Konsole & Pywal Integrations"
         }
         ColumnLayout {
             Layout.fillWidth: true
@@ -238,22 +157,22 @@ PageBase {
             ToggleRow {
                 first: true
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("Disable Konsole Sync")
-                subtext: qsTr("Disable automatic Konsole theming")
+                text: "Disable Konsole Sync"
+                subtext: "Disable automatic Konsole theming"
                 checked: root.disableKonsole
                 onToggled: root.setOption("disable_konsole", checked ? "True" : "False")
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("Konsole Blur")
-                subtext: qsTr("Enable background blur for Konsole")
+                text: "Konsole Blur"
+                subtext: "Enable background blur for Konsole"
                 checked: root.konsoleBlur
                 onToggled: root.setOption("konsole_blur", checked ? "True" : "False")
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Konsole Opacity (Light)")
-                subtext: qsTr("Konsole background opacity in light mode")
+                label: "Konsole Opacity (Light)"
+                subtext: "Konsole background opacity in light mode"
                 value: root.konsoleOpacity
                 from: 0
                 to: 100
@@ -262,8 +181,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Konsole Opacity (Dark)")
-                subtext: qsTr("Konsole background opacity in dark mode")
+                label: "Konsole Opacity (Dark)"
+                subtext: "Konsole background opacity in dark mode"
                 value: root.konsoleOpacityDark
                 from: 0
                 to: 100
@@ -272,76 +191,65 @@ PageBase {
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("Sync Pywal")
-                subtext: qsTr("Use pywal to theme other programs using Material You colors")
+                text: "Sync Pywal"
+                subtext: "Use pywal to theme other programs using Material You colors"
                 checked: root.pywal
                 onToggled: root.setOption("pywal", checked ? "True" : "False")
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
                 last: true
-                text: qsTr("Pywal & Konsole Light Mode")
-                subtext: qsTr("Force light/dark mode for pywal and/or Konsole")
+                text: "Pywal & Konsole Light Mode"
+                subtext: "Force light/dark mode for pywal and/or Konsole"
                 checked: root.pywalLight
                 onToggled: root.setOption("pywal_light", checked ? "True" : "False")
             }
-        }
 
-        ToggleRow {
-            first: true
-            last: true
-            text: qsTr("Show advanced options")
-            subtext: qsTr("Engine behavior, color tuning and window decoration settings")
-            checked: root.showAdvanced
-            onToggled: root.showAdvanced = checked
         }
 
         SectionHeader {
-            text: qsTr("Engine & Behavior")
-            visible: root.showAdvanced
+            text: "Engine & Behavior"
+            first: true
         }
         ColumnLayout {
-            visible: root.showAdvanced
             Layout.fillWidth: true
             spacing: 0
 
             ToggleRow {
                 first: true
-                text: qsTr("Pause Mode")
-                subtext: qsTr("Disables wallpaper detection and automatic theming for Applications, not the Shell")
+                text: "Pause Mode"
+                subtext: "Disables wallpaper detection and automatic theming for Applications, not the Shell"
                 checked: root.pauseMode
                 onToggled: root.setOption("pause_mode", checked ? "True" : "False")
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("Manual Fetch")
-                subtext: qsTr("Disables automatic color fetching")
+                text: "Manual Fetch"
+                subtext: "Disables automatic color fetching"
                 checked: root.manualFetch
                 onToggled: root.setOption("manual_fetch", checked ? "True" : "False")
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
                 last: true
-                text: qsTr("Only Apply Once After Change")
-                subtext: qsTr("Extract colors from screenshot once after changing plugin (useful for animated loops)")
+                text: "Only Apply Once After Change"
+                subtext: "Extract colors from screenshot once after changing plugin (useful for animated loops)"
                 checked: root.onceAfterChange
                 onToggled: root.setOption("once_after_change", checked ? "True" : "False")
             }
         }
 
         SectionHeader {
-            text: qsTr("Color Attributes")
-            visible: root.showAdvanced
+            text: "Color Attributes"
         }
         ColumnLayout {
-            visible: root.showAdvanced
             Layout.fillWidth: true
             spacing: 0
 
             StepperRow {
                 first: true
-                label: qsTr("Material Design Spec Version")
-                subtext: qsTr("The version of the material color specification to use")
+                label: "Material Design Spec Version"
+                subtext: "The version of the material color specification to use"
                 value: root.specVersion
                 from: 2021
                 to: 2025
@@ -350,8 +258,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Chroma Multiplier")
-                subtext: qsTr("Changes chroma (colorfulness) of theme")
+                label: "Chroma Multiplier"
+                subtext: "Changes chroma (colorfulness) of theme"
                 value: root.chromaMultiplier
                 from: 0.5
                 to: 10.0
@@ -360,8 +268,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Tone Multiplier")
-                subtext: qsTr("Changes tone (brightness) of theme")
+                label: "Tone Multiplier"
+                subtext: "Changes tone (brightness) of theme"
                 value: root.toneMultiplier
                 from: 0.5
                 to: 1.5
@@ -370,8 +278,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Contrast Level")
-                subtext: qsTr("Overall color contrast level")
+                label: "Contrast Level"
+                subtext: "Overall color contrast level"
                 value: root.contrastLevel
                 from: -1.0
                 to: 1.0
@@ -380,8 +288,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Frame Contrast")
-                subtext: qsTr("Frames and outlines contrast")
+                label: "Frame Contrast"
+                subtext: "Frames and outlines contrast"
                 value: root.frameContrast
                 from: 0.0
                 to: 1.0
@@ -390,8 +298,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Light Blend Multiplier")
-                subtext: qsTr("Amount of perceptible color for backgrounds in light mode")
+                label: "Light Blend Multiplier"
+                subtext: "Amount of perceptible color for backgrounds in light mode"
                 value: root.lightBlendMultiplier
                 from: 0.0
                 to: 4.0
@@ -401,8 +309,8 @@ PageBase {
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
                 last: true
-                label: qsTr("Dark Blend Multiplier")
-                subtext: qsTr("Amount of perceptible color for backgrounds in dark mode")
+                label: "Dark Blend Multiplier"
+                subtext: "Amount of perceptible color for backgrounds in dark mode"
                 value: root.darkBlendMultiplier
                 from: 0.0
                 to: 4.0
@@ -410,27 +318,25 @@ PageBase {
                 onMoved: v => root.setOption("dark_blend_multiplier", v.toFixed(2))
             }
         }
-
+        
         SectionHeader {
-            text: qsTr("Window Decorations (Requires Plugins)")
-            visible: root.showAdvanced
+            text: "Window Decorations (Requires Plugins)"
         }
         ColumnLayout {
-            visible: root.showAdvanced
             Layout.fillWidth: true
             spacing: 0
 
             ToggleRow {
                 first: true
-                text: qsTr("Titlebar Opacity Override")
-                subtext: qsTr("Override opacity values for titlebar")
+                text: "Titlebar Opacity Override"
+                subtext: "Override opacity values for titlebar"
                 checked: root.titlebarOpacityOverride
                 onToggled: root.setOption("titlebar_opacity_override", checked ? "True" : "False")
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Titlebar Opacity (Light)")
-                subtext: qsTr("Requires Klassy or Sierra Breeze Enhanced")
+                label: "Titlebar Opacity (Light)"
+                subtext: "Requires Klassy or Sierra Breeze Enhanced"
                 value: root.titlebarOpacity
                 from: 0
                 to: 100
@@ -439,8 +345,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Titlebar Opacity (Dark)")
-                subtext: qsTr("Requires Klassy or Sierra Breeze Enhanced")
+                label: "Titlebar Opacity (Dark)"
+                subtext: "Requires Klassy or Sierra Breeze Enhanced"
                 value: root.titlebarOpacityDark
                 from: 0
                 to: 100
@@ -449,8 +355,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Toolbar Opacity (Light)")
-                subtext: qsTr("Requires Lightly Application Style")
+                label: "Toolbar Opacity (Light)"
+                subtext: "Requires Lightly Application Style"
                 value: root.toolbarOpacity
                 from: 0
                 to: 100
@@ -459,8 +365,8 @@ PageBase {
             }
             StepperRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                label: qsTr("Toolbar Opacity (Dark)")
-                subtext: qsTr("Requires Lightly Application Style")
+                label: "Toolbar Opacity (Dark)"
+                subtext: "Requires Lightly Application Style"
                 value: root.toolbarOpacityDark
                 from: 0
                 to: 100
@@ -469,23 +375,23 @@ PageBase {
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("Klassy Windeco Outline")
-                subtext: qsTr("Tint Klassy Window Decoration window outline (Reloads KWin)")
+                text: "Klassy Windeco Outline"
+                subtext: "Tint Klassy Window Decoration window outline (Reloads KWin)"
                 checked: root.klassyWindecoOutline
                 onToggled: root.setOption("klassy_windeco_outline", checked ? "True" : "False")
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
-                text: qsTr("KDE Rounded Corners Outline")
-                subtext: qsTr("Tint KDE Rounded Corners desktop effect window outline")
+                text: "KDE Rounded Corners Outline"
+                subtext: "Tint KDE Rounded Corners desktop effect window outline"
                 checked: root.kdeRoundedCornersEffectOutline
                 onToggled: root.setOption("kde_rounded_corners_effect_outline", checked ? "True" : "False")
             }
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2
                 last: true
-                text: qsTr("Sierra Breeze Buttons Color")
-                subtext: qsTr("Tint Sierra Breeze decoration buttons (Reloads KWin)")
+                text: "Sierra Breeze Buttons Color"
+                subtext: "Tint Sierra Breeze decoration buttons (Reloads KWin)"
                 checked: root.sierraBreezeButtonsColor
                 onToggled: root.setOption("sierra_breeze_buttons_color", checked ? "True" : "False")
             }

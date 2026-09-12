@@ -19,8 +19,48 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
+    title: qsTr("Updates")
+
     // ── Branch menu items ──────────────────────────────────────────────────
     readonly property list<MenuItem> branchItems: branchVariants.instances
+
+    Item {
+        visible: false
+
+        Variants {
+            id: branchVariants
+
+            model: UpdateChecker.availableBranches
+
+            MenuItem {
+                required property string modelData
+
+                text: modelData
+                icon: "call_split"
+            }
+        }
+
+        Connections {
+            target: UpdateChecker
+
+            function onCommitsChanged() { root.selectedVersionId = ""; }
+
+            function onVersionSummaryModeChanged() { root.selectedVersionId = ""; }
+
+            function onAvailableVersionsChanged() { root.selectedVersionId = ""; }
+
+            function onCurrentBranchChanged() { root.selectedVersionId = ""; }
+
+            function onCurrentVersionChanged() { root.selectedVersionId = ""; }
+
+            function onInstalledCommitHashChanged() { root.selectedVersionId = ""; }
+
+            function onCheckingUpdatesChanged() {
+                if (!UpdateChecker.checkingUpdates)
+                    root.pendingBranch = "";
+            }
+        }
+    }
 
     readonly property var activeBranchItem: {
         const found = branchItems.find(function(i) { return i.text === UpdateChecker.currentBranch; });
@@ -52,7 +92,7 @@ PageBase {
     readonly property bool branchDataLoading: root.pendingBranch !== "" && UpdateChecker.checkingUpdates
 
     readonly property int updatesPageIdx: {
-        const idx = PageRegistry.indexForKey("updates");
+        const idx = PageRegistry.pages.findIndex(page => page.icon === "update");
         if (idx >= 0) return idx;
         return PageRegistry.pages.length > 0 ? Math.min(Math.max(nState.currentPageIdx, 0), PageRegistry.pages.length - 1) : 0;
     }
@@ -73,8 +113,6 @@ PageBase {
 
     readonly property bool selectionIsFuture: root.timelineSelectionEnabled && root.selectedVersionState === "available"
 
-    readonly property bool selectionIsReinstall: root.timelineSelectionEnabled && root.selectedVersionState === "current"
-
     // Drives both the primary button's visibility and the secondary button's
     // width (it takes over as the sole, full-width action when the primary
     // one isn't shown) — see the action row below.
@@ -82,7 +120,6 @@ PageBase {
         if (root.updateRunning) return false;
         if (root.updateProgress === 1.0) return true;
         if (root.selectionIsRevert) return true;
-        if (root.selectionIsReinstall) return true;
         if (root.selectionIsFuture && root.selectedVersionId !== "") return true;
         return UpdateChecker.hasUpdate;
     }
@@ -93,9 +130,7 @@ PageBase {
             // Version mode: full timeline with available + current + past
             const versions = UpdateChecker.availableVersions;
             const current = UpdateChecker.currentVersion;
-            const currentIdx = current === "unknown"
-                ? -2
-                : versions.findIndex(v => v === current || v.replace(/^v/i, "") === current.replace(/^v/i, ""));
+            const currentIdx = current === "unknown" ? -2 : versions.indexOf(current);
             const result = [];
             for (let i = 0; i < versions.length; i++) {
                 let state;
@@ -122,7 +157,7 @@ PageBase {
             // how the version timeline treats releases.
             const commits = UpdateChecker.commits;
             const localHash = UpdateChecker.installedCommitHash;
-            const localIdx = localHash !== "" ? commits.findIndex(c => c.fullHash === localHash || c.hash === localHash) : -1;
+            const localIdx = localHash !== "" ? commits.findIndex(c => c.fullHash === localHash) : -1;
             const result = [];
             for (let i = 0; i < commits.length; i++) {
                 const c = commits[i];
@@ -153,62 +188,6 @@ PageBase {
                 });
             }
             return result;
-        }
-    }
-
-    title: qsTr("Updates")
-
-    headerActions: [
-        IconTextButton {
-            text: qsTr("Help")
-            icon: "help"
-            type: TextButton.Tonal
-            scale: pressed ? 0.95 : 1.0
-            onClicked: Qt.openUrlExternally("https://github.com/ladybug-me/caelestia-dots-kde/blob/main/.github/docs/TROUBLESHOOTING.md#11-update-issues")
-
-            Behavior on scale {
-                Anim {
-                    type: Anim.DefaultEffects
-                }
-            }
-        }
-    ]
-
-    Item {
-        visible: false
-
-        Variants {
-            id: branchVariants
-
-            model: UpdateChecker.availableBranches
-
-            MenuItem {
-                required property string modelData
-
-                text: modelData
-                icon: "call_split"
-            }
-        }
-
-        Connections {
-            function onCommitsChanged() { root.selectedVersionId = ""; }
-
-            function onVersionSummaryModeChanged() { root.selectedVersionId = ""; }
-
-            function onAvailableVersionsChanged() { root.selectedVersionId = ""; }
-
-            function onCurrentBranchChanged() { root.selectedVersionId = ""; }
-
-            function onCurrentVersionChanged() { root.selectedVersionId = ""; }
-
-            function onInstalledCommitHashChanged() { root.selectedVersionId = ""; }
-
-            function onCheckingUpdatesChanged() {
-                if (!UpdateChecker.checkingUpdates)
-                    root.pendingBranch = "";
-            }
-
-            target: UpdateChecker
         }
     }
 
@@ -245,11 +224,10 @@ PageBase {
                         if (root.updateProgress === 1.0) return "done_all";
                         if (root.updateRunning) return "sync";
                         if (root.selectionIsRevert) return "history";
-                        if (root.selectionIsReinstall) return "replay";
                         if (UpdateChecker.currentVersion === "unknown" && !UpdateChecker.hasUpdate) return "help";
                         return UpdateChecker.hasUpdate ? "update" : "check_circle";
                     }
-                    color: (UpdateChecker.hasUpdate || root.updateRunning || root.updateProgress === 1.0 || root.selectedVersionId !== "")
+                    color: (UpdateChecker.hasUpdate || root.updateRunning || root.updateProgress === 1.0)
                         ? Colours.palette.m3primary
                         : Colours.palette.m3onSurfaceVariant
                 }
@@ -258,7 +236,7 @@ PageBase {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.fillWidth: true
                     font: Tokens.font.title.medium
-                    color: (UpdateChecker.hasUpdate || root.updateRunning || root.updateProgress === 1.0 || root.selectedVersionId !== "")
+                    color: (UpdateChecker.hasUpdate || root.updateRunning || root.updateProgress === 1.0)
                         ? Colours.palette.m3onSurface
                         : Colours.palette.m3onSurfaceVariant
                     horizontalAlignment: Text.AlignHCenter
@@ -269,7 +247,6 @@ PageBase {
                         if (root.updateProgress === 1.0) return qsTr("Update complete - log out to apply");
                         if (root.updateRunning) return root.updateStatus || qsTr("Updating…");
                         if (root.selectionIsRevert) return qsTr("Restore to %1?").arg(root.selectedVersionId);
-                        if (root.selectionIsReinstall) return qsTr("Reinstall %1?").arg(root.selectedVersionId);
                         if (root.selectionIsFuture && root.selectedVersionId !== "")
                             return qsTr("Install %1?").arg(root.selectedVersionId);
                         if (UpdateChecker.hasUpdate) {
@@ -316,7 +293,6 @@ PageBase {
                         text: {
                             if (root.updateProgress === 1.0) return qsTr("Log Out");
                             if (root.selectionIsRevert) return qsTr("Restore");
-                            if (root.selectionIsReinstall) return qsTr("Reinstall");
                             if (root.selectionIsFuture && root.selectedVersionId !== "")
                                 return qsTr("Install %1").arg(root.selectedVersionId);
                             return qsTr("Install Update");
@@ -328,7 +304,6 @@ PageBase {
                         icon: {
                             if (root.updateProgress === 1.0) return "logout";
                             if (root.selectionIsRevert) return "history";
-                            if (root.selectionIsReinstall) return "replay";
                             return "system_update_alt";
                         }
                         onClicked: {
@@ -572,17 +547,17 @@ PageBase {
         ConnectedRect {
             id: timelineCard
 
+            visible: !root.branchDataLoading
+            first: true
+            last: true
+            Layout.fillWidth: true
             // Dev branch can list up to 10 commits — cap the card height and
             // let it scroll internally instead of pushing the log/actions
             // below it far down the page. Commit rows are taller than plain
             // release rows, so scale the cap with the timeline's own row
             // height instead of a hard-coded constant.
-            readonly property real maxListHeight: 6 * timeline.rowHeight
 
-            visible: !root.branchDataLoading
-            first: true
-            last: true
-            Layout.fillWidth: true
+            readonly property real maxListHeight: 6 * timeline.rowHeight
             implicitHeight: Math.min(timeline.implicitHeight, maxListHeight) + Tokens.padding.medium * 2
 
             Flickable {

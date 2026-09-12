@@ -16,7 +16,7 @@ PageBase {
     ]
     readonly property var toolToggles: [
         { id: "settings", label: qsTr("Settings") },
-        { id: "colorpicker", label: qsTr("Color Picker") },
+        { id: "colorpicker", label: Strings.localizeEnglishSpelling(qsTr("Colour Picker")) },
         { id: "wallpaper", label: qsTr("Wallpaper") },
         { id: "badapple", label: qsTr("Bad Apple") },
     ]
@@ -25,7 +25,6 @@ PageBase {
         { id: "dnd", label: qsTr("Do Not Disturb") },
         { id: "pauseWallpaper", label: qsTr("Pause Wallpaper") },
         { id: "nightlight", label: qsTr("Night Light") },
-        { id: "easyeffects", label: qsTr("EasyEffects") },
         { id: "restartShell", label: qsTr("Restart Shell") },
     ]
 

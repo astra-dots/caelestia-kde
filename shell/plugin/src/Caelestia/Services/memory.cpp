@@ -52,7 +52,7 @@ void Memory::tick() {
     m_lastUsed = usedKib;
     m_total = static_cast<qreal>(totalKib);
     m_used = static_cast<qreal>(usedKib);
-    emit changed();
+    Q_EMIT changed();
 }
 
 } // namespace caelestia::services

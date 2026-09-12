@@ -22,17 +22,7 @@ ItemList {
     showList: true
 
     model: ScriptModel {
-        values: {
-            const list = [];
-            const seen = new Set();
-            for (const n of root.nodes) {
-                if (!n || seen.has(n.name))
-                    continue;
-                seen.add(n.name);
-                list.push(n);
-            }
-            return list.sort((a, b) => (a.properties?.["node.nick"] || a.description || a.name || "").localeCompare(b.properties?.["node.nick"] || b.description || b.name || ""));
-        }
+        values: [...root.nodes].sort((a, b) => (a.description || a.name || "").localeCompare(b.description || b.name || ""))
     }
 
     delegate: Item {
@@ -85,7 +75,7 @@ ItemList {
 
             StyledText {
                 Layout.fillWidth: true
-                text: device.modelData?.properties?.["node.nick"] || device.modelData?.description || device.modelData?.name || qsTr("Unknown")
+                text: device.modelData?.description || device.modelData?.name || qsTr("Unknown")
                 font: Tokens.font.body.small
                 elide: Text.ElideRight
             }

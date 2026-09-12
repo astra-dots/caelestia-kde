@@ -15,9 +15,6 @@ GridLayout {
 
     required property int index
     required property int activeWsId
-    /// Name of the screen this bar is on. Window icons are limited to it: the
-    /// desktop is shared across screens, but the pill is not.
-    required property string screenName
     required property var occupied
     required property int groupOffset
 
@@ -115,7 +112,7 @@ GridLayout {
             property int swipeStartWsId: -1
             property bool generatedShapeThisSwipe: false
 
-            property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? (KWinWorkspaceState.swipeOffsetByOutput?.[root.screenName] ?? KWinWorkspaceState.swipeOffset) : 0.0
+            property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
             property real lastRawSwipeOffset: 0.0
             property bool isSwiping: false
 
@@ -338,8 +335,6 @@ GridLayout {
                             const wins = KWinActiveWindowBridge.windowList;
                             for (let i = 0; i < wins.length; ++i) {
                                 const w = wins[i];
-                                if (w.output !== root.screenName)
-                                    continue;
                                 if (w.workspace && w.workspace.id === ws && w["class"] !== "quickshell" && w["class"] !== "plasmashell") {
                                     windows.push(w);
                                 }
@@ -408,8 +403,6 @@ GridLayout {
                             const wins = KWinActiveWindowBridge.windowList;
                             for (let i = 0; i < wins.length; ++i) {
                                 const w = wins[i];
-                                if (w.output !== root.screenName)
-                                    continue;
                                 if (w.workspace && w.workspace.id === ws && w["class"] !== "quickshell" && w["class"] !== "plasmashell") {
                                     windows.push(w);
                                 }

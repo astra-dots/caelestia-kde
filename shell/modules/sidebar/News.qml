@@ -34,7 +34,7 @@ Item {
             'Process {\n' +
             '    id: p\n' +
             '    command: ["sh", "-c", \'. /etc/os-release 2>/dev/null && echo "$ID"\']\n' +
-            '    stdout: StdioCollector { }\n' +
+            '    stdout: StdioCollector { onStreamFinished: p.destroy(); }\n' +
             '}', root, "osReleaseProc");
         return process;
     }
@@ -53,12 +53,12 @@ Item {
         if (_distroId === "") {
             var proc = newsFeedUrl();
             if (proc && proc.stdout) {
-                proc.stdout.streamFinished.connect(function() {
+                proc.stdout.onStreamFinished = function() {
                     var id = (proc.stdout.text || "").trim();
                     _distroId = id;
                     doFetch(id);
                     if (proc) proc.destroy();
-                });
+                };
                 proc.running = true;
                 return;
             }

@@ -43,19 +43,19 @@ Searcher {
             variant: "tonalspot"
             icon: "android"
             name: qsTr("Tonal Spot")
-            description: qsTr("Default for Material theme colors. A pastel palette with a low chroma.")
+            description: Strings.localizeEnglishSpelling(qsTr("Default for Material theme colours. A pastel palette with a low chroma."))
         },
         Variant {
             variant: "expressive"
             icon: "compare_arrows"
             name: qsTr("Expressive")
-            description: qsTr("A medium chroma palette. The primary palette's hue is different from the seed color, for variety.")
+            description: Strings.localizeEnglishSpelling(qsTr("A medium chroma palette. The primary palette's hue is different from the seed colour, for variety."))
         },
         Variant {
             variant: "fidelity"
             icon: "compare"
             name: qsTr("Fidelity")
-            description: qsTr("Matches the seed color, even if the seed color is very bright (high chroma).")
+            description: Strings.localizeEnglishSpelling(qsTr("Matches the seed colour, even if the seed colour is very bright (high chroma)."))
         },
         Variant {
             variant: "content"
@@ -67,13 +67,13 @@ Searcher {
             variant: "fruitsalad"
             icon: "nutrition"
             name: qsTr("Fruit Salad")
-            description: qsTr("A playful theme - the seed color's hue does not appear in the theme.")
+            description: Strings.localizeEnglishSpelling(qsTr("A playful theme - the seed colour's hue does not appear in the theme."))
         },
         Variant {
             variant: "rainbow"
             icon: "looks"
             name: qsTr("Rainbow")
-            description: qsTr("A playful theme - the seed color's hue does not appear in the theme.")
+            description: Strings.localizeEnglishSpelling(qsTr("A playful theme - the seed colour's hue does not appear in the theme."))
         },
         Variant {
             variant: "neutral"
@@ -85,7 +85,7 @@ Searcher {
             variant: "monochrome"
             icon: "filter_b_and_w"
             name: qsTr("Monochrome")
-            description: qsTr("All colors are grayscale, no chroma.")
+            description: Strings.localizeEnglishSpelling(qsTr("All colours are grayscale, no chroma."))
         }
     ]
 

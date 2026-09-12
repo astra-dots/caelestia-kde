@@ -1,11 +1,10 @@
 #include "cpu.hpp"
 
-#include <qfile.h>
-#include <qregularexpression.h>
+#include "sensorslib.hpp"
 
 #include <cmath>
-
-#include "sensorslib.hpp"
+#include <qfile.h>
+#include <qregularexpression.h>
 
 namespace caelestia::services {
 
@@ -54,7 +53,7 @@ void Cpu::readNameOnce() {
         return;
     }
     m_name = cleaned;
-    emit nameChanged();
+    Q_EMIT nameChanged();
 }
 
 void Cpu::refreshPercentage() {
@@ -91,7 +90,7 @@ void Cpu::refreshPercentage() {
 
     if (std::abs(newPerc - m_percentage) > 0.0001) {
         m_percentage = newPerc;
-        emit percentageChanged();
+        Q_EMIT percentageChanged();
     }
 }
 
@@ -100,7 +99,7 @@ void Cpu::refreshTemperature() {
     const qreal newTemp = t.value_or(0.0);
     if (std::abs(newTemp - m_temperature) > 0.05) {
         m_temperature = newTemp;
-        emit temperatureChanged();
+        Q_EMIT temperatureChanged();
     }
 }
 

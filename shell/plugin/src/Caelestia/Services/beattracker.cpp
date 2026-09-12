@@ -1,9 +1,8 @@
 #include "beattracker.hpp"
 
-#include <aubio/aubio.h>
-
 #include "audiocollector.hpp"
 #include "audioprovider.hpp"
+#include <aubio/aubio.h>
 
 namespace caelestia::services {
 

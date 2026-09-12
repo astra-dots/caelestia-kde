@@ -1,16 +1,19 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 
 namespace caelestia::config {
 
-class NexusConfig : public settings::ObjectNode {
-    CONFIG_NODE(NexusConfig, settings::ObjectNode)
+class NexusConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(int, wallpapersPerRow, 4)
     CONFIG_GLOBAL_PROPERTY(int, networkRescanInterval, 15000)
-    CONFIG_PROPERTY(int, maxNetworksShown, 5)
+
+public:
+    explicit NexusConfig(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
 } // namespace caelestia::config

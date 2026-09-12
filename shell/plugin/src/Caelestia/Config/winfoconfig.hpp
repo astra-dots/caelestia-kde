@@ -1,14 +1,18 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 
 namespace caelestia::config {
 
 // WInfoConfig has no serialized properties (serializer returns {})
 // All properties are in AdvancedConfig.winfo
-class WInfoConfig : public settings::ObjectNode {
-    CONFIG_NODE(WInfoConfig, settings::ObjectNode)
+class WInfoConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
+
+public:
+    explicit WInfoConfig(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
 } // namespace caelestia::config

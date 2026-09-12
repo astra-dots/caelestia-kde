@@ -63,11 +63,8 @@ Item {
             Toaster.toast(qsTr("Copied to clipboard"), preview, "content_paste");
     }
 
-    function updateImage(): void {
-        if (!root.modelData?.isImage) {
-            imagePreview.imagePath = "";
-            return;
-        }
+    Component.onCompleted: {
+        if (!root.isImage) return;
 
         // A pinned image has its own stored copy; nothing pre-warms it and no
         // imageReady will ever arrive for it.
@@ -76,16 +73,10 @@ Item {
             return;
         }
 
-        // If already cached on disk, display immediately; otherwise wait for imageReady
-        if (Clipboard.isImageCached(root.modelData.id)) {
-            imagePreview.imagePath = Clipboard.getImagePath(root.modelData.id);
-        } else {
-            imagePreview.imagePath = "";
-        }
+        // Check whether the image was already pre-warmed during reload()
+        const cached = Clipboard.getImagePath(root.modelData.id);
+        imagePreview.imagePath = cached;
     }
-
-    onModelDataChanged: updateImage()
-    Component.onCompleted: updateImage()
 
     /// Listen for the imageReady signal from the C++ backend (forwarded via Clipboard singleton).
     Connections {
@@ -324,10 +315,15 @@ Item {
             radius: Tokens.rounding.medium
             color: Colours.tPalette.m3surfaceContainerHigh
 
-            CachingImage {
+            Image {
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.small
-                path: imagePreview.imagePath
+                asynchronous: true
+                cache: false
+                fillMode: Image.PreserveAspectFit
+                source: imagePreview.imagePath.length > 0 
+                    ? ("file://" + imagePreview.imagePath + (imagePreview.reloadToken > 0 ? "?t=" + imagePreview.reloadToken : "")) 
+                    : ""
             }
         }
     }

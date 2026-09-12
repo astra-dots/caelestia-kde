@@ -1,8 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick.Layouts
-import Caelestia.Config
-import qs.services
 import qs.utils
 import qs.modules.nexus.common
 
@@ -32,9 +30,9 @@ PageBase {
         }
 
         NavRow {
-            icon: "waving_hand"
-            label: qsTr("Greeter")
-            status: qsTr("Greeting display, popout")
+            icon: "web_asset"
+            label: qsTr("Active window")
+            status: qsTr("Title display, popout")
             onClicked: root.nState.openSubPage(8)
         }
 
@@ -62,7 +60,7 @@ PageBase {
         NavRow {
             icon: "dock"
             label: qsTr("Dock")
-            status: qsTr("Positioning, recoloring")
+            status: Strings.localizeEnglishSpelling(qsTr("Positioning, recolouring"))
             onClicked: root.nState.openSubPage(12)
         }
 

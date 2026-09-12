@@ -5,34 +5,11 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Caelestia.Config
-import Caelestia.Services
 import qs.components.misc
 import qs.services
 
 Scope {
-    id: root
-
     property alias lock: lock
-    readonly property bool isHyprland: !!Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE")
-    property bool kdeLocked: false
-
-    function requestLock(): void {
-        if (root.isHyprland)
-            lock.locked = true;
-        else {
-            root.kdeLocked = true;
-            Quickshell.execDetached(["loginctl", "lock-session"]);
-        }
-    }
-
-    function requestUnlock(): void {
-        if (root.isHyprland)
-            lock.unlock();
-        else {
-            root.kdeLocked = false;
-            Quickshell.execDetached(["loginctl", "unlock-session"]);
-        }
-    }
 
     WlSessionLock {
         id: lock
@@ -57,41 +34,31 @@ Scope {
         lock: lock
     }
 
-    Connections {
-        function onLockRequested(): void {
-            if (!root.isHyprland)
-                root.kdeLocked = true;
-        }
 
-        function onUnlockRequested(): void {
-            if (!root.isHyprland)
-                root.kdeLocked = false;
-        }
 
-        target: SessionManager
-    }
+
 
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
         name: "unlock"
         description: "Unlock the current session"
-        onPressed: root.requestUnlock()
+        onPressed: lock.unlock()
     }
 
     IpcHandler {
         function lock(): void {
             console.log("Lock IPC trigger received");
-            root.requestLock();
+            lock.locked = true;
             Audio.playLock();
         }
 
         function unlock(): void {
-            root.requestUnlock();
+            lock.unlock();
         }
 
         function isLocked(): bool {
-            return root.isHyprland ? lock.locked : root.kdeLocked;
+            return lock.locked;
         }
 
         target: "lock"
@@ -103,7 +70,7 @@ Scope {
         interval: 750
         onTriggered: {
             if (GlobalConfig.lock.lockOnStartup) {
-                root.requestLock();
+                lock.locked = true;
             }
         }
     }
@@ -129,3 +96,4 @@ Scope {
         }
     }
 }
+

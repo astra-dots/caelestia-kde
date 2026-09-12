@@ -2,7 +2,6 @@
 
 #include <qfont.h>
 #include <qqmlintegration.h>
-#include <qvariant.h>
 
 namespace caelestia::config {
 

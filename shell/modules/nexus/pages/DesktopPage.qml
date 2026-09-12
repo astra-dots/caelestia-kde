@@ -123,7 +123,7 @@ PageBase {
         NavRow {
             icon: "extension"
             label: qsTr("Desktop Addons")
-            status: qsTr("Clock, Lyrics, Visualiser")
+            status: qsTr("Clock, Lyrics, Visualiser, Shimeji")
             onClicked: root.nState.openSubPage(1)
         }
 

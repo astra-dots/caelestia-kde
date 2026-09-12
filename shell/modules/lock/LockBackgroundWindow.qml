@@ -13,65 +13,20 @@ import qs.modules.drawers.blur
 Window {
     id: root
 
-    required property var targetScreen
-
-    readonly property real lockHeight: Math.min(root.targetScreen?.width ?? root.width, root.targetScreen?.height ?? root.height)
-    readonly property bool isPortrait: (root.targetScreen?.width ?? root.width) < (root.targetScreen?.height ?? root.height)
-    property bool contentReady: Colours.schemeLoaded
-
     color: "black"
-    visible: true
+
+    readonly property real lockHeight: Math.min(root.screen?.width ?? 0, root.screen?.height ?? 0)
+
+    readonly property bool isPortrait: (root.screen?.width ?? 0) < (root.screen?.height ?? 0)
+
+    contentItem.Config.screen: screen.name
+    contentItem.Tokens.screen: screen.name
+
+    width: root.screen?.width ?? 1920
+    height: root.screen?.height ?? 1080
     visibility: Window.FullScreen
-    flags: Qt.FramelessWindowHint
-    width: root.targetScreen?.width ?? 1920
-    height: root.targetScreen?.height ?? 1080
 
-    contentItem.Config.screen: targetScreen.name
-    contentItem.Tokens.screen: targetScreen.name
 
-    Timer {
-        id: fallbackReadyTimer
-
-        interval: 250
-        running: !root.contentReady
-        onTriggered: root.contentReady = true
-    }
-
-    Shortcut {
-        sequences: ["Escape"]
-        onActivated: Qt.quit()
-    }
-
-    TapHandler {
-        onTapped: (eventPoint) => {
-            const mapped = root.contentItem.mapToItem(lockContent, eventPoint.position.x, eventPoint.position.y);
-            if (!lockContent.contains(mapped)) {
-                Qt.quit();
-            }
-        }
-    }
-
-    QtObject {
-        id: mockLock
-
-        property bool locked: true
-        property bool secure: true
-        property bool unlocking: false
-        property var pam: pamModule
-
-        signal unlock()
-
-        onUnlock: {
-            Quickshell.execDetached(["loginctl", "unlock-session"]);
-            Qt.quit();
-        }
-    }
-
-    Pam {
-        id: pamModule
-
-        lock: mockLock
-    }
 
     Loader {
         id: wallpaperLoader
@@ -81,16 +36,9 @@ Window {
         active: true
 
         source: "../background/Wallpaper.qml"
-
+        
         onLoaded: {
-            item.screen = root.targetScreen;
-        }
-
-        layer.enabled: Config.lock.blurWallpaper
-        layer.effect: MultiEffect {
-            blurEnabled: true
-            blurMax: 64
-            blur: 1.0
+            item.screen = root.screen;
         }
     }
 
@@ -106,13 +54,6 @@ Window {
         anchors.centerIn: parent
         implicitWidth: root.isPortrait ? lockShort : lockLong
         implicitHeight: root.isPortrait ? lockLong : lockShort
-        opacity: root.contentReady ? 1 : 0
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 150
-            }
-        }
 
         Elevation {
             anchors.fill: lockBg
@@ -126,7 +67,7 @@ Window {
             anchors.fill: lockBg
             sourceItem: wallpaperLoader
             sourceRect: Qt.rect(lockContent.x, lockContent.y, lockContent.width, lockContent.height)
-
+            
             layer.enabled: true
             layer.effect: MultiEffect {
                 blurEnabled: true
@@ -171,7 +112,11 @@ Window {
             width: lockContent.implicitWidth - Tokens.padding.extraLargeIncreased
             height: lockContent.implicitHeight - Tokens.padding.extraLargeIncreased
 
-            lock: mockLock
+            // We mock the lock object because Content expects it.
+            // Since we don't have WlSessionLock, we just pass an empty stub.
+            lock: QtObject {
+                property bool locked: true
+            }
         }
     }
 }

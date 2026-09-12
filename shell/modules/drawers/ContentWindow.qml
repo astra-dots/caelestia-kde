@@ -255,7 +255,7 @@ StyledWindow {
             visibilities.dashboard = false;
             visibilities.screenshot = false;
             visibilities.utilities = false;
-            Visibilities.setOverview(false);
+            visibilities.overview = false;
             panels.popouts.hasCurrent = false;
             panels.popouts.detachedMode = "";
             bar.closeTray();
@@ -670,7 +670,7 @@ StyledWindow {
         MouseArea {
             anchors.fill: parent
             visible: visibilities.overview
-            onClicked: Visibilities.setOverview(false)
+            onClicked: visibilities.overview = false
         }
         Screenshot.ScreenshotOverlay {
             id: screenshotOverlay

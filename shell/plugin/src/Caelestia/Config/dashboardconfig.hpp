@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 
 namespace caelestia::config {
 
-class DashboardPerformance : public settings::ObjectNode {
-    CONFIG_NODE(DashboardPerformance, settings::ObjectNode)
+class DashboardPerformance : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(bool, showBattery, true)
     CONFIG_PROPERTY(bool, showGpu, true)
@@ -14,10 +14,15 @@ class DashboardPerformance : public settings::ObjectNode {
     CONFIG_PROPERTY(bool, showMemory, true)
     CONFIG_PROPERTY(bool, showStorage, true)
     CONFIG_PROPERTY(bool, showNetwork, true)
+
+public:
+    explicit DashboardPerformance(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
-class DashboardConfig : public settings::ObjectNode {
-    CONFIG_NODE(DashboardConfig, settings::ObjectNode)
+class DashboardConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_PROPERTY(bool, showOnHover, true)
@@ -38,6 +43,11 @@ class DashboardConfig : public settings::ObjectNode {
     CONFIG_PROPERTY(int, hoverThickness, 10)
     CONFIG_PROPERTY(int, hoverWidth, 50)
     CONFIG_SUBOBJECT(DashboardPerformance, performance)
+
+public:
+    explicit DashboardConfig(QObject* parent = nullptr)
+        : ConfigObject(parent)
+        , m_performance(new DashboardPerformance(this)) {}
 };
 
 } // namespace caelestia::config

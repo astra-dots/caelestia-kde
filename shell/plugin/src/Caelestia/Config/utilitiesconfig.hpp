@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 
 #include <qstring.h>
 #include <qvariant.h>
@@ -9,10 +8,10 @@
 namespace caelestia::config {
 
 using Qt::StringLiterals::operator""_s;
-using settings::vmap;
 
-class UtilitiesToasts : public settings::ObjectNode {
-    CONFIG_NODE(UtilitiesToasts, settings::ObjectNode)
+class UtilitiesToasts : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(QString, fullscreen, u"off"_s)
     CONFIG_GLOBAL_PROPERTY(bool, configLoaded, false)
@@ -33,19 +32,26 @@ class UtilitiesToasts : public settings::ObjectNode {
     CONFIG_GLOBAL_PROPERTY(bool, transparency, false)
     CONFIG_GLOBAL_PROPERTY(qreal, transparencyBase, 0.85)
 
+public:
+    explicit UtilitiesToasts(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
-class UtilitiesVpn : public settings::ObjectNode {
-    CONFIG_NODE(UtilitiesVpn, settings::ObjectNode)
+class UtilitiesVpn : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_GLOBAL_PROPERTY(bool, enabled, false)
-    CONFIG_GLOBAL_PROPERTY(QVariantList, provider, QVariantList())
-    CONFIG_GLOBAL_PROPERTY(QString, selectedProvider, QString())
+    CONFIG_GLOBAL_PROPERTY(QVariantList, provider)
 
+public:
+    explicit UtilitiesVpn(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
-class UtilitiesGameMode : public settings::ObjectNode {
-    CONFIG_NODE(UtilitiesGameMode, settings::ObjectNode)
+class UtilitiesGameMode : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_GLOBAL_PROPERTY(bool, disableHyprlandAnimations, true)
     CONFIG_GLOBAL_PROPERTY(bool, disableHyprlandBlur, true)
@@ -56,14 +62,19 @@ class UtilitiesGameMode : public settings::ObjectNode {
     CONFIG_GLOBAL_PROPERTY(bool, disableToastTransparency, true)
     CONFIG_GLOBAL_PROPERTY(bool, disableDesktopLyrics, true)
     CONFIG_GLOBAL_PROPERTY(bool, disableVisualizer, true)
+    CONFIG_GLOBAL_PROPERTY(bool, disableShimeji, true)
 
     CONFIG_GLOBAL_PROPERTY(bool, autoEnable, true)
-    CONFIG_GLOBAL_PROPERTY(QStringList, autoEnableRegexes, QStringList())
+    CONFIG_GLOBAL_PROPERTY(QStringList, autoEnableRegexes)
 
+public:
+    explicit UtilitiesGameMode(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
-class UtilitiesConfig : public settings::ObjectNode {
-    CONFIG_NODE(UtilitiesConfig, settings::ObjectNode)
+class UtilitiesConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_PROPERTY(bool, showOnHover, true)
@@ -78,7 +89,7 @@ class UtilitiesConfig : public settings::ObjectNode {
     CONFIG_PROPERTY(bool, showScreenRecorder, true)
     CONFIG_PROPERTY(bool, showQuickToggles, true)
     CONFIG_PROPERTY(QVariantList, quickToggles,
-        DEFAULT_ARG({
+        {
             vmap({ { u"id"_s, u"wifi"_s }, { u"enabled"_s, true } }),
             vmap({ { u"id"_s, u"bluetooth"_s }, { u"enabled"_s, true } }),
             vmap({ { u"id"_s, u"mic"_s }, { u"enabled"_s, true } }),
@@ -88,8 +99,14 @@ class UtilitiesConfig : public settings::ObjectNode {
             vmap({ { u"id"_s, u"vpn"_s }, { u"enabled"_s, false } }),
             vmap({ { u"id"_s, u"wallpaper"_s }, { u"enabled"_s, true } }),
             vmap({ { u"id"_s, u"badapple"_s }, { u"enabled"_s, true } }),
-        }))
+        })
 
+public:
+    explicit UtilitiesConfig(QObject* parent = nullptr)
+        : ConfigObject(parent)
+        , m_toasts(new UtilitiesToasts(this))
+        , m_vpn(new UtilitiesVpn(this))
+        , m_gameMode(new UtilitiesGameMode(this)) {}
 };
 
 } // namespace caelestia::config

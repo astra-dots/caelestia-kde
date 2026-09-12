@@ -113,9 +113,14 @@ PageBase {
         }
         ToggleRow {
             text: qsTr("Disable visualizer")
-            last: true
             checked: GlobalConfig.utilities.gameMode.disableVisualizer
             onToggled: GlobalConfig.utilities.gameMode.disableVisualizer = checked
+        }
+        ToggleRow {
+            text: qsTr("Disable shimeji pets")
+            last: true
+            checked: GlobalConfig.utilities.gameMode.disableShimeji
+            onToggled: GlobalConfig.utilities.gameMode.disableShimeji = checked
         }
     }
 }

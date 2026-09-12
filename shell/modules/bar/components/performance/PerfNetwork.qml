@@ -1,5 +1,4 @@
 import QtQuick
-import Caelestia.Services
 import qs.components
 import qs.services
 
@@ -13,13 +12,12 @@ PerfStat {
     accent: Colours.palette.m3tertiary
     value: NaN
     valueText: {
-        const fmt = NetworkUsage.formatBytesRate(totalSpeed);
+        const fmt = NetworkUsage.formatBytes(totalSpeed);
         if (!fmt)
             return "0.0 B/s";
         return `${fmt.value.toFixed(1)} ${fmt.unit}`;
     }
 
-    ServiceRef {
-        service: NetworkUsage
-    }
+    Component.onCompleted: NetworkUsage.refCount += 1
+    Component.onDestruction: NetworkUsage.refCount = Math.max(0, NetworkUsage.refCount - 1)
 }

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 
 namespace caelestia::config {
 
-class OverviewConfig : public settings::ObjectNode {
-    CONFIG_NODE(OverviewConfig, settings::ObjectNode)
+class OverviewConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_PROPERTY(bool, disableWallpaperBlur, true)
@@ -25,6 +25,10 @@ class OverviewConfig : public settings::ObjectNode {
     CONFIG_PROPERTY(qreal, gridFadeSpeed, 1.0)
     CONFIG_PROPERTY(int, easingType, 2) // Easing.OutQuad
     CONFIG_PROPERTY(int, layoutType, 1) // 0: KDE, 1: GNOME
+
+public:
+    explicit OverviewConfig(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
 } // namespace caelestia::config

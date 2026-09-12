@@ -1,17 +1,15 @@
 #include "storage.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <qdir.h>
 #include <qfile.h>
 #include <qfileinfo.h>
 #include <qhash.h>
 #include <qloggingcategory.h>
 #include <qstorageinfo.h>
-
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
-
-#include <algorithm>
-#include <cmath>
 
 Q_LOGGING_CATEGORY(lcStorage, "caelestia.services.storage", QtInfoMsg)
 
@@ -145,8 +143,8 @@ void Storage::setManualPrimaryDisk(DiskInfo* disk) {
         return;
     }
     m_manualPrimaryDisk = disk;
-    emit manualPrimaryDiskChanged();
-    emit primaryDiskChanged();
+    Q_EMIT manualPrimaryDiskChanged();
+    Q_EMIT primaryDiskChanged();
 }
 
 DiskInfo* Storage::primaryDisk() const {
@@ -217,7 +215,6 @@ void Storage::tick() {
         quint64 usedBytes = 0;
         bool hasRoot = false;
         QByteArray device;
-        QByteArray fsType;
     };
 
     QHash<QByteArray, DeviceEntry> byDevice;
@@ -239,7 +236,6 @@ void Storage::tick() {
 
         DeviceEntry& e = byDevice[device];
         e.device = device;
-        e.fsType = v.fileSystemType();
         e.totalBytes = totalBytes;
         e.usedBytes = usedBytes;
         e.hasRoot = e.hasRoot || isRoot;
@@ -249,22 +245,6 @@ void Storage::tick() {
         const DeviceEntry& e = it.value();
         const QStringList disks = resolveToPhysicalDisks(QString::fromLocal8Bit(e.device));
         if (disks.isEmpty()) {
-            // ZFS has no /dev block device to resolve — its "device" is a
-            // "pool/dataset" name (e.g. rpool/root), so resolveToPhysicalDisks
-            // returns nothing and the whole pool would be dropped. Fall back to
-            // keying by the pool name. Datasets in a pool share the pool's free
-            // space, so keep a single representative entry per pool (preferring
-            // the root dataset, else the largest) rather than summing them.
-            if (e.fsType == "zfs") {
-                const qsizetype slash = e.device.indexOf('/');
-                const QString pool = QString::fromLocal8Bit(slash > 0 ? e.device.left(slash) : e.device);
-                Accum& a = byDisk[pool];
-                if (!a.hasRoot && (e.hasRoot || e.totalBytes > a.totalBytes)) {
-                    a.usedBytes = e.usedBytes;
-                    a.totalBytes = e.totalBytes;
-                    a.hasRoot = e.hasRoot;
-                }
-            }
             continue;
         }
         for (const QString& d : disks) {
@@ -316,16 +296,16 @@ void Storage::tick() {
     m_disks = next;
 
     if (listChanged) {
-        emit disksChanged();
+        Q_EMIT disksChanged();
     }
     if (std::abs(percentage() - prevPercentage) > 0.0001) {
-        emit percentageChanged();
+        Q_EMIT percentageChanged();
     }
     if (manualCleared) {
-        emit manualPrimaryDiskChanged();
+        Q_EMIT manualPrimaryDiskChanged();
     }
     if (primaryDisk() != prevPrimary) {
-        emit primaryDiskChanged();
+        Q_EMIT primaryDiskChanged();
     }
 }
 

@@ -22,21 +22,15 @@ qml_module(caelestia-services
         beattracker.cpp
         audiocollector.cpp
         audioprovider.cpp
-        audiodevicebackend.cpp
-        audiodevicebackend.hpp
         ${CAVA_SOURCES}
         tickingservice.cpp
         sensorslib.cpp
         usagefmt.cpp
-        networkusage.cpp
-        networkusage.hpp
         cpu.cpp
         gpu.cpp
         memory.cpp
         diskinfo.cpp
         storage.cpp
-        weather.cpp
-        weather.hpp
         lyriccandidate.cpp
         lyrics.cpp
         sessionmanager.cpp
@@ -45,10 +39,6 @@ qml_module(caelestia-services
         discordipc.hpp
         hyprlandstate.cpp
         hyprlandstate.hpp
-        hyprdevices.cpp
-        hyprdevices.hpp
-        hyprextras.cpp
-        hyprextras.hpp
         keybindsmodel.cpp
         keybindsmodel.hpp
         emojidb.cpp
@@ -78,8 +68,6 @@ qml_module(caelestia-services
         krohnkiteconfig.hpp
         windowscreencast.cpp
         windowscreencast.hpp
-        windowstream.cpp
-        windowstream.hpp
         windowicon.hpp
         minimizegeometry.cpp
         minimizegeometry.hpp
@@ -93,7 +81,6 @@ qml_module(caelestia-services
         NmQt.hpp
     LIBRARIES
         Qt::DBus
-        Qt::Network
         Qt::Gui
         Qt::Quick
         Qt::GuiPrivate
@@ -106,9 +93,9 @@ qml_module(caelestia-services
         ${CAVA_LIBRARIES}
         Sensors::Sensors
         KF6::NetworkManagerQt
-        KF6::PulseAudioQt
         caelestia-core
         caelestia-config
+        caelestia-internal
 )
 
 

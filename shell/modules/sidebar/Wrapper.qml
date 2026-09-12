@@ -33,9 +33,6 @@ Item {
     Behavior on offsetScale {
         Anim {}
     }
-    Behavior on anchors.bottomMargin {
-        Anim {}
-    }
     Loader {
         id: content
 

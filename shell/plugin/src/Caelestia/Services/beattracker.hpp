@@ -1,10 +1,8 @@
 #pragma once
 
-#include <qqmlintegration.h>
-
-#include <aubio/aubio.h>
-
 #include "audioprovider.hpp"
+#include <aubio/aubio.h>
+#include <qqmlintegration.h>
 
 namespace caelestia::services {
 

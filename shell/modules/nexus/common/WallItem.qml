@@ -6,7 +6,6 @@ import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.components.controls
-import qs.components.images
 import qs.services
 import qs.utils
 
@@ -20,8 +19,6 @@ Item {
     property alias radius: imgWrapper.radius
     property alias imgHeight: imgWrapper.implicitHeight
     property bool fillLabel: true
-    property bool isFolder: false
-    property int folderCount: 0
 
     signal clicked
 
@@ -71,48 +68,25 @@ Item {
                 }
             }
 
-            CachingImage {
+            Image {
                 id: img
 
-                path: root.displaySource
+                source: root.displaySource
                 anchors.fill: parent
+                asynchronous: true
+                fillMode: Image.PreserveAspectCrop
+                sourceSize: {
+                    const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
+                    const w = width > 0 ? width : (imgWrapper.width > 0 ? imgWrapper.width : 200);
+                    const h = height > 0 ? height : (imgWrapper.height > 0 ? imgWrapper.height : 200);
+                    return Qt.size(w * dpr, h * dpr);
+                }
                 retainWhileLoading: true
                 opacity: status === Image.Ready ? 1 : 0
 
                 Behavior on opacity {
                     Anim {
                         type: Anim.SlowEffects
-                    }
-                }
-            }
-
-            StyledRect {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: Tokens.padding.small
-                radius: Tokens.rounding.full
-                color: Colours.palette.m3secondaryContainer
-                visible: root.isFolder
-                width: folderBadge.implicitWidth + Tokens.padding.medium * 2
-                height: folderBadge.implicitHeight + Tokens.padding.small * 2
-
-                RowLayout {
-                    id: folderBadge
-
-                    anchors.centerIn: parent
-                    spacing: Tokens.spacing.small
-
-                    MaterialIcon {
-                        text: "folder"
-                        color: Colours.palette.m3onSecondaryContainer
-                        fontStyle: Tokens.font.icon.builders.medium.weight(Font.Medium).build()
-                    }
-
-                    StyledText {
-                        text: root.folderCount > 0 ? String(root.folderCount) : ""
-                        visible: root.folderCount > 0
-                        color: Colours.palette.m3onSecondaryContainer
-                        font: Tokens.font.label.builders.small.weight(Font.Medium).build()
                     }
                 }
             }

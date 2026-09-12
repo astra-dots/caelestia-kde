@@ -17,7 +17,6 @@ Item {
     required property var content
     required property DrawerVisibilities visibilities
     required property var panels
-    required property real maxWidth
     required property real maxHeight
     required property StyledTextField search
     required property int padding
@@ -32,8 +31,7 @@ Item {
     readonly property bool showKeybinds: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}keybinds `)
     readonly property bool showAnimations: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}animations `)
     readonly property bool showPinned: LauncherPins.showPinnedOnOpen && search.text.length === 0 && !showAllApps && !showWallpapers && !showWindowSwitcher && !showKeybinds && !showAnimations && !showEmojis
-    readonly property bool showAppsBrowser: root.state === "apps" && !search.text && Config.launcher.showBrowseOnEmpty && !showPinned
-    readonly property var currentList: showEmojis ? emojiList.item : (showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : (showPinned ? pinnedList.item : (showAppsBrowser ? browser.item : appList.item))))))
+    readonly property var currentList: showEmojis ? emojiList.item : (showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : (showPinned ? pinnedList.item : appList.item)))))
 
     readonly property var wallpaperTabs: {
         const res = [];
@@ -67,8 +65,8 @@ Item {
 
             PropertyChanges {
                 target: root
-                implicitWidth: root.showAppsBrowser ? browser.implicitWidth : root.Tokens.sizes.launcher.itemWidth
-                implicitHeight: root.showAppsBrowser ? Math.min(root.maxHeight, Math.max(root.Tokens.sizes.launcher.browseMinHeight, Math.min(browser.implicitHeight, root.Tokens.sizes.launcher.browseHeight))) : Math.min(root.maxHeight, appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight)
+                implicitWidth: root.Tokens.sizes.launcher.itemWidth
+                implicitHeight: Math.min(root.maxHeight, appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight)
             }
         },
         State {
@@ -217,7 +215,7 @@ Item {
     Loader {
         id: appList
 
-        active: root.state === "apps" && !root.showAppsBrowser
+        active: root.state === "apps"
 
         anchors.fill: parent
 
@@ -225,67 +223,6 @@ Item {
             search: root.search
             visibilities: root.visibilities
             parentList: root
-        }
-    }
-
-    Loader {
-        id: browser
-
-        active: root.state === "apps"
-        visible: root.showAppsBrowser
-        opacity: root.showAppsBrowser ? 1 : 0
-
-        anchors.fill: parent
-
-        sourceComponent: AppBrowser {
-            visibilities: root.visibilities
-            maxWidth: root.maxWidth
-        }
-
-        Behavior on opacity {
-            enabled: root.visibilities.launcher && !root.visibilities.skipLauncherAnim
-
-            Anim {
-                type: Anim.DefaultEffects
-            }
-        }
-    }
-
-    Row {
-        id: filtersRow
-
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: Tokens.spacing.small
-
-        visible: root.state === "wallpapers"
-
-        IconTextButton {
-            text: qsTr("Images")
-            icon: "image"
-            type: Wallpapers.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
-            onClicked: {
-                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Image" ? "All" : "Image";
-                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
-            }
-        }
-        IconTextButton {
-            text: qsTr("Animated")
-            icon: "animation"
-            type: Wallpapers.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
-            onClicked: {
-                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Animated" ? "All" : "Animated";
-                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
-            }
-        }
-        IconTextButton {
-            text: qsTr("Videos")
-            icon: "videocam"
-            type: Wallpapers.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
-            onClicked: {
-                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Video" ? "All" : "Video";
-                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
-            }
         }
     }
 
@@ -313,8 +250,8 @@ Item {
         asynchronous: true
         active: root.state === "wallpapers"
 
-        anchors.top: filtersRow.bottom
-        anchors.topMargin: Tokens.spacing.medium
+        anchors.top: parent.top
+        anchors.topMargin: Tokens.padding.small
         anchors.horizontalCenter: parent.horizontalCenter
         height: root.Tokens.sizes.launcher.wallpaperHeight
 
@@ -516,9 +453,9 @@ Item {
         /// its own, so ask the list itself.
         readonly property bool cliphistMissing: root.currentList?.state === "clipboard" && !Clipboard.available
 
-        opacity: (!root.showAppsBrowser && root.state !== "emoji" && root.currentList?.count === 0) ? 1 : 0
-        scale: (!root.showAppsBrowser && root.state !== "emoji" && root.currentList?.count === 0) ? 1 : 0.5
-        visible: !root.showAppsBrowser && root.state !== "emoji" && opacity > 0
+        opacity: (root.state !== "emoji" && root.currentList?.count === 0) ? 1 : 0
+        scale: root.currentList?.count === 0 ? 1 : 0.5
+        visible: root.state !== "emoji" && opacity > 0
 
         spacing: Tokens.spacing.medium
         padding: Tokens.padding.large

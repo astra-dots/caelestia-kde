@@ -1,20 +1,19 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 #include <qstring.h>
 
 namespace caelestia::config {
 
 using Qt::StringLiterals::operator""_s;
-using settings::vmap;
 
-class AiConfig : public settings::ObjectNode {
-    CONFIG_NODE(AiConfig, settings::ObjectNode)
+class AiConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(QString, ollamaUrl, u"http://localhost:11434"_s)
     CONFIG_PROPERTY(QString, ollamaModel, u"llama3"_s)
-
+    
     CONFIG_PROPERTY(bool, saveChatHistory, true)
     CONFIG_PROPERTY(QString, ollamaHistoryJson, u"[]"_s)
 
@@ -102,6 +101,9 @@ class AiConfig : public settings::ObjectNode {
     CONFIG_PROPERTY(QString, opencodeGoUrl, u"https://opencode.ai/zen/go/v1"_s)
     CONFIG_PROPERTY(QString, defaultOpencodeGoModel, u""_s)
 
+public:
+    explicit AiConfig(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
 } // namespace caelestia::config

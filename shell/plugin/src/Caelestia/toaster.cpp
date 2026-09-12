@@ -1,7 +1,6 @@
 #include "toaster.hpp"
 
 #include <qlogging.h>
-#include <qqmlengine.h>
 #include <qtimer.h>
 
 namespace caelestia {
@@ -92,16 +91,6 @@ void Toast::unlock(QObject* sender) {
     if (m_locks.remove(sender) && m_closed) {
         close();
     }
-}
-
-Toaster* Toaster::instance() {
-    static Toaster toaster;
-    return &toaster;
-}
-
-Toaster* Toaster::create(QQmlEngine*, QJSEngine*) {
-    QQmlEngine::setObjectOwnership(instance(), QQmlEngine::CppOwnership);
-    return instance();
 }
 
 Toaster::Toaster(QObject* parent)

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <qqmlintegration.h>
-
 #include "tickingservice.hpp"
+
+#include <qqmlintegration.h>
 
 namespace caelestia::services {
 

@@ -168,7 +168,7 @@ PageBase {
             onToggled: GlobalConfig.overview.hoverBottomRight = checked
         }
         SectionHeader {
-            text: qsTr("Behavior")
+            text: qsTr("Behaviour")
         }
         SelectRow {
             first: true

@@ -1,10 +1,9 @@
 #include "audioprovider.hpp"
 
-#include <qloggingcategory.h>
-#include <qthread.h>
-
 #include "audiocollector.hpp"
 #include "service.hpp"
+#include <qloggingcategory.h>
+#include <qthread.h>
 
 Q_LOGGING_CATEGORY(lcAp, "caelestia.services.ap", QtInfoMsg)
 Q_LOGGING_CATEGORY(lcApProcessor, "caelestia.services.ap.processor", QtInfoMsg)

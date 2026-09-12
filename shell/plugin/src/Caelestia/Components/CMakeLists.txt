@@ -4,14 +4,6 @@ qml_module(caelestia-components
         lazylistview.cpp
         wavyline.cpp
         buttonrow.cpp
-        circularindicatormanager.cpp
-        linearindicatormanager.cpp
-        sparklineitem.cpp
-        visualiserbars.cpp
     LIBRARIES
-        Qt::Gui
         Qt::Quick
-        caelestia-core
-    DEPENDENCIES
-        Caelestia
 )

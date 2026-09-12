@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "clipboardmanager.hpp"
 
-#include "../Config/rootnodes.hpp"
+#include "../Config/config.hpp"
 #include "../Config/launcherconfig.hpp"
 
 #include <qdir.h>
@@ -12,13 +12,12 @@
 #include <qjsonobject.h>
 #include <qloggingcategory.h>
 #include <qregularexpression.h>
-#include <qsavefile.h>
 #include <QStandardPaths>
 
 Q_LOGGING_CATEGORY(lcClipboard, "caelestia.services.clipboard", QtInfoMsg)
 
 namespace caelestia::services {
-
+  
 ClipboardManager::ClipboardManager(QObject* parent)
     : QObject(parent) {
     QString runtimeDir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
@@ -266,12 +265,6 @@ void ClipboardManager::copyPinned(int pinId) {
     qCWarning(lcClipboard) << "Refusing to copy unknown clipboard pin" << pinId;
 }
 
-bool ClipboardManager::isImageCached(int id) const {
-    const QString path = m_imageCacheDir + "/" + QString::number(id) + ".png";
-    const QFileInfo fi(path);
-    return fi.exists() && fi.size() > 0;
-}
-
 void ClipboardManager::reload() {
     // Kill any in-flight list process
     if (m_listProc && m_listProc->state() != QProcess::NotRunning) {
@@ -314,14 +307,14 @@ void ClipboardManager::reload() {
 
         // Parse natively: each line is "<id>\t<preview>"
         static const QRegularExpression imageRe(
-            QStringLiteral(R"(\[\[ binary data [\d\.]+\s*(?:B|KiB|MiB|GiB)\s+(?:png|jpe?g|webp|gif|bmp|ico|tiff|svg)(?:\s+\d+x\d+)?\s*\]\])"),
+            QStringLiteral(R"(^\[\[ binary data .* \]\]$)"),
             QRegularExpression::CaseInsensitiveOption);
 
         QVariantList result;
         const auto lines = output.split('\n');
         result.reserve(lines.size());
 
-        const int maxEntries = caelestia::config::ConfigSingleton::instance()->launcher()->clipboardMaxEntries();
+        const int maxEntries = caelestia::config::GlobalConfig::instance()->launcher()->clipboardMaxEntries();
         int count = 0;
 
         for (const auto& rawLine : lines) {
@@ -361,7 +354,7 @@ void ClipboardManager::reload() {
             const int id = map.value("id").toInt();
             const QString outPath = m_imageCacheDir + "/" + QString::number(id) + ".png";
             // Skip if already cached from a previous reload
-            if (isImageCached(id)) {
+            if (QFileInfo::exists(outPath)) {
                 emit imageReady(id, outPath);
                 continue;
             }
@@ -388,15 +381,6 @@ void ClipboardManager::reload() {
 }
 
 void ClipboardManager::decodeImage(int id, const QString& outPath) {
-    if (isImageCached(id)) {
-        emit imageReady(id, outPath);
-        return;
-    }
-
-    if (m_activeDecodes.contains(id)) {
-        return;
-    }
-
     // Ensure output directory exists
     const QFileInfo fi(outPath);
     QDir dir(fi.absolutePath());
@@ -406,14 +390,11 @@ void ClipboardManager::decodeImage(int id, const QString& outPath) {
     }
     QFile::setPermissions(dir.absolutePath(), QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
 
-    m_activeDecodes.insert(id);
-
     auto* proc = new QProcess(this);
     proc->setProgram("cliphist");
     proc->setArguments({"decode", QString::number(id)});
 
     connect(proc, &QProcess::finished, this, [this, proc, outPath, id](int exitCode, QProcess::ExitStatus) {
-        m_activeDecodes.remove(id);
         if (exitCode != 0) {
             qCWarning(lcClipboard) << "cliphist decode failed for id" << id;
             proc->deleteLater();
@@ -423,29 +404,20 @@ void ClipboardManager::decodeImage(int id, const QString& outPath) {
         const auto data = proc->readAllStandardOutput();
         proc->deleteLater();
 
-        if (data.isEmpty()) {
-            qCWarning(lcClipboard) << "cliphist decode produced empty output for id" << id;
-            return;
-        }
-
-        QSaveFile f(outPath);
-        if (!f.open(QIODevice::WriteOnly)) {
+        QFile f(outPath);
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             qCWarning(lcClipboard) << "Failed to write decoded clipboard image to:" << outPath;
             return;
         }
         f.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
         f.write(data);
-        if (!f.commit()) {
-            qCWarning(lcClipboard) << "Failed to commit decoded clipboard image to:" << outPath;
-            return;
-        }
+        f.close();
 
         // Signal QML that this specific image is ready — no timers needed.
         emit imageReady(id, outPath);
     });
 
-    connect(proc, &QProcess::errorOccurred, this, [this, proc, id](QProcess::ProcessError err) {
-        m_activeDecodes.remove(id);
+    connect(proc, &QProcess::errorOccurred, this, [proc, id](QProcess::ProcessError err) {
         qCWarning(lcClipboard) << "cliphist decode process error for id" << id << ":" << err;
         proc->deleteLater();
     });
@@ -454,8 +426,6 @@ void ClipboardManager::decodeImage(int id, const QString& outPath) {
 }
 
 void ClipboardManager::clearHistory() {
-    m_activeDecodes.clear();
-
     // Stop any in-flight list process before wiping history.
     if (m_listProc && m_listProc->state() != QProcess::NotRunning) {
         m_listProc->kill();

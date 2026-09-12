@@ -1,5 +1,4 @@
 #include "fontbuilder.hpp"
-
 #include <qloggingcategory.h>
 
 namespace caelestia::config {

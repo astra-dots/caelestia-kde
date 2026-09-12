@@ -157,6 +157,7 @@ PageBase {
             text: qsTr("Liquid Smear")
         }
     ]
+
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
@@ -185,7 +186,6 @@ PageBase {
         }
 
         SelectRow {
-            last: true
             Layout.fillWidth: true
             label: qsTr("Dashboard profile picture shape")
             subtext: qsTr("Choose the shape of the profile picture on the dashboard")
@@ -201,6 +201,26 @@ PageBase {
             menuItems: dashboardShapeItems
             onSelected: item => {
                 GlobalConfig.dashboard.profilePicShape = item.value
+            }
+        }
+
+        SelectRow {
+            Layout.fillWidth: true
+            last: true
+            label: qsTr("Lock screen profile picture shape")
+            subtext: qsTr("Choose the shape of the profile picture on the lock screen")
+            fallbackIcon: "lock"
+            fallbackText: qsTr("Clam Shell")
+            active: {
+                for (let i = 0; i < lockShapeItems.length; i++) {
+                    if (lockShapeItems[i].value === GlobalConfig.lock.profilePicShape)
+                        return lockShapeItems[i];
+                }
+                return lockShapeItems[0];
+            }
+            menuItems: lockShapeItems
+            onSelected: item => {
+                GlobalConfig.lock.profilePicShape = item.value
             }
         }
 
@@ -244,8 +264,8 @@ PageBase {
 
         ToggleRow {
             Layout.fillWidth: true
-            text: qsTr("Recolor media GIF")
-            subtext: qsTr("Apply system theme colors to the media GIF")
+            text: Strings.localizeEnglishSpelling(qsTr("Recolour media GIF"))
+            subtext: Strings.localizeEnglishSpelling(qsTr("Apply system theme colours to the media GIF"))
             checked: Config.dashboard.colorizeMediaGif
             onToggled: GlobalConfig.dashboard.colorizeMediaGif = checked
         }
@@ -260,8 +280,8 @@ PageBase {
 
         ToggleRow {
             Layout.fillWidth: true
-            text: qsTr("Randomize shape colors")
-            subtext: qsTr("Randomly shift shape colors while morphing")
+            text: Strings.localizeEnglishSpelling(qsTr("Randomize shape colours"))
+            subtext: Strings.localizeEnglishSpelling(qsTr("Randomly shift shape colours while morphing"))
             checked: Config.dashboard.randomizeMediaShapeColors
             onToggled: GlobalConfig.dashboard.randomizeMediaShapeColors = checked
         }
@@ -426,7 +446,7 @@ PageBase {
 
         // Behaviour
         SectionHeader {
-            text: qsTr("Behavior")
+            text: Strings.localizeEnglishSpelling(qsTr("Behaviour"))
         }
 
         StepperRow {

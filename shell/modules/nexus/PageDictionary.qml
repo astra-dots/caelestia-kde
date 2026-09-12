@@ -8,21 +8,20 @@ QtObject {
         // Personalization
         {
             label: qsTr("Appearance"),
-            key: "appearance",
             icon: "palette",
-            description: qsTr("Wallpapers, fonts, colors"),
+            description: Strings.localizeEnglishSpelling(qsTr("Wallpapers, fonts, colours")),
             category: "personalization",
             settings: [
                 { label: qsTr("Theme & Effects"), pagePath: "wallandstyle/AppearancePage.qml", subPageIdx: 8 },
-                { label: qsTr("Colors"), keywords: ["accent", "palette", "scheme", "theme", "color"], pagePath: "wallandstyle/ColourSelect.qml", subPageIdx: 3 },
+                { label: qsTr("Accent Colors"), pagePath: "wallandstyle/ColourSelect.qml", subPageIdx: 3 },
                 { label: qsTr("Blur & Opacity"), pagePath: "wallandstyle/AppearancePage.qml", subPageIdx: 8 },
-                { label: qsTr("Corner Radius"), keywords: ["rounding", "radius"], pagePath: "wallandstyle/AppearancePage.qml", subPageIdx: 8 },
-                { label: qsTr("Wallpapers"), pagePath: "wallandstyle/WallpaperSelect.qml", subPageIdx: 1 }
+                { label: qsTr("Corner Radius"), pagePath: "wallandstyle/AppearancePage.qml", subPageIdx: 8 },
+                { label: qsTr("Wallpapers"), pagePath: "wallandstyle/WallpaperSelect.qml", subPageIdx: 1 },
+                { label: qsTr("Animations"), pagePath: "wallandstyle/AppearancePage.qml", subPageIdx: 8 }
             ]
         },
         {
             label: qsTr("Desktop & Tiling"),
-            key: "desktop",
             icon: "desktop_windows",
             description: qsTr("KDE Desktop, addons, right click menu"),
             category: "personalization",
@@ -36,7 +35,6 @@ QtObject {
         },
         {
             label: qsTr("Panels"),
-            key: "panels",
             icon: "dock_to_bottom",
             description: qsTr("Dashboard, taskbar, launcher, sidebar"),
             category: "personalization",
@@ -52,7 +50,6 @@ QtObject {
         // Connectivity
         {
             label: qsTr("Network"),
-            key: "network",
             icon: "wifi",
             description: qsTr("Wi-Fi and VPN connections"),
             category: "connectivity",
@@ -63,7 +60,6 @@ QtObject {
         },
         {
             label: qsTr("Connected devices"),
-            key: "bluetooth",
             icon: "bluetooth",
             description: qsTr("Bluetooth, pairing, drivers"),
             category: "connectivity",
@@ -74,7 +70,6 @@ QtObject {
         },
         {
             label: qsTr("Audio & Sound"),
-            key: "audio",
             icon: "volume_up",
             description: qsTr("Output, input, app volume, sound effects"),
             category: "connectivity",
@@ -89,7 +84,6 @@ QtObject {
         // Controls
         {
             label: qsTr("Notifications"),
-            key: "notifications",
             icon: "notifications",
             description: qsTr("Alerts, toasts, and delivery behavior"),
             category: "controls",
@@ -101,7 +95,6 @@ QtObject {
         },
         {
             label: qsTr("Utilities"),
-            key: "utilities",
             icon: "build",
             description: qsTr("Quick controls, clipboard, game mode"),
             category: "controls",
@@ -115,7 +108,6 @@ QtObject {
         },
         {
             label: qsTr("Power"),
-            key: "power",
             icon: "battery_charging_full",
             description: qsTr("Battery indicators, idle suspend"),
             category: "controls",
@@ -126,20 +118,7 @@ QtObject {
             ]
         },
         {
-            label: qsTr("Session"),
-            key: "session",
-            icon: "power_settings_new",
-            description: qsTr("Shutdown, logout, and reboot menu"),
-            category: "controls",
-            settings: [
-                { label: qsTr("Session Menu"), keywords: ["power", "shutdown", "logout", "reboot", "hibernate"] },
-                { label: qsTr("Session Icons"), keywords: ["icon", "logout", "shutdown"] },
-                { label: qsTr("Session Commands"), keywords: ["command", "logout", "shutdown"] }
-            ]
-        },
-        {
             label: qsTr("Shortcuts"),
-            key: "shortcuts",
             icon: "keyboard",
             description: qsTr("Keyboard shortcuts, custom keybinds"),
             category: "controls",
@@ -152,7 +131,6 @@ QtObject {
         // Shell
         {
             label: qsTr("Apps"),
-            key: "apps",
             icon: "apps",
             description: qsTr("Default apps, file types, app details"),
             category: "shell",
@@ -165,7 +143,6 @@ QtObject {
         },
         {
             label: qsTr("Services"),
-            key: "services",
             icon: "settings_suggest",
             description: qsTr("Background services, daemon control"),
             category: "shell",
@@ -176,7 +153,6 @@ QtObject {
         },
         {
             label: qsTr("Language & region"),
-            key: "language",
             icon: "language",
             description: qsTr("Locale, timezone, formats"),
             category: "shell",
@@ -189,7 +165,6 @@ QtObject {
         // System
         {
             label: qsTr("Updates"),
-            key: "updates",
             icon: "update",
             description: qsTr("System updates"),
             category: "system",
@@ -200,17 +175,15 @@ QtObject {
         },
         {
             label: qsTr("Plugins"),
-            key: "plugins",
             icon: "extension",
-            description: qsTr("Personalized desktop experience"),
+            description: qsTr("Plugin support is not available yet"),
             category: "system",
             settings: [
-                { label: qsTr("Plugin system"), description: qsTr("Personalized desktop experience"), keywords: ["extensions", "addons", "plugins"] }
+                { label: qsTr("Plugin support"), description: qsTr("Not available yet"), keywords: ["extensions", "addons", "plugins"] }
             ]
         },
         {
             label: qsTr("About System"),
-            key: "about",
             icon: "info",
             description: qsTr("Specs, version, system information"),
             category: "system",
@@ -224,7 +197,6 @@ QtObject {
         // indexed by position, so entries cannot be reordered independently.
         {
             label: qsTr("AI Assistant"),
-            key: "ai",
             icon: "smart_toy",
             description: qsTr("Claude Code, accounts, providers"),
             category: "assistant",

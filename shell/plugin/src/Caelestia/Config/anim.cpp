@@ -101,7 +101,7 @@ void AnimTokens::bindCurves(AnimCurves* curves) {
     m_curves = curves;
 
     // Rebuild when any curve control points change
-    connect(curves, &settings::Node::optionChanged, this, &AnimTokens::rebuildCurves);
+    connect(curves, &AnimCurves::propertiesChanged, this, &AnimTokens::rebuildCurves);
 
     rebuildCurves();
 }

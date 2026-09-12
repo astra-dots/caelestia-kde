@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import Caelestia.Config
 import qs.components
 import qs.components.controls
@@ -15,34 +14,11 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
-    property var lightSchemes: []
-    property var darkSchemes: []
-
-    function parseSchemeList(json: string): void {
-        const light = [];
-        const dark = [];
-        try {
-            const entries = JSON.parse(json);
-            for (const s of entries) {
-                const entry = { name: s.name, flavour: s.flavour, mode: s.mode, colours: s.colours };
-                if (String(s.mode).toLowerCase().includes("light"))
-                    light.push(entry);
-                else
-                    dark.push(entry);
-            }
-        } catch (e) {
-            // Leave the lists empty on parse failure.
-        }
-        root.lightSchemes = light;
-        root.darkSchemes = dark;
-    }
-
-    title: qsTr("Colors")
+    title: Strings.localizeEnglishSpelling(qsTr("Colours"))
     isSubPage: true
 
     Component.onCompleted: {
         Schemes.reload();
-        schemeListProc.running = true;
     }
 
     ColumnLayout {
@@ -51,171 +27,72 @@ PageBase {
         width: root.cappedWidth
         spacing: Tokens.spacing.large
 
+        Item {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Tokens.padding.small
+        }
+
+        // Standard Connected Navigation Rows
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.extraSmall / 2
+
+            NavRow {
+                first: true
+                icon: "settings_suggest"
+                label: qsTr("Advanced Material You Settings")
+                status: qsTr("Configure advanced color engine settings and integrations")
+                onClicked: root.nState.openSubPage(9)
+            }
+
+            NavRow {
+                last: true
+                icon: "palette"
+                label: qsTr("Extracted Color Palette Inspector")
+                status: qsTr("View all extracted tokens and copyable hex codes")
+                onClicked: root.nState.openSubPage(10)
+            }
+        }
+
         StyledText {
-            text: qsTr("Wallpapers")
+            Layout.topMargin: Tokens.spacing.small
+            text: qsTr("Color Theme")
             font: Tokens.font.title.medium
         }
 
-        StyledRect {
-            id: dynamicCard
-
-            readonly property bool isSelected: Schemes.currentScheme === "dynamic"
-
+        GridLayout {
             Layout.fillWidth: true
-            implicitHeight: dynamicRow.implicitHeight + Tokens.padding.large * 2
-            radius: Tokens.rounding.large
-            color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
-            border.width: isSelected ? 2 : 1
-            border.color: isSelected ? Colours.palette.m3secondary : Colours.palette.m3surfaceVariant
+            columns: 2
+            rowSpacing: Tokens.spacing.medium
+            columnSpacing: Tokens.spacing.medium
 
-            StateLayer {
-                radius: parent.radius
-                onClicked: Colours.setScheme("dynamic")
-            }
-
-            RowLayout {
-                id: dynamicRow
-
-                anchors.fill: parent
-                anchors.margins: Tokens.padding.large
-                spacing: Tokens.spacing.large
+            Repeater {
+                model: [
+                    {
+                        name: qsTr("Dark"),
+                        description: qsTr("Dark theme mode"),
+                        icon: "dark_mode",
+                        mode: "dark"
+                    },
+                    {
+                        name: qsTr("Light"),
+                        description: qsTr("Light theme mode"),
+                        icon: "light_mode",
+                        mode: "light"
+                    }
+                ]
 
                 StyledRect {
-                    Layout.preferredWidth: Tokens.sizes.launcher.itemHeight
-                    Layout.preferredHeight: Tokens.sizes.launcher.itemHeight
-
-                    border.width: 1
-                    border.color: Qt.alpha(Colours.palette.m3outline, 0.5)
-                    radius: Tokens.rounding.full
-                    color: "transparent"
-                    clip: true
-
-                    GridLayout {
-                        anchors.fill: parent
-                        columns: 2
-                        rows: 2
-                        columnSpacing: 0
-                        rowSpacing: 0
-
-                        StyledRect {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: Colours.palette.m3surface
-                            radius: Tokens.rounding.full
-                        }
-                        StyledRect {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: Colours.palette.m3primary
-                            radius: Tokens.rounding.full
-                        }
-                        StyledRect {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: Colours.palette.m3secondary
-                            radius: Tokens.rounding.full
-                        }
-                        StyledRect {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: Colours.palette.m3tertiary
-                            radius: Tokens.rounding.full
-                        }
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Tokens.spacing.extraSmall
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: qsTr("Dynamic")
-                        font: Tokens.font.title.small
-                        color: dynamicCard.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: qsTr("Colors that follow your wallpaper")
-                        font: Tokens.font.body.medium
-                        color: dynamicCard.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
-                    }
-                }
-
-                MaterialIcon {
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: dynamicCard.isSelected
-                    text: "check"
-                    color: Colours.palette.m3onSecondaryContainer
-                    fontStyle: Tokens.font.icon.large
-                }
-            }
-        }
-
-        StyledText {
-            Layout.topMargin: Tokens.spacing.large
-            text: qsTr("Light")
-            font: Tokens.font.title.medium
-        }
-
-        GridLayout {
-            Layout.fillWidth: true
-            columns: 2
-            rowSpacing: Tokens.spacing.medium
-            columnSpacing: Tokens.spacing.medium
-
-            Repeater {
-                model: root.lightSchemes
-
-                PaletteCard {}
-            }
-        }
-
-        StyledText {
-            Layout.topMargin: Tokens.spacing.large
-            text: qsTr("Dark")
-            font: Tokens.font.title.medium
-        }
-
-        GridLayout {
-            Layout.fillWidth: true
-            columns: 2
-            rowSpacing: Tokens.spacing.medium
-            columnSpacing: Tokens.spacing.medium
-
-            Repeater {
-                model: root.darkSchemes
-
-                PaletteCard {}
-            }
-        }
-
-        StyledText {
-            Layout.topMargin: Tokens.spacing.large
-            text: qsTr("Scheme")
-            font: Tokens.font.title.medium
-        }
-
-        GridLayout {
-            Layout.fillWidth: true
-            columns: 2
-            rowSpacing: Tokens.spacing.medium
-            columnSpacing: Tokens.spacing.medium
-
-            Repeater {
-                model: Schemes.variants
-
-                StyledRect {
-                    id: varDelegateRect
+                    id: modeDelegateRect
 
                     required property var modelData
 
-                    readonly property bool isSelected: modelData?.variant === Schemes.currentVariant
+                    readonly property bool isSelected: (modelData?.mode === "light") === Colours.light
 
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.preferredWidth: 1
-                    implicitHeight: varCol.implicitHeight + Tokens.padding.large * 2
+                    implicitHeight: modeCol.implicitHeight + Tokens.padding.medium * 2
                     radius: Tokens.rounding.large
                     color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
                     border.width: isSelected ? 2 : 1
@@ -223,40 +100,40 @@ PageBase {
 
                     StateLayer {
                         radius: parent.radius
-                        onClicked: varDelegateRect.modelData?.onClicked(null)
+                        onClicked: Colours.setMode(modeDelegateRect.modelData?.mode)
                     }
 
                     RowLayout {
-                        id: varCol
+                        id: modeCol
 
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.margins: Tokens.padding.large
-                        spacing: Tokens.spacing.large
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
 
                         MaterialIcon {
                             Layout.alignment: Qt.AlignTop
-                            text: varDelegateRect.modelData?.icon ?? ""
-                            fontStyle: Tokens.font.icon.extraLarge
-                            color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                            text: modeDelegateRect.modelData?.icon ?? ""
+                            fontStyle: Tokens.font.icon.large
+                            color: modeDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                         }
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: Tokens.spacing.extraSmall
+                            spacing: 2
 
                             StyledText {
                                 Layout.fillWidth: true
-                                text: varDelegateRect.modelData?.name ?? ""
-                                font: Tokens.font.title.small
-                                color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                                text: modeDelegateRect.modelData?.name ?? ""
+                                font: Tokens.font.body.small
+                                color: modeDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: varDelegateRect.modelData?.description ?? ""
-                                font: Tokens.font.body.medium
-                                color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
+                                text: modeDelegateRect.modelData?.description ?? ""
+                                font: Tokens.font.label.small
+                                color: modeDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
                                 wrapMode: Text.Wrap
                             }
                         }
@@ -265,203 +142,182 @@ PageBase {
             }
         }
 
-        // Extracted Color Palette Inspector subpage button
-        StyledRect {
-            Layout.fillWidth: true
+        StyledText {
             Layout.topMargin: Tokens.spacing.large
-            implicitHeight: allColorsRow.implicitHeight + Tokens.padding.large * 2
-            radius: Tokens.rounding.large
-            color: Colours.tPalette.m3surfaceContainer
+            text: qsTr("Schemes")
+            font: Tokens.font.title.medium
+        }
 
-            StateLayer {
-                anchors.fill: parent
-                radius: parent.radius
-                onClicked: root.nState.openSubPage(11)
-            }
+        GridLayout {
+            Layout.fillWidth: true
+            columns: 2
+            rowSpacing: Tokens.spacing.medium
+            columnSpacing: Tokens.spacing.medium
 
-            RowLayout {
-                id: allColorsRow
+            Repeater {
+                model: Schemes.list
+                
+                StyledRect {
+                    id: delegateRect
 
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Tokens.padding.large
-                spacing: Tokens.spacing.large
-
-                MaterialIcon {
-                    text: "palette"
-                    fontStyle: Tokens.font.icon.extraLarge
-                    color: Colours.palette.m3onSurface
-                }
-
-                ColumnLayout {
+                    required property var modelData
+                    
+                    readonly property bool isSelected: `${modelData?.name} ${modelData?.flavour}` === Schemes.currentScheme
+                    
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing.extraSmall
-
-                    StyledText {
-                        text: qsTr("Extracted Color Palette Inspector")
-                        font: Tokens.font.title.small
-                        color: Colours.palette.m3onSurface
+                    Layout.fillHeight: true
+                    implicitHeight: schemeRow.implicitHeight + Tokens.padding.medium * 2
+                    radius: Tokens.rounding.large
+                    color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
+                    border.width: isSelected ? 2 : 1
+                    border.color: isSelected ? Colours.palette.m3secondary : Colours.palette.m3surfaceVariant
+                    
+                    StateLayer {
+                        radius: parent.radius
+                        onClicked: delegateRect.modelData?.onClicked(null)
                     }
-                    StyledText {
-                        text: qsTr("View all extracted tokens and copyable hex codes")
-                        font: Tokens.font.body.medium
-                        color: Colours.palette.m3onSurfaceVariant
-                    }
-                }
+                    
+                    RowLayout {
+                        id: schemeRow
 
-                MaterialIcon {
-                    text: "chevron_right"
-                    fontStyle: Tokens.font.icon.large
-                    color: Colours.palette.m3onSurfaceVariant
+                        anchors.fill: parent
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
+                        
+                        StyledRect {
+                            id: preview
+                            Layout.preferredWidth: 26
+                            Layout.preferredHeight: 26
+                            
+                            border.width: 1
+                            border.color: Qt.alpha(`#${delegateRect.modelData?.colours?.outline}`, 0.5)
+
+                            color: `#${delegateRect.modelData?.colours?.surface}`
+                            radius: Tokens.rounding.full
+
+                            Item {
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                anchors.right: parent.right
+
+                                width: parent.width / 2
+                                clip: true
+
+                                StyledRect {
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    anchors.right: parent.right
+
+                                    width: preview.width
+                                    color: `#${delegateRect.modelData?.colours?.primary}`
+                                    radius: Tokens.rounding.full
+                                }
+                            }
+                        }
+                        
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: delegateRect.modelData?.flavour ?? ""
+                                font: Tokens.font.body.small
+                                color: delegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: delegateRect.modelData?.name ?? ""
+                                font: Tokens.font.label.small
+                                color: delegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
+                            }
+                        }
+                        
+                        MaterialIcon {
+                            Layout.alignment: Qt.AlignVCenter
+                            visible: delegateRect.isSelected
+                            text: "check"
+                            color: Colours.palette.m3onSecondaryContainer
+                            fontStyle: Tokens.font.icon.medium
+                        }
+                    }
                 }
             }
         }
 
-        // Advanced color settings subpage button
-        StyledRect {
+        StyledText {
+            Layout.topMargin: Tokens.spacing.large
+            text: qsTr("Variants")
+            font: Tokens.font.title.medium
+        }
+
+        GridLayout {
             Layout.fillWidth: true
             Layout.bottomMargin: Tokens.spacing.extraLarge
-            implicitHeight: row.implicitHeight + Tokens.padding.large * 2
-            radius: Tokens.rounding.large
-            color: Colours.tPalette.m3surfaceContainer
+            columns: 2
+            rowSpacing: Tokens.spacing.medium
+            columnSpacing: Tokens.spacing.medium
 
-            StateLayer {
-                anchors.fill: parent
-                radius: parent.radius
-                onClicked: root.nState.openSubPage(9)
-            }
+            Repeater {
+                model: M3Variants.list
+                
+                StyledRect {
+                    id: varDelegateRect
 
-            RowLayout {
-                id: row
-
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Tokens.padding.large
-                spacing: Tokens.spacing.large
-
-                MaterialIcon {
-                    text: "settings_suggest"
-                    fontStyle: Tokens.font.icon.extraLarge
-                    color: Colours.palette.m3onSurface
-                }
-
-                ColumnLayout {
+                    required property var modelData
+                    
+                    readonly property bool isSelected: modelData?.variant === Schemes.currentVariant
+                    
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing.extraSmall
-
-                    StyledText {
-                        text: qsTr("Advanced color settings")
-                        font: Tokens.font.title.small
-                        color: Colours.palette.m3onSurface
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1
+                    implicitHeight: varCol.implicitHeight + Tokens.padding.medium * 2
+                    radius: Tokens.rounding.large
+                    color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
+                    border.width: isSelected ? 2 : 1
+                    border.color: isSelected ? Colours.palette.m3secondary : Colours.palette.m3surfaceVariant
+                    
+                    StateLayer {
+                        radius: parent.radius
+                        onClicked: varDelegateRect.modelData?.onClicked(null)
                     }
-                    StyledText {
-                        text: qsTr("Material You engine, terminal and window decoration options")
-                        font: Tokens.font.body.medium
-                        color: Colours.palette.m3onSurfaceVariant
-                    }
-                }
+                    
+                    RowLayout {
+                        id: varCol
 
-                MaterialIcon {
-                    text: "chevron_right"
-                    fontStyle: Tokens.font.icon.large
-                    color: Colours.palette.m3onSurfaceVariant
-                }
-            }
-        }
-
-        Process {
-            id: schemeListProc
-
-            command: ["python3", Quickshell.shellPath("scripts/scheme-list.py")]
-            stdout: StdioCollector {
-                onStreamFinished: root.parseSchemeList(text)
-            }
-        }
-    }
-
-    component PaletteCard: StyledRect {
-        id: card
-
-        required property var modelData
-
-        readonly property bool isSelected: `${modelData?.name} ${modelData?.flavour}` === Schemes.currentScheme && ((modelData?.mode === "light") === Colours.light)
-
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.preferredWidth: 1
-        implicitHeight: cardRow.implicitHeight + Tokens.padding.large * 2
-        radius: Tokens.rounding.large
-        color: isSelected ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
-        border.width: isSelected ? 2 : 1
-        border.color: isSelected ? Colours.palette.m3secondary : Colours.palette.m3surfaceVariant
-
-        StateLayer {
-            radius: parent.radius
-            onClicked: Quickshell.execDetached(["caelestia", "scheme", "set", "-n", card.modelData.name, "-f", card.modelData.flavour, "-m", card.modelData.mode])
-        }
-
-        RowLayout {
-            id: cardRow
-
-            anchors.fill: parent
-            anchors.margins: Tokens.padding.large
-            spacing: Tokens.spacing.large
-
-            StyledRect {
-                Layout.preferredWidth: Tokens.sizes.launcher.itemHeight
-                Layout.preferredHeight: Tokens.sizes.launcher.itemHeight
-
-                border.width: 1
-                border.color: Qt.alpha(`#${card.modelData?.colours?.outline}`, 0.5)
-                color: `#${card.modelData?.colours?.surface}`
-                radius: Tokens.rounding.full
-
-                Item {
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.right: parent.right
-
-                    width: parent.width / 2
-                    clip: true
-
-                    StyledRect {
                         anchors.top: parent.top
-                        anchors.bottom: parent.bottom
+                        anchors.left: parent.left
                         anchors.right: parent.right
-
-                        width: parent.width
-                        color: `#${card.modelData?.colours?.primary}`
-                        radius: Tokens.rounding.full
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
+                        
+                        MaterialIcon {
+                            Layout.alignment: Qt.AlignTop
+                            text: varDelegateRect.modelData?.icon ?? ""
+                            fontStyle: Tokens.font.icon.large
+                            color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                        }
+                        
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: varDelegateRect.modelData?.name ?? ""
+                                font: Tokens.font.body.small
+                                color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: varDelegateRect.modelData?.description ?? ""
+                                font: Tokens.font.label.small
+                                color: varDelegateRect.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
+                                wrapMode: Text.Wrap
+                            }
+                        }
                     }
                 }
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: Tokens.spacing.extraSmall
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: card.modelData?.flavour ?? ""
-                    font: Tokens.font.title.small
-                    color: card.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
-                }
-                StyledText {
-                    Layout.fillWidth: true
-                    text: card.modelData?.name ?? ""
-                    font: Tokens.font.body.medium
-                    color: card.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
-                }
-            }
-
-            MaterialIcon {
-                Layout.alignment: Qt.AlignVCenter
-                visible: card.isSelected
-                text: "check"
-                color: Colours.palette.m3onSecondaryContainer
-                fontStyle: Tokens.font.icon.large
             }
         }
     }

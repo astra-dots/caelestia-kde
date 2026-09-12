@@ -68,8 +68,8 @@ PageBase {
             ToggleRow {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
                 Layout.fillWidth: true
-                text: qsTr("Recolor wallpaper")
-                subtext: qsTr("Tint the wallpaper to match static color schemes")
+                text: Strings.localizeEnglishSpelling(qsTr("Recolour wallpaper"))
+                subtext: Strings.localizeEnglishSpelling(qsTr("Tint the wallpaper to match static colour schemes"))
                 checked: Config.background.wallpaperRecolor
                 onToggled: { 
                     GlobalConfig.background.wallpaperRecolor = checked; 
@@ -87,7 +87,7 @@ PageBase {
                 Layout.fillWidth: true
                 last: true
                 icon: ""
-                label: qsTr("Recolor strength")
+                label: Strings.localizeEnglishSpelling(qsTr("Recolour strength"))
                 valueLabel: Math.round(value * 100) + "%"
                 value: Config.background.wallpaperRecolorStrength
                 enabled: Config.background.wallpaperRecolor && Config.background.wallpaperEnabled

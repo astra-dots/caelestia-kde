@@ -28,11 +28,8 @@ Item {
                 isPortrait: root.isPortrait
             }
         }
-        BackgroundCenter {
-            Layout.alignment: Qt.AlignHCenter
-            lockHeight: root.lockHeight
-            isPortrait: root.isPortrait
-        }
+
+
 
         ColumnLayout {
             Layout.fillWidth: true
@@ -112,9 +109,8 @@ Item {
                 lock: root.lock
             }
         }
-        BackgroundCenter {
-            lockHeight: root.lockHeight
-        }
+
+
 
         ColumnLayout {
             Layout.fillWidth: true

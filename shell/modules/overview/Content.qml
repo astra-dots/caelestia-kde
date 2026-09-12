@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import qs.components
 import qs.services
 import qs.modules.windowinfo as WInfo
@@ -9,7 +8,6 @@ import qs.modules.windowinfo as WInfo
 Item {
     id: root
 
-    required property ShellScreen screen
     required property DrawerVisibilities visibilities
     required property var panels
     property var animConfig
@@ -28,7 +26,6 @@ Item {
         id: windowGrid
 
         panels: root.panels
-        screen: root.screen
         anchors.fill: parent
         opacity: root.visibilities.overview ? 1 : 0
         // activeInfoClient is managed manually to ensure synchronous release before WindowInfo requests it
@@ -38,14 +35,14 @@ Item {
             windowInfoOverlay.isOpen = true
         }
         onRequestClose: {
-            Visibilities.setOverview(false)
+            root.visibilities.overview = false
         }
 
         Behavior on opacity { NumberAnimation { duration: root.animConfig ? root.animConfig.gridDuration : 1500; easing.type: root.animConfig ? root.animConfig.easingType : Easing.OutCubic } }
     }
     Shortcut {
         sequence: "Escape"
-        onActivated: Visibilities.setOverview(false)
+        onActivated: root.visibilities.overview = false
         enabled: root.visibilities.overview
     }
     Item {

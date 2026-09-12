@@ -50,17 +50,17 @@ void DiskInfo::update(quint64 usedBytes, quint64 totalBytes, bool hasRoot) {
     m_hasRoot = hasRoot;
 
     if (usedDiff) {
-        emit usedChanged();
+        Q_EMIT usedChanged();
     }
     if (totalDiff) {
-        emit totalChanged();
+        Q_EMIT totalChanged();
     }
     if (usedDiff || totalDiff) {
-        emit freeChanged();
-        emit percChanged();
+        Q_EMIT freeChanged();
+        Q_EMIT percChanged();
     }
     if (rootDiff) {
-        emit hasRootChanged();
+        Q_EMIT hasRootChanged();
     }
 }
 

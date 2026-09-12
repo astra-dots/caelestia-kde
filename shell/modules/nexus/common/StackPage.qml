@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import Caelestia.Config
 import qs.components
+import qs.utils
+import qs.utils
 import qs.modules.nexus
 
 StackView {
@@ -111,7 +113,7 @@ StackView {
 
         function onSubPageClosed(): void {
             if (root.depth < root.nState.subPageIdxStack.length) {
-                console.log(logCat, "Attempted to close page while depth < stack depth. Ignoring.");
+                Logger.log(logCat, "Attempted to close page while depth < stack depth. Ignoring.");
                 return;
             }
             root.pop();

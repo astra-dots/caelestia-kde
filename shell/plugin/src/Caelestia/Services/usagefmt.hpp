@@ -1,8 +1,6 @@
 #pragma once
 
-#include <qobject.h>
 #include <qqmlintegration.h>
-#include <qstring.h>
 
 namespace caelestia::services::usagefmt {
 

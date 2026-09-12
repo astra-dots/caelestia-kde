@@ -34,7 +34,7 @@ Singleton {
         return item[key];
     }
 
-    function query(search: string): var {
+    function query(search: string): list<var> {
         search = transformSearch(search.trim().replace(/\s+/g, " "));
         if (!search)
             return [...list];

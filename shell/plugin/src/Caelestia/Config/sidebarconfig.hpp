@@ -1,16 +1,20 @@
 #pragma once
 
-#include "../Settings/objectnode.hpp"
-#include "common.hpp"
+#include "configobject.hpp"
 
 namespace caelestia::config {
 
-class SidebarConfig : public settings::ObjectNode {
-    CONFIG_NODE(SidebarConfig, settings::ObjectNode)
+class SidebarConfig : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_PROPERTY(int, dragThreshold, 50)
     CONFIG_PROPERTY(int, grabWidth, 12)
+
+public:
+    explicit SidebarConfig(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
 };
 
 } // namespace caelestia::config

@@ -17,8 +17,6 @@ ColumnLayout {
 
     required property PopoutState popouts
 
-    property real scaleOffset: 1.0
-    property real fontScale: 1.0
     property bool showAppVolumes: false
     property bool _isSidebarOpen: popouts.sidebarOpen && popouts.isHorizontal
 
@@ -30,30 +28,19 @@ ColumnLayout {
         }
     }
 
+    readonly property real masterScale: !isNaN(GlobalConfig.bar.previewScale) ? GlobalConfig.bar.previewScale : 1.0
+    readonly property real elementOffset: GlobalConfig.bar.perElementPreviewScale ? (!isNaN(GlobalConfig.bar.previewScales.audio) ? GlobalConfig.bar.previewScales.audio : 0.0) : 0.0
+    readonly property real barScaleOffset: GlobalConfig.bar.previewScaleWithBar ? (!isNaN(GlobalConfig.bar.scale) ? GlobalConfig.bar.scale : 1.0) : 1.0
+    readonly property real scaleOffset: Math.max(0.1, (masterScale + elementOffset) * barScaleOffset)
+    readonly property real elementFontOffset: GlobalConfig.bar.perElementFontScale ? (!isNaN(GlobalConfig.bar.previewFontScales.audio) ? GlobalConfig.bar.previewFontScales.audio : 0.0) : 0.0
+    readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0) + elementFontOffset)
+
     readonly property bool hasInput: Audio.sources.length > 0
     width: Math.max((root.showAppVolumes || hasInput ? 580 : 300) * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
     implicitWidth: width
     spacing: Tokens.spacing.medium * scaleOffset
 
     readonly property real cardHeight: Math.max(outputLayout.implicitHeight, (root.hasInput ? inputLayout.implicitHeight : 0)) + Tokens.padding.medium * 2 * root.scaleOffset
-
-    function outputIcon(node: PwNode): string {
-        if (!node)
-            return "speaker";
-        const name = (node.description || node.name || "").toLowerCase();
-        if (name.includes("headset") || name.includes("headphone") || name.includes("earbud") || name.includes("earphone"))
-            return "headphones";
-        return "speaker";
-    }
-
-    function sourceIcon(node: PwNode): string {
-        if (!node)
-            return "mic";
-        const name = (node.description || node.name || "").toLowerCase();
-        if (name.includes("headset"))
-            return "headset_mic";
-        return "mic";
-    }
 
     ButtonGroup {
         id: sinks
@@ -120,7 +107,6 @@ ColumnLayout {
         id: mainView
 
         Layout.fillWidth: true
-        Layout.bottomMargin: Tokens.padding.medium * root.scaleOffset
         spacing: Tokens.spacing.medium * root.scaleOffset
         visible: !root.showAppVolumes
 
@@ -149,21 +135,9 @@ ColumnLayout {
                     y: Tokens.padding.medium * root.scaleOffset
                     spacing: Tokens.spacing.medium * root.scaleOffset
 
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Tokens.spacing.small * root.scaleOffset
-
-                        MaterialIcon {
-                            text: root.outputIcon(Audio.sink)
-                            color: Colours.palette.m3primary
-                            fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-                        }
-
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: qsTr("Output device")
-                            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
-                        }
+                    StyledText {
+                        text: qsTr("Output device")
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
                     }
 
                     Repeater {
@@ -181,7 +155,7 @@ ColumnLayout {
                             ButtonGroup.group: sinks
                             checked: Audio.sink?.id === modelData.id
                             onClicked: Audio.setAudioSink(modelData)
-                            text: modelData.description || modelData.name || qsTr("Unknown")
+                            text: modelData.description
                             font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
 
                             contentItem: MarqueeText {
@@ -231,21 +205,9 @@ ColumnLayout {
                     y: Tokens.padding.medium * root.scaleOffset
                     spacing: Tokens.spacing.medium * root.scaleOffset
 
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Tokens.spacing.small * root.scaleOffset
-
-                        MaterialIcon {
-                            text: root.sourceIcon(Audio.source)
-                            color: Colours.palette.m3primary
-                            fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-                        }
-
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: qsTr("Input device")
-                            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
-                        }
+                    StyledText {
+                        text: qsTr("Input device")
+                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
                     }
 
                     Repeater {
@@ -263,7 +225,7 @@ ColumnLayout {
                             ButtonGroup.group: sources
                             checked: Audio.source?.id === modelData.id
                             onClicked: Audio.setAudioSource(modelData)
-                            text: modelData.description || modelData.name || qsTr("Unknown")
+                            text: modelData.description
                             font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
 
                             contentItem: MarqueeText {
@@ -293,8 +255,7 @@ ColumnLayout {
             }
         }
 
-        // Sliders Row: Volume on Left, Microphone on Right
-        // With explicit bottom margin so sliders are never cut off from the bottom
+        // Sliders Row: Volume on Left, Microphone on Right (Guaranteed identical vertical height)
         RowLayout {
             Layout.fillWidth: true
             Layout.bottomMargin: Tokens.padding.large * root.scaleOffset
@@ -309,19 +270,6 @@ ColumnLayout {
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.topMargin: Tokens.spacing.small * root.scaleOffset
-
-                    IconButton {
-                        type: IconButton.Text
-                        isRound: true
-                        icon: Icons.getVolumeIcon(Audio.volume, Audio.muted)
-                        font: Tokens.font.icon.builders.small.size(Tokens.font.icon.small.pointSize * root.fontScale).build()
-                        implicitWidth: Math.round(24 * root.scaleOffset)
-                        implicitHeight: Math.round(24 * root.scaleOffset)
-                        onClicked: {
-                            if (Audio.sink?.ready && Audio.sink?.audio)
-                                Audio.sink.audio.muted = !Audio.sink.audio.muted;
-                        }
-                    }
 
                     StyledText {
                         Layout.fillWidth: true
@@ -361,7 +309,7 @@ ColumnLayout {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        implicitHeight: Math.round(12 * root.scaleOffset)
+                        implicitHeight: Math.round(10 * root.scaleOffset)
 
                         value: Audio.volume
                         onInteraction: v => Audio.setVolume(Math.round(v * 100) / 100)
@@ -377,28 +325,10 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 spacing: Tokens.spacing.small * root.scaleOffset
 
-                RowLayout {
-                    Layout.fillWidth: true
+                StyledText {
                     Layout.topMargin: Tokens.spacing.small * root.scaleOffset
-
-                    IconButton {
-                        type: IconButton.Text
-                        isRound: true
-                        icon: Icons.getMicVolumeIcon(Audio.sourceVolume, Audio.sourceMuted)
-                        font: Tokens.font.icon.builders.small.size(Tokens.font.icon.small.pointSize * root.fontScale).build()
-                        implicitWidth: Math.round(24 * root.scaleOffset)
-                        implicitHeight: Math.round(24 * root.scaleOffset)
-                        onClicked: {
-                            if (Audio.source?.ready && Audio.source?.audio)
-                                Audio.source.audio.muted = !Audio.source.audio.muted;
-                        }
-                    }
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: qsTr("Microphone (%1)").arg(Audio.sourceMuted ? qsTr("Muted") : `${Math.round(Audio.sourceVolume * 100)}%`)
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
-                    }
+                    text: qsTr("Microphone (%1)").arg(Audio.sourceMuted ? qsTr("Muted") : `${Math.round(Audio.sourceVolume * 100)}%`)
+                    font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
                 }
 
                 CustomMouseArea {
@@ -416,7 +346,7 @@ ColumnLayout {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        implicitHeight: Math.round(12 * root.scaleOffset)
+                        implicitHeight: Math.round(10 * root.scaleOffset)
 
                         value: Audio.sourceVolume
                         onInteraction: v => Audio.setSourceVolume(Math.round(v * 100) / 100)
@@ -431,7 +361,6 @@ ColumnLayout {
         id: appVolumesView
 
         Layout.fillWidth: true
-        Layout.bottomMargin: Tokens.padding.medium * root.scaleOffset
         spacing: Tokens.spacing.medium * root.scaleOffset
         visible: root.showAppVolumes
 
@@ -457,7 +386,7 @@ ColumnLayout {
                     Layout.topMargin: Tokens.padding.large * root.scaleOffset
                     Layout.bottomMargin: Tokens.padding.large * root.scaleOffset
                     spacing: Tokens.spacing.small * root.scaleOffset
-                    visible: Audio.appStreams.length === 0
+                    visible: Audio.streams.length === 0
 
                     MaterialIcon {
                         Layout.alignment: Qt.AlignHCenter
@@ -492,7 +421,7 @@ ColumnLayout {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: Audio.appStreams.length > 0
+                    visible: Audio.streams.length > 0
 
                     ScrollBar.vertical: StyledScrollBar {
                         flickable: streamFlickable
@@ -505,7 +434,7 @@ ColumnLayout {
                         spacing: Tokens.spacing.medium * root.scaleOffset
 
                         Repeater {
-                            model: Audio.appStreams
+                            model: Audio.streams
 
                             ColumnLayout {
                                 id: streamDelegate

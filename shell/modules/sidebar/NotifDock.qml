@@ -43,7 +43,7 @@ Item {
             opacity: root.notifCount > 0 ? 1 : 0
 
             text: root.notifCount
-            color: Colours.palette.m3outline
+            color: Colours.palette.m3onSurfaceVariant
             font: Tokens.font.label.large
 
             Behavior on anchors.leftMargin {
@@ -66,7 +66,7 @@ Item {
             anchors.leftMargin: Tokens.spacing.extraSmall
 
             text: root.notifCount > 0 ? qsTr("notification%1").arg(root.notifCount === 1 ? "" : "s") : qsTr("Notifications")
-            color: Colours.palette.m3outline
+            color: Colours.palette.m3onSurfaceVariant
             font: Tokens.font.label.large
             elide: Text.ElideRight
         }
@@ -78,35 +78,38 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: title.bottom
-        anchors.bottom: clearLoader.opacity > 0 ? clearLoader.top : toggleRect.top
+        anchors.bottom: clearLoader.opacity > 0 ? clearLoader.top : parent.bottom
         anchors.bottomMargin: Tokens.padding.medium
         anchors.topMargin: Tokens.spacing.medium
 
         radius: Tokens.rounding.medium
         color: "transparent"
 
-        Loader {
-            id: loader
+        Column {
+            id: emptyState
 
-            asynchronous: true
             anchors.centerIn: parent
-            active: opacity > 0
-            opacity: (root.notifCount > 0 && !gameIsActive) ? 0 : 1
-            z: (root.notifCount > 0 && !gameIsActive) ? -1 : 1
+            spacing: Tokens.spacing.small
+            opacity: root.notifCount === 0 ? 1 : 0
+            visible: opacity > 0
 
-            property bool gameIsActive: item && item.hasOwnProperty("isPlaying") && item.isPlaying
+            MaterialIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "notifications_none"
+                fontStyle: Tokens.font.icon.extraLarge
+                color: Colours.palette.m3onSurfaceVariant
+            }
 
-            width: clipRect.width
-            height: 250
-
-            sourceComponent: DinoGame {
-                width: clipRect.width
-                height: 250
+            StyledText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("No notifications")
+                font: Tokens.font.body.large
+                color: Colours.palette.m3onSurfaceVariant
             }
 
             Behavior on opacity {
                 Anim {
-                    type: Anim.StandardExtraLarge
+                    type: Anim.DefaultEffects
                 }
             }
         }
@@ -115,11 +118,11 @@ Item {
             id: view
 
             anchors.fill: parent
+            opacity: root.notifCount > 0 ? 1 : 0
 
             flickableDirection: Flickable.VerticalFlick
             contentWidth: width
             contentHeight: notifList.implicitHeight
-            opacity: loader.opacity === 1 ? 0 : 1
 
             StyledScrollBar.vertical: StyledScrollBar {
                 flickable: view
@@ -132,69 +135,10 @@ Item {
                 visibilities: root.visibilities
                 container: view
             }
-        }
-    }
 
-
-    StyledRect {
-        id: toggleRect
-
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.rightMargin: clearLoader.opacity > 0 ? clearLoader.width + Tokens.padding.medium * 2 : 0
-        
-        height: toggleLayout.implicitHeight + Tokens.padding.large * 2
-        radius: Tokens.rounding.large
-        color: Colours.tPalette.m3surfaceContainer
-        
-        RowLayout {
-            id: toggleLayout
-
-            anchors.fill: parent
-            anchors.margins: Tokens.padding.large
-            spacing: Tokens.spacing.medium
-            
-            StyledRect {
-                implicitWidth: implicitHeight
-                implicitHeight: icon.implicitHeight + Tokens.padding.large
-                radius: Tokens.rounding.full
-                color: GlobalConfig.general.caelestiaMode ? Colours.palette.m3secondary : Colours.palette.m3secondaryContainer
-                
-                MaterialIcon {
-                    id: icon
-
-                    anchors.centerIn: parent
-                    text: "auto_awesome"
-                    color: GlobalConfig.general.caelestiaMode ? Colours.palette.m3onSecondary : Colours.palette.m3onSecondaryContainer
-                    fontStyle: Tokens.font.icon.large
-                }
-            }
-            
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-                
-                StyledText {
-                    Layout.fillWidth: true
-                    text: qsTr("Caelestia Mode")
-                    font: Tokens.font.body.medium
-                    elide: Text.ElideRight
-                }
-                
-                StyledText {
-                    Layout.fillWidth: true
-                    text: GlobalConfig.general.caelestiaMode ? "Spinning kurukuru activated" : "Classic dinosaur character"
-                    color: Colours.palette.m3onSurfaceVariant
-                    font: Tokens.font.body.small
-                    elide: Text.ElideRight
-                }
-            }
-            
-            StyledSwitch {
-                checked: GlobalConfig.general.caelestiaMode
-                onToggled: {
-                    GlobalConfig.general.caelestiaMode = checked;
+            Behavior on opacity {
+                Anim {
+                    type: Anim.DefaultEffects
                 }
             }
         }
