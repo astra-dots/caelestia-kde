@@ -6,6 +6,7 @@ import Quickshell
 import Caelestia.Config
 import Caelestia.Services
 import qs.services
+import qs.services.api
 import qs.utils
 
 Searcher {
@@ -40,6 +41,15 @@ Searcher {
                 return;
 
             if (command[0] === "autocomplete" && command.length > 1) {
+                if (command[1] === "wallpaper" && PluginLoader.pluginInstances["wallpaper-selector"]) {
+                    list.visibilities.launcher = false;
+                    const plugin = PluginLoader.pluginInstances["wallpaper-selector"];
+                    if (typeof CaelestiaApi !== "undefined" && CaelestiaApi.windows && CaelestiaApi.windows.kwin) {
+                        plugin.activeScreen = CaelestiaApi.windows.kwin.cursorOutputName() || "";
+                    }
+                    plugin.showing = true;
+                    return;
+                }
                 list.search.text = `${GlobalConfig.launcher.actionPrefix}${command[1]} `;
             } else if (command[0] === "setMode" && command.length > 1) {
                 list.visibilities.launcher = false;

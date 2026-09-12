@@ -39,20 +39,20 @@ Item {
 
                 StyledText {
                     text: Time.hourStr
-                    font: Tokens.font.clock.size(Tokens.font.headline.large.pointSize * 1.8 * root.clockScale).weight(Font.Bold).family(root.clockFont).build()
+                    font: Tokens.font.clock.size(Math.max(32, Tokens.font.headline.large.pointSize) * 1.8 * root.clockScale).weight(Font.Bold).family(root.clockFont).build()
                     color: root.safePrimary
                 }
 
                 StyledText {
                     text: ":"
-                    font: Tokens.font.clock.size(Tokens.font.headline.large.pointSize * 1.8 * root.clockScale).weight(Font.Light).family(root.clockFont).build()
+                    font: Tokens.font.clock.size(Math.max(32, Tokens.font.headline.large.pointSize) * 1.8 * root.clockScale).weight(Font.Light).family(root.clockFont).build()
                     color: root.safeTertiary
                     opacity: 0.8
                 }
 
                 StyledText {
                     text: Time.minuteStr
-                    font: Tokens.font.clock.size(Tokens.font.headline.large.pointSize * 1.8 * root.clockScale).weight(Font.Bold).family(root.clockFont).build()
+                    font: Tokens.font.clock.size(Math.max(32, Tokens.font.headline.large.pointSize) * 1.8 * root.clockScale).weight(Font.Bold).family(root.clockFont).build()
                     color: root.safePrimary
                 }
 
@@ -81,13 +81,13 @@ Item {
 
                 StyledText {
                     text: Time.format("dddd")
-                    font: Tokens.font.clock.size(Tokens.font.body.medium.pointSize * root.clockScale).weight(Font.Bold).family(root.sansFont).build()
+                    font: Tokens.font.clock.size(Math.max(14, Tokens.font.body.medium.pointSize) * root.clockScale).weight(Font.Bold).family(root.sansFont).build()
                     color: Colours.palette.m3onSurface
                 }
 
                 StyledText {
                     text: Time.format("MMMM dd, yyyy")
-                    font: Tokens.font.clock.size(Tokens.font.body.small.pointSize * root.clockScale).family(root.sansFont).build()
+                    font: Tokens.font.clock.size(Math.max(12, Tokens.font.body.small.pointSize) * root.clockScale).family(root.sansFont).build()
                     color: Colours.palette.m3onSurfaceVariant
                 }
             }
