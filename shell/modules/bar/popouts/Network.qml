@@ -32,11 +32,31 @@ ColumnLayout {
     spacing: Tokens.spacing.medium * scaleOffset
     width: Math.max(540 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
 
-    StyledText {
+    RowLayout {
+        Layout.fillWidth: true
         Layout.topMargin: Tokens.padding.medium * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
-        text: qsTr("Network")
-        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+        Layout.rightMargin: Tokens.padding.small * root.scaleOffset
+
+        StyledText {
+            Layout.fillWidth: true
+            text: qsTr("Network")
+            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+        }
+
+        IconButton {
+            id: networkSettingsBtn
+            type: IconButton.Text
+            isRound: true
+            icon: "settings"
+            font: Tokens.font.icon.builders.medium.size(Tokens.font.icon.medium.pointSize * root.fontScale).build()
+            onClicked: root.popouts.detachRequested("network")
+
+            Tooltip {
+                target: networkSettingsBtn
+                text: qsTr("Network Settings")
+            }
+        }
     }
 
     StyledRect {
@@ -94,7 +114,7 @@ ColumnLayout {
                             if (a.active !== b.active)
                                 return b.active - a.active;
                             return b.strength - a.strength;
-                        }).slice(0, 6)
+                        }).slice(0, GlobalConfig.nexus.maxNetworksShown || 6)
                     }
 
                     RowLayout {

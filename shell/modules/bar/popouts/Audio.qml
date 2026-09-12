@@ -42,6 +42,24 @@ ColumnLayout {
 
     readonly property real cardHeight: Math.max(outputLayout.implicitHeight, (root.hasInput ? inputLayout.implicitHeight : 0)) + Tokens.padding.medium * 2 * root.scaleOffset
 
+    function outputIcon(node: PwNode): string {
+        if (!node)
+            return "speaker";
+        const name = (node.description || node.name || "").toLowerCase();
+        if (name.includes("headset") || name.includes("headphone") || name.includes("earbud") || name.includes("earphone"))
+            return "headphones";
+        return "speaker";
+    }
+
+    function sourceIcon(node: PwNode): string {
+        if (!node)
+            return "mic";
+        const name = (node.description || node.name || "").toLowerCase();
+        if (name.includes("headset"))
+            return "headset_mic";
+        return "mic";
+    }
+
     ButtonGroup {
         id: sinks
     }
@@ -135,9 +153,21 @@ ColumnLayout {
                     y: Tokens.padding.medium * root.scaleOffset
                     spacing: Tokens.spacing.medium * root.scaleOffset
 
-                    StyledText {
-                        text: qsTr("Output device")
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.small * root.scaleOffset
+
+                        MaterialIcon {
+                            text: root.outputIcon(Audio.sink)
+                            color: Colours.palette.m3primary
+                            fontStyle: Tokens.font.icon.builders.medium.size(Tokens.font.icon.medium.pointSize * root.fontScale).build()
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Output device")
+                            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                        }
                     }
 
                     Repeater {
@@ -205,9 +235,21 @@ ColumnLayout {
                     y: Tokens.padding.medium * root.scaleOffset
                     spacing: Tokens.spacing.medium * root.scaleOffset
 
-                    StyledText {
-                        text: qsTr("Input device")
-                        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.small * root.scaleOffset
+
+                        MaterialIcon {
+                            text: root.sourceIcon(Audio.source)
+                            color: Colours.palette.m3primary
+                            fontStyle: Tokens.font.icon.builders.medium.size(Tokens.font.icon.medium.pointSize * root.fontScale).build()
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Input device")
+                            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
+                        }
                     }
 
                     Repeater {
