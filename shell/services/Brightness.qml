@@ -222,13 +222,6 @@ Singleton {
             }
         }
 
-        readonly property Timer pollTimer: Timer {
-            interval: 4000
-            repeat: true
-            running: monitor.isDdc
-            onTriggered: monitor.fetchBrightness()
-        }
-
         function applyHardwareBrightness(value: real): void {
             const rounded = Math.max(1, Math.min(100, Math.round(value * 100)));
             lastDispatchedBrightness = value;

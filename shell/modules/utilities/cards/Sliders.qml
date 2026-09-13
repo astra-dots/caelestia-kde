@@ -24,9 +24,24 @@ StyledRect {
     color: Colours.tPalette.m3surfaceContainer
     clip: true
 
-    onVisibleChanged: {
-        if (visible && root.monitor && typeof root.monitor.fetchBrightness === "function") {
+    property var visibilities: null
+    readonly property bool isUtilitiesOpen: visibilities ? visibilities.utilities : false
+
+    onIsUtilitiesOpenChanged: {
+        if (isUtilitiesOpen && root.monitor && typeof root.monitor.fetchBrightness === "function") {
             root.monitor.fetchBrightness();
+        }
+    }
+
+    Timer {
+        id: openPollTimer
+        interval: 1000
+        repeat: true
+        running: root.isUtilitiesOpen && (root.monitor?.isDdc ?? false)
+        onTriggered: {
+            if (root.monitor && typeof root.monitor.fetchBrightness === "function") {
+                root.monitor.fetchBrightness();
+            }
         }
     }
 

@@ -44,6 +44,7 @@ Item {
             id: sliders
 
             Layout.fillWidth: true
+            visibilities: root.visibilities
         }
 
         Toggles {
