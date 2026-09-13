@@ -11,7 +11,10 @@ Item {
     implicitWidth: icon.implicitWidth + info.implicitWidth + info.anchors.leftMargin
     implicitHeight: Math.max(icon.implicitHeight, info.implicitHeight) + Tokens.padding.largeIncreased * 2
 
-    Component.onCompleted: Weather.reload()
+    Component.onCompleted: {
+        if (!Weather.hasWeather)
+            Weather.reload();
+    }
 
     MaterialIcon {
         id: icon
