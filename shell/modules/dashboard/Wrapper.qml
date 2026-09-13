@@ -62,20 +62,13 @@ Item {
         event.accepted = true;
     }
 
-    property bool hasBeenOpened: false
-
-    onShouldBeActiveChanged: {
-        if (shouldBeActive)
-            hasBeenOpened = true;
-    }
-
     Loader {
         id: content
 
         focus: root.shouldBeActive
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        active: root.hasBeenOpened || root.shouldBeActive || root.visible
+        active: root.shouldBeActive || root.visible
         sourceComponent: Content {
             visibilities: root.visibilities
             dashState: root.dashState
