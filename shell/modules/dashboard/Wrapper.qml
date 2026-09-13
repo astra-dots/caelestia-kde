@@ -62,27 +62,13 @@ Item {
         event.accepted = true;
     }
 
-    property bool hasBeenOpened: false
-
-    Component.onCompleted: {
-        Qt.callLater(() => {
-            root.hasBeenOpened = true;
-        });
-    }
-
-    onShouldBeActiveChanged: {
-        if (shouldBeActive)
-            hasBeenOpened = true;
-    }
-
     Loader {
         id: content
 
         focus: root.shouldBeActive
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        visible: root.visible
-        active: root.hasBeenOpened || root.shouldBeActive || root.visible
+        active: root.shouldBeActive || root.visible
         sourceComponent: Content {
             visibilities: root.visibilities
             dashState: root.dashState
