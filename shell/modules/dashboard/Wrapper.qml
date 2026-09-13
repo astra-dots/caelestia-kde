@@ -39,7 +39,10 @@ Item {
     opacity: 1 - offsetScale
 
     Behavior on offsetScale {
-        Anim {}
+        Anim {
+            type: Anim.Emphasized
+            duration: 500
+        }
     }
     focus: root.shouldBeActive
 
