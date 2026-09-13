@@ -24,6 +24,12 @@ StyledRect {
     color: Colours.tPalette.m3surfaceContainer
     clip: true
 
+    onVisibleChanged: {
+        if (visible && root.monitor && typeof root.monitor.fetchBrightness === "function") {
+            root.monitor.fetchBrightness();
+        }
+    }
+
     ColumnLayout {
         id: layout
 

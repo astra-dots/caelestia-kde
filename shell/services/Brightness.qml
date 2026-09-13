@@ -184,13 +184,17 @@ Singleton {
         readonly property bool isAppleDisplay: root.appleDisplayPresent && modelData.model.startsWith("StudioDisplay")
         property real brightness: 1.0
         property real queuedBrightness: NaN
+        property real lastDispatchedBrightness: NaN
 
         readonly property Process initProc: Process {
             stdout: StdioCollector {
                 onStreamFinished: {
+                    if (monitor.timer.running || !isNaN(monitor.queuedBrightness))
+                        return;
                     if (monitor.isAppleDisplay) {
-                        const val = parseInt(text.trim());
-                        monitor.brightness = val / 101;
+                        const val = parseInt(text.trim(), 10);
+                        if (!isNaN(val))
+                            monitor.brightness = val / 101;
                     } else {
                         const parts = text.trim().split(/\s+/);
                         if (parts.length >= 5) {
@@ -198,6 +202,7 @@ Singleton {
                             const max = parseInt(parts[4], 10);
                             if (!isNaN(cur) && !isNaN(max) && max > 0) {
                                 monitor.brightness = cur / max;
+                                monitor.lastDispatchedBrightness = cur / max;
                             }
                         }
                     }
@@ -206,37 +211,73 @@ Singleton {
         }
 
         readonly property Timer timer: Timer {
-            interval: 500
+            interval: 100
             onTriggered: {
                 if (!isNaN(monitor.queuedBrightness)) {
-                    monitor.setBrightness(monitor.queuedBrightness);
+                    const val = monitor.queuedBrightness;
                     monitor.queuedBrightness = NaN;
+                    monitor.applyHardwareBrightness(val);
+                    monitor.timer.restart();
                 }
             }
+        }
+
+        readonly property Timer pollTimer: Timer {
+            interval: 4000
+            repeat: true
+            running: monitor.isDdc
+            onTriggered: monitor.fetchBrightness()
+        }
+
+        function applyHardwareBrightness(value: real): void {
+            const rounded = Math.max(1, Math.min(100, Math.round(value * 100)));
+            lastDispatchedBrightness = value;
+            if (isAppleDisplay)
+                Quickshell.execDetached(["asdbctl", "set", rounded]);
+            else if (isDdc)
+                Quickshell.execDetached(["ddcutil", "--noverify", "-b", busNum, "setvcp", "10", rounded]);
+            else
+                BrightnessWatcher.setBrightness(modelData.name, value);
         }
 
         function setBrightness(value: real): void {
             value = Math.max(0, Math.min(1, value));
             const rounded = Math.round(value * 100);
-            if (Math.round(brightness * 100) === rounded)
+            if (Math.round(brightness * 100) === rounded && Math.round(lastDispatchedBrightness * 100) === rounded)
                 return;
 
-            if (isDdc && timer.running) {
-                queuedBrightness = value;
-                return;
-            }
-
+            // Immediately update visual UI so slider is buttery smooth with zero delay
             brightness = value;
 
-            if (isAppleDisplay)
-                Quickshell.execDetached(["asdbctl", "set", rounded]);
-            else if (isDdc)
-                Quickshell.execDetached(["ddcutil", "-b", busNum, "setvcp", "10", rounded]);
-            else
-                BrightnessWatcher.setBrightness(modelData.name, value);
+            if (isDdc) {
+                if (timer.running) {
+                    queuedBrightness = value;
+                } else {
+                    applyHardwareBrightness(value);
+                    timer.restart();
+                }
+            } else {
+                applyHardwareBrightness(value);
+            }
+        }
 
-            if (isDdc)
-                timer.restart();
+        function fetchBrightness(): void {
+            if (timer.running || !isNaN(queuedBrightness))
+                return;
+
+            if (isAppleDisplay) {
+                initProc.command = ["asdbctl", "get"];
+                if (!initProc.running)
+                    initProc.running = true;
+            } else if (isDdc) {
+                initProc.command = ["ddcutil", "-b", busNum, "getvcp", "10", "--brief"];
+                if (!initProc.running)
+                    initProc.running = true;
+            } else {
+                const val = BrightnessWatcher.brightness(modelData.name);
+                if (val >= 0.0)
+                    monitor.brightness = val;
+            }
         }
 
         function initBrightness(): void {
@@ -255,7 +296,10 @@ Singleton {
             initProc.running = true;
         }
 
-        onBusNumChanged: initBrightness()
+        onBusNumChanged: {
+            if (busNum.length > 0)
+                initBrightness();
+        }
         Component.onCompleted: initBrightness()
     }
 }
