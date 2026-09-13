@@ -11,9 +11,13 @@ class CavaProcessor : public AudioProcessor {
 
 public:
     explicit CavaProcessor(QObject* parent = nullptr);
-    ~CavaProcessor();
+    ~CavaProcessor() override;
 
     void setBars(int bars);
+
+public slots:
+    void start() override;
+    void stop() override;
 
 signals:
     void valuesChanged(const QVector<double>& values);
@@ -29,6 +33,7 @@ private:
     int m_bars;
     QVector<double> m_values;
     QVector<double> m_frameValues;
+    bool m_decaying = false;
 
     void reload();
     void initCava();
@@ -50,8 +55,6 @@ public:
     void setBars(int bars);
 
     [[nodiscard]] QVector<double> values() const;
-
-    void stop() override;
 
 signals:
     void barsChanged();

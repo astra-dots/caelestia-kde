@@ -49,7 +49,7 @@ Item {
             id: bar
 
             required property int modelData
-            readonly property real value: Math.max(1e-2, Math.min(1, (Players.active?.isPlaying ?? false) ? (Audio.cava?.values?.[modelData] ?? 0) : 0))
+            readonly property real value: Math.max(1e-2, Math.min(1, Audio.cava?.values?.[modelData] ?? 0))
 
             readonly property real angle: modelData * 2 * Math.PI / GlobalConfig.services.visualiserBars
             readonly property real dist: shapeEdgeDist + value * root.maxMagnitude

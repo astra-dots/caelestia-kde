@@ -24,7 +24,54 @@ CavaProcessor::~CavaProcessor() {
     delete[] m_in;
 }
 
+void CavaProcessor::start() {
+    m_decaying = false;
+    AudioProcessor::start();
+}
+
+void CavaProcessor::stop() {
+    if (m_frameValues.isEmpty()) {
+        AudioProcessor::stop();
+        return;
+    }
+
+    bool allZero = true;
+    for (int i = 0; i < m_bars; ++i) {
+        if (m_frameValues[i] > 0.008) {
+            allZero = false;
+            break;
+        }
+    }
+
+    if (allZero) {
+        AudioProcessor::stop();
+    } else {
+        m_decaying = true;
+    }
+}
+
 void CavaProcessor::process() {
+    if (m_decaying) {
+        bool allZero = true;
+        for (int i = 0; i < m_bars; ++i) {
+            m_frameValues[i] *= 0.80;
+            if (m_frameValues[i] < 0.008) {
+                m_frameValues[i] = 0.0;
+            } else {
+                allZero = false;
+            }
+        }
+
+        m_values = m_frameValues;
+        emit valuesChanged(m_values);
+
+        if (allZero) {
+            m_decaying = false;
+            AudioProcessor::stop();
+        }
+        return;
+    }
+
     if (!m_plan || m_bars == 0 || !m_out) {
         return;
     }
@@ -152,14 +199,6 @@ QVector<double> CavaProvider::values() const {
 void CavaProvider::updateValues(const QVector<double>& values) {
     if (values != m_values) {
         m_values = values;
-        emit valuesChanged();
-    }
-}
-
-void CavaProvider::stop() {
-    AudioProvider::stop();
-    if (!m_values.isEmpty()) {
-        m_values.fill(0.0);
         emit valuesChanged();
     }
 }

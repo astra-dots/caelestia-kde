@@ -12,13 +12,13 @@ class AudioProcessor : public QObject {
 
 public:
     explicit AudioProcessor(QObject* parent = nullptr);
-    ~AudioProcessor();
+    virtual ~AudioProcessor();
 
     void init();
 
 public slots:
-    void start();
-    void stop();
+    virtual void start();
+    virtual void stop();
 
 protected:
     virtual void process() = 0;
