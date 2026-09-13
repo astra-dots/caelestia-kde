@@ -7,6 +7,7 @@ import Quickshell.Io
 import Caelestia.Config
 import Caelestia.Services
 import qs.components.misc
+import qs.services.api
 
 Singleton {
     id: root
@@ -27,7 +28,12 @@ Singleton {
 
     function getMonitor(query: string): var {
         if (query === "active") {
-            return monitors.find(m => Hypr.monitorFor(m.modelData)?.focused); // qmllint disable missing-property
+            let active = monitors.find(m => Hypr.monitorFor(m.modelData)?.focused); // qmllint disable missing-property
+            if (!active && typeof CaelestiaApi !== "undefined" && CaelestiaApi.windows && CaelestiaApi.windows.kwin) {
+                const activeName = CaelestiaApi.windows.kwin.cursorOutputName();
+                active = monitors.find(m => m.modelData.name === activeName);
+            }
+            return active ?? (monitors.length > 0 ? monitors[0] : null);
         }
 
         if (query.startsWith("model:")) {
@@ -60,10 +66,13 @@ Singleton {
             monitor.setBrightness(monitor.brightness - GlobalConfig.services.brightnessIncrement);
     }
 
-    onMonitorsChanged: {
-        ddcMonitors = [];
-        ddcProc.running = true;
+    function detectMonitors(): void {
+        if (!ddcProc.running)
+            ddcProc.running = true;
     }
+
+    onMonitorsChanged: detectMonitors()
+    Component.onCompleted: detectMonitors()
 
     Variants {
         id: variants
@@ -84,12 +93,18 @@ Singleton {
     Process {
         id: ddcProc
 
-        command: ["ddcutil", "detect", "--brief"]
+        command: ["python3", Quickshell.shellDir + "/scripts/detect_monitors.py"]
         stdout: StdioCollector {
-            onStreamFinished: root.ddcMonitors = text.trim().split("\n\n").filter(d => d.startsWith("Display ")).map(d => ({
-                        busNum: d.match(/I2C bus:[ ]*\/dev\/i2c-([0-9]+)/)[1],
-                        connector: d.match(/DRM connector:\s+(.*)/)[1].replace(/^card\d+-/, "") // strip "card1-"
-                    }))
+            onStreamFinished: {
+                try {
+                    const parsed = JSON.parse(text.trim());
+                    if (Array.isArray(parsed)) {
+                        root.ddcMonitors = parsed;
+                    }
+                } catch (e) {
+                    console.log("[Brightness] Failed to parse detect_monitors output:", e, text);
+                }
+            }
         }
     }
 
@@ -99,7 +114,7 @@ Singleton {
 
         function onBrightnessChanged(outputName: string, value: real): void {
             const monitor = root.getMonitor(outputName);
-            if (monitor && monitor.brightness !== value) {
+            if (monitor && !monitor.isDdc && monitor.brightness !== value) {
                 monitor.brightness = value;
             }
         }
@@ -189,11 +204,18 @@ Singleton {
             stdout: StdioCollector {
                 onStreamFinished: {
                     if (monitor.isAppleDisplay) {
-                        const val = parseInt(text.trim());
-                        monitor.brightness = val / 101;
+                        const val = parseInt(text.trim(), 10);
+                        if (!isNaN(val))
+                            monitor.brightness = val / 101;
                     } else {
-                        const [, , , cur, max] = text.split(" ");
-                        monitor.brightness = parseInt(cur) / parseInt(max);
+                        const parts = text.trim().split(/\s+/);
+                        if (parts.length >= 5) {
+                            const cur = parseInt(parts[3], 10);
+                            const max = parseInt(parts[4], 10);
+                            if (!isNaN(cur) && !isNaN(max) && max > 0) {
+                                monitor.brightness = cur / max;
+                            }
+                        }
                     }
                 }
             }
@@ -236,9 +258,11 @@ Singleton {
         function initBrightness(): void {
             if (isAppleDisplay)
                 initProc.command = ["asdbctl", "get"];
-            else if (isDdc)
+            else if (isDdc) {
                 initProc.command = ["ddcutil", "-b", busNum, "getvcp", "10", "--brief"];
-            else {
+                // Ensure KWin compositor software dimming overlay is completely removed / reset to 100%
+                BrightnessWatcher.setBrightness(modelData.name, 1.0);
+            } else {
                 const val = BrightnessWatcher.brightness(modelData.name);
                 if (val >= 0.0)
                     monitor.brightness = val;
@@ -248,7 +272,10 @@ Singleton {
             initProc.running = true;
         }
 
-        onBusNumChanged: initBrightness()
+        onBusNumChanged: {
+            if (busNum.length > 0)
+                initBrightness();
+        }
         Component.onCompleted: initBrightness()
     }
 }
