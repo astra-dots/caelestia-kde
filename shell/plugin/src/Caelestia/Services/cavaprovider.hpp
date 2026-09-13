@@ -51,6 +51,8 @@ public:
 
     [[nodiscard]] QVector<double> values() const;
 
+    void stop() override;
+
 signals:
     void barsChanged();
     void valuesChanged();

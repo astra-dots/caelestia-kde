@@ -240,10 +240,17 @@ AudioCollector::AudioCollector(QObject* parent)
     , m_writeBuffer(&m_buffer2) {}
 
 AudioCollector::~AudioCollector() {
-    AudioCollector::stop();
+    if (m_lingerTimer) {
+        m_lingerTimer->stop();
+    }
+    stopImmediate();
 }
 
 void AudioCollector::start() {
+    if (m_lingerTimer && m_lingerTimer->isActive()) {
+        m_lingerTimer->stop();
+    }
+
     if (m_thread.joinable()) {
         return;
     }
@@ -256,6 +263,25 @@ void AudioCollector::start() {
 }
 
 void AudioCollector::stop() {
+    if (!m_thread.joinable()) {
+        return;
+    }
+
+    clearBuffer();
+
+    if (!m_lingerTimer) {
+        m_lingerTimer = new QTimer(this);
+        m_lingerTimer->setSingleShot(true);
+        connect(m_lingerTimer, &QTimer::timeout, this, &AudioCollector::stopImmediate);
+    }
+    m_lingerTimer->start(30000);
+}
+
+void AudioCollector::stopImmediate() {
+    if (hasRefs()) {
+        return;
+    }
+
     if (m_thread.joinable()) {
         m_thread.request_stop();
         m_thread.join();

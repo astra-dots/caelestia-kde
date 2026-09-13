@@ -2,6 +2,7 @@
 
 #include <qmutex.h>
 #include <qqmlintegration.h>
+#include <qtimer.h>
 
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
@@ -17,7 +18,7 @@ namespace caelestia::services {
 
 namespace ac {
 
-constexpr quint32 SAMPLE_RATE = 44100;
+constexpr quint32 SAMPLE_RATE = 48000;
 constexpr quint32 CHUNK_SIZE = 512;
 
 } // namespace ac
@@ -70,10 +71,12 @@ private:
     std::atomic<std::vector<float>*> m_readBuffer;
     std::atomic<std::vector<float>*> m_writeBuffer;
     quint32 m_sampleCount;
+    QTimer* m_lingerTimer = nullptr;
 
     void reload();
     void start() override;
     void stop() override;
+    void stopImmediate();
 };
 
 } // namespace caelestia::services

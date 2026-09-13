@@ -14,6 +14,9 @@ public:
     void ref(QObject* sender);
     void unref(QObject* sender);
 
+protected:
+    [[nodiscard]] bool hasRefs() const;
+
 private:
     QSet<QObject*> m_refs;
 

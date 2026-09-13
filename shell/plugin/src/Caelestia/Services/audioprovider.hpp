@@ -38,12 +38,11 @@ protected:
     AudioProcessor* m_processor;
 
     void init();
+    void start() override;
+    void stop() override;
 
 private:
     QThread* m_thread;
-
-    void start() override;
-    void stop() override;
 };
 
 } // namespace caelestia::services

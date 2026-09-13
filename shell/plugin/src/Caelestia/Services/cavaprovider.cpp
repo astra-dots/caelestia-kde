@@ -156,4 +156,12 @@ void CavaProvider::updateValues(const QVector<double>& values) {
     }
 }
 
+void CavaProvider::stop() {
+    AudioProvider::stop();
+    if (!m_values.isEmpty()) {
+        m_values.fill(0.0);
+        emit valuesChanged();
+    }
+}
+
 } // namespace caelestia::services

@@ -22,4 +22,8 @@ void Service::unref(QObject* sender) {
     }
 }
 
+bool Service::hasRefs() const {
+    return !m_refs.isEmpty();
+}
+
 } // namespace caelestia::services
