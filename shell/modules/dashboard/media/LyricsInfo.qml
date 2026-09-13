@@ -175,36 +175,6 @@ Item {
                     }
                 }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Tokens.spacing.extraSmall
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: qsTr("Offset: %1 ms").arg(Math.round(Lyrics.offset))
-                        color: Colours.palette.m3onSurfaceVariant
-                        animate: true
-                    }
-
-                    IconButton {
-                        icon: "restart_alt"
-                        type: IconButton.Text
-                        visible: Math.round(Lyrics.offset) !== 0
-                        onClicked: Lyrics.offset = 0
-                    }
-
-                    IconButton {
-                        icon: "remove"
-                        type: IconButton.Text
-                        onClicked: Lyrics.offset -= 50
-                    }
-
-                    IconButton {
-                        icon: "add"
-                        type: IconButton.Text
-                        onClicked: Lyrics.offset += 50
-                    }
-                }
 
             }
 

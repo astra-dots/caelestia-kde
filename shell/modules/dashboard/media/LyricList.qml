@@ -16,10 +16,10 @@ Item {
 
     readonly property real fadeAmount: 0.1
     property bool flag
-    property list<string> lyricList: Lyrics.lyrics
+    property list<string> lyricList: (Lyrics.hasLyrics && onlineTrackMatches) ? Lyrics.lyrics : []
 
     readonly property bool onlineTrackMatches: Lyrics.trackTitle.length > 0 && Lyrics.trackTitle.toLowerCase() === (Players.active?.trackTitle ?? "").toLowerCase()
-    readonly property bool onlineHasSyncedLyrics: onlineTrackMatches && !Lyrics.loading && (Lyrics.hasLyrics || (root.lyricList && root.lyricList.length > 0))
+    readonly property bool onlineHasSyncedLyrics: onlineTrackMatches && !Lyrics.loading && Lyrics.hasLyrics
     readonly property bool spicyIsSynced: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics && SpotifyService.syncType !== "Static"
     readonly property bool spicyIsStatic: SpotifyService.isSpotify && SpotifyService.hasSpicyLyrics && SpotifyService.syncType === "Static"
     readonly property bool useSpicy: spicyIsSynced || (spicyIsStatic && !onlineHasSyncedLyrics)
@@ -74,7 +74,7 @@ Item {
         }
         const currentTitle = p.trackTitle || "";
         const currentArtist = p.trackArtist || "";
-        if (Lyrics.trackTitle === currentTitle && Lyrics.trackArtist === currentArtist && (Lyrics.hasLyrics || (root.lyricList && root.lyricList.length > 0) || Lyrics.loading)) {
+        if (Lyrics.trackTitle === currentTitle && Lyrics.trackArtist === currentArtist && (Lyrics.hasLyrics || Lyrics.loading)) {
             return;
         }
         Lyrics.clearTrack();
@@ -358,7 +358,7 @@ Item {
                     if (root.isStaticLyrics) return -1;
                     return SpotifyService.indexForTime(SpotifyService.effectivePosition);
                 }
-                const pos = (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0);
+                const pos = Players.active?.position ?? 0;
                 return Lyrics.indexForTime(pos);
             });
             jumpToCurrent();
@@ -401,7 +401,7 @@ Item {
             readonly property bool isCurrent: ListView.isCurrentItem
             readonly property real currentPos: root.useSpicy
                 ? SpotifyService.effectivePosition
-                : ((Players.active?.position ?? 0) + (Lyrics.offset / 1000.0))
+                : (Players.active?.position ?? 0)
 
             readonly property string lineText: typeof modelData === "string" ? modelData : (modelData?.text ?? "")
             readonly property bool isInterlude: Boolean(modelData?.isInterlude) || (lyricItem.lineText === ". . ." || lyricItem.lineText === "• • •" || lyricItem.lineText === "...")

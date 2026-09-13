@@ -23,7 +23,8 @@ lock = threading.Lock()
 current_state = {"isLiked": False, "uri": ""}
 current_lyrics = {}
 LYRICS_CACHE_FILE = "/tmp/caelestia_spotify_lyrics.json"
-THEME_FILE = "/tmp/caelestia_spotify_theme.json"
+STATE_DIR = os.path.expanduser("~/.local/state/caelestia")
+THEME_FILE = os.path.join(STATE_DIR, "spotify_theme.json")
 current_theme_mode = "song"
 cached_scheme = {}
 last_scheme_check = 0
@@ -50,13 +51,14 @@ def load_cached_theme_mode():
 
 def save_cached_theme_mode():
     try:
+        os.makedirs(STATE_DIR, exist_ok=True)
         with open(THEME_FILE, "w", encoding="utf-8") as f:
             json.dump({"mode": current_theme_mode}, f)
     except Exception as e:
         log_debug(f"Error saving theme mode: {e}")
 
 
-SCHEME_STATE_FILE = os.path.expanduser("~/.local/state/caelestia/scheme.json")
+SCHEME_STATE_FILE = os.path.join(STATE_DIR, "scheme.json")
 
 
 def read_scheme_from_file():

@@ -33,7 +33,7 @@ Singleton {
     readonly property string syncType: root.spicyLyrics?.type ?? "None"
     readonly property var lyricLines: root.spicyLyrics?.lines ?? []
 
-    readonly property real effectivePosition: (Players.active?.position ?? 0) + (Lyrics.offset / 1000.0)
+    readonly property real effectivePosition: Players.active?.position ?? 0
 
     Connections {
         target: Players.active
