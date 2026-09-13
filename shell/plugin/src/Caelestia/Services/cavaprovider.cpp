@@ -37,7 +37,7 @@ void CavaProcessor::stop() {
 
     bool allZero = true;
     for (int i = 0; i < m_bars; ++i) {
-        if (m_frameValues[i] > 0.008) {
+        if (m_frameValues[i] > 0.005) {
             allZero = false;
             break;
         }
@@ -54,8 +54,8 @@ void CavaProcessor::process() {
     if (m_decaying) {
         bool allZero = true;
         for (int i = 0; i < m_bars; ++i) {
-            m_frameValues[i] *= 0.80;
-            if (m_frameValues[i] < 0.008) {
+            m_frameValues[i] *= 0.89;
+            if (m_frameValues[i] < 0.005) {
                 m_frameValues[i] = 0.0;
             } else {
                 allZero = false;
