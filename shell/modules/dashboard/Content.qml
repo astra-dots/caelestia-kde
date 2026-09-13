@@ -17,6 +17,8 @@ Item {
     required property DashboardState dashState
     required property FileDialog facePicker
 
+    visible: (visibilities?.dashboard ?? false)
+
     readonly property var dashboardTabs: {
         const allTabs = [
             {

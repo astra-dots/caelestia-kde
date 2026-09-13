@@ -28,6 +28,8 @@ Item {
         return rand(min, max) * (Math.random() < 0.5 ? -1 : 1);
     }
 
+    property bool active: false
+
     clip: true
     Component.onCompleted: shapes.model = count
 
@@ -38,7 +40,7 @@ Item {
     }
 
     FrameAnimation {
-        running: root.visible && root.width > 0 && root.height > 0 && (Players.active?.isPlaying ?? false)
+        running: root.active && root.width > 0 && root.height > 0 && (Players.active?.isPlaying ?? false)
         onTriggered: {
             const dt = frameTime;
             for (let i = 0; i < shapes.count; i++) {

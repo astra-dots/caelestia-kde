@@ -299,7 +299,7 @@ Item {
 
     FrameAnimation {
         id: syncFrameAnim
-        running: root.visible && (Players.active?.isPlaying ?? false)
+        running: root.isMediaActive && (Players.active?.isPlaying ?? false)
         onTriggered: {
             if (Players.active) {
                 Players.active.positionChanged();

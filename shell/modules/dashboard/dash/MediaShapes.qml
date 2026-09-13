@@ -49,7 +49,7 @@ Item {
         }
 
         function morph() {
-            if (Config.dashboard.useMediaShapes && root.visible) {
+            if (Config.dashboard.useMediaShapes && root.active) {
                 if (Config.dashboard.syncMediaShapesToBeat) {
                     materialShape.shape = root.shapeTiers[Math.floor(Math.random() * root.shapeTiers.length)];
                 } else {
@@ -77,7 +77,7 @@ Item {
         property real speedMultiplier: Config.dashboard.syncMediaShapesToBeat ? (Config.general.mediaGifSpeedAdjustment / 300) : 1.0
 
         Timer {
-            running: root.visible && Config.dashboard.useMediaShapes && (Players.active?.isPlaying ?? false)
+            running: root.active && Config.dashboard.useMediaShapes
             repeat: true
             interval: (60000 / Math.max(1, Audio.beatTracker.bpm > 0 ? Audio.beatTracker.bpm : 120)) * materialShape.speedMultiplier
             onTriggered: materialShape.morph()
@@ -87,7 +87,8 @@ Item {
             target: Audio.beatTracker
 
             function onBeat(bpm) {
-                materialShape.morph();
+                if (root.active)
+                    materialShape.morph();
             }
         }
         

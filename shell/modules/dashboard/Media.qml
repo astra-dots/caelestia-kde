@@ -27,6 +27,7 @@ Item {
 
     BackgroundShapes {
         anchors.fill: parent
+        active: root.isMediaActive
     }
 
     RowLayout {
@@ -166,6 +167,7 @@ Item {
 
                     Details {
                         Layout.fillWidth: true
+                        isMediaActive: root.isMediaActive
                     }
 
                     LyricsAndSelector {

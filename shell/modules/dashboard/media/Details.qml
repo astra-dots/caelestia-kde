@@ -27,10 +27,12 @@ ColumnLayout {
         return `${mins}:${secs}`;
     }
 
+    property bool isMediaActive: false
+
     spacing: Tokens.spacing.extraSmall
 
     Timer {
-        running: root.visible && (Players.active?.isPlaying ?? false)
+        running: root.isMediaActive && (Players.active?.isPlaying ?? false)
         interval: 100
         triggeredOnStart: true
         repeat: true
@@ -41,6 +43,7 @@ ColumnLayout {
         Layout.fillWidth: true
         text: Players.active?.trackTitle ?? ""
         font: Tokens.font.title.large
+        scrollEnabled: root.isMediaActive
     }
 
     MarqueeText {
@@ -48,6 +51,7 @@ ColumnLayout {
         text: Players.active?.trackArtist || qsTr("Unknown artist")
         color: Colours.palette.m3onSurfaceVariant
         font: Tokens.font.title.medium
+        scrollEnabled: root.isMediaActive
     }
 
     MarqueeText {
@@ -55,6 +59,7 @@ ColumnLayout {
         text: Players.active?.trackAlbum || qsTr("Unknown album")
         color: Colours.palette.m3secondary
         font: Tokens.font.body.medium
+        scrollEnabled: root.isMediaActive
     }
 
     RowLayout {

@@ -36,7 +36,7 @@ Item {
     }
 
     Timer {
-        running: (Players.active?.isPlaying ?? false) && root.visible
+        running: root.isDashActive && (Players.active?.isPlaying ?? false)
         interval: GlobalConfig.dashboard.mediaUpdateInterval
         triggeredOnStart: true
         repeat: true
@@ -62,7 +62,7 @@ Item {
         wavy: true
         waveFrequency: 8
         waveDuration: 2000
-        wavePaused: !Players.active?.isPlaying
+        wavePaused: !root.isDashActive || !Players.active?.isPlaying
     }
 
     CoverArt {
@@ -89,6 +89,7 @@ Item {
         text: root.hasMedia ? (Players.active.trackTitle || qsTr("Unknown title")) : qsTr("No media playing")
         color: Colours.palette.m3primary
         font: Tokens.font.title.small
+        scrollEnabled: root.isDashActive
 
         width: parent.implicitWidth - Tokens.padding.extraLargeIncreased
     }
@@ -104,6 +105,7 @@ Item {
         text: root.hasMedia ? (Players.active.trackAlbum || qsTr("Unknown album")) : qsTr("Ready to play")
         color: Colours.palette.m3onSurfaceVariant
         font: Tokens.font.body.small
+        scrollEnabled: root.isDashActive
 
         width: parent.implicitWidth - Tokens.padding.extraLargeIncreased
     }
@@ -120,6 +122,7 @@ Item {
         visible: root.hasMedia && text.length > 0
         color: Colours.palette.m3secondary
         font: Tokens.font.body.small
+        scrollEnabled: root.isDashActive
 
         width: parent.implicitWidth - Tokens.padding.extraLargeIncreased
     }
@@ -202,7 +205,7 @@ Item {
 
             anchors.fill: parent
 
-            playing: Players.active?.isPlaying ?? false
+            playing: root.isDashActive && (Players.active?.isPlaying ?? false)
             speed: Audio.beatTracker.bpm / Config.general.mediaGifSpeedAdjustment // qmllint disable unresolved-type
             source: Paths.absolutePath(Config.paths.mediaGif)
             asynchronous: true
