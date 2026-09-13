@@ -135,14 +135,14 @@ StyledListView {
 
                 StyledText {
                     text: modelData ? modelData.name : ""
-                    font: Tokens.font.body.medium
+                    font: Tokens.font.body.builders.small.weight(Font.Medium).build()
                     color: Colours.palette.m3onSurface
                     elide: Text.ElideRight
                 }
 
                 StyledText {
                     text: modelData ? (modelData.path === "default" ? qsTr("Use default shell animations") : qsTr("Click to apply animation")) : ""
-                    font: Tokens.font.body.small
+                    font: Tokens.font.label.small
                     color: Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight
                 }

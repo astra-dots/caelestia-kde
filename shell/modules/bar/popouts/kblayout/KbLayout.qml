@@ -44,7 +44,7 @@ ColumnLayout {
         Layout.topMargin: Tokens.padding.medium * scaleOffset
         Layout.rightMargin: Tokens.padding.extraSmall * scaleOffset
         text: qsTr("Keyboard Layouts")
-        font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
+        font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
     }
 
     ListView {
@@ -134,6 +134,7 @@ ColumnLayout {
                 anchors.leftMargin: Tokens.padding.extraSmall
                 anchors.rightMargin: Tokens.padding.extraSmall
                 text: kbDelegate.label
+                font: Tokens.font.body.builders.small.size(Tokens.font.body.small.pointSize * root.fontScale).build()
                 elide: Text.ElideRight
                 opacity: kbDelegate.isDisabled ? 0.4 : 1.0
             }
@@ -172,7 +173,7 @@ ColumnLayout {
             Layout.fillWidth: true
             text: kb.activeLabel
             elide: Text.ElideRight
-            font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
+            font: Tokens.font.body.builders.medium.size(Tokens.font.body.medium.pointSize * root.fontScale).weight(Font.Medium).build()
             color: Colours.palette.m3primary
         }
 

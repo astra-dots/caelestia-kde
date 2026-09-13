@@ -191,7 +191,7 @@ Item {
                 anchors.rightMargin: Tokens.spacing.small
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.isImage ? (root.modelData?.preview ?? "Image") : (root.modelData?.preview ?? "")
-                font: Tokens.font.body.medium
+                font: Tokens.font.body.builders.small.weight(Font.Medium).build()
                 elide: Text.ElideRight
                 visible: !(root.isImage && !root.isExpanded)
             }
@@ -319,7 +319,7 @@ Item {
                     width: textFlickable.width
                     text: root.isTextLoaded ? root.fullText : (root.modelData?.preview ?? "")
                     wrapMode: Text.Wrap
-                    font: Tokens.font.body.medium
+                    font: Tokens.font.body.small
                     color: Colours.palette.m3onSurface
                 }
             }

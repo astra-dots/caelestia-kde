@@ -596,7 +596,7 @@ Item {
                     StyledText {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: root.isSearching ? qsTr("No emojis found for \"%1\"").arg(root.searchQuery) : qsTr("No recent emojis yet")
-                        font: Tokens.font.body.builders.large.weight(Font.Medium).build()
+                        font: Tokens.font.title.small
                         color: Colours.palette.m3onSurfaceVariant
                     }
 

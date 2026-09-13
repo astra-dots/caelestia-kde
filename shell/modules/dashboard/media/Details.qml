@@ -54,7 +54,7 @@ ColumnLayout {
         Layout.fillWidth: true
         text: Players.active?.trackAlbum || qsTr("Unknown album")
         color: Colours.palette.m3secondary
-        font: Tokens.font.title.medium
+        font: Tokens.font.body.medium
     }
 
     RowLayout {

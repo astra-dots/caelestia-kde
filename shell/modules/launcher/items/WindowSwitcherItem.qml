@@ -195,7 +195,7 @@ Item {
         elide: Text.ElideRight
         renderType: Text.QtRendering
         text: root.modelData?.title ?? ""
-        font: Tokens.font.body.medium
+        font: Tokens.font.body.builders.small.weight(Font.Medium).build()
     }
 
     Connections {

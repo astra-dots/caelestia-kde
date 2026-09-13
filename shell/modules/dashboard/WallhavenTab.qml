@@ -130,7 +130,7 @@ Item {
 
                             StyledText {
                                 text: qsTr("Wallhaven")
-                                font: Tokens.font.body.builders.large.weight(Font.Medium).build()
+                                font: Tokens.font.title.small
                             }
 
                             StyledText {

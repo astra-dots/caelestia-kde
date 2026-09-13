@@ -44,12 +44,12 @@ Item {
 
             StyledText {
                 text: root.modelData?.name ?? ""
-                font: Tokens.font.body.medium
+                font: Tokens.font.body.builders.small.weight(Font.Medium).build()
             }
 
             StyledText {
                 text: root.modelData?.description ?? ""
-                font: Tokens.font.body.small
+                font: Tokens.font.label.small
                 color: Colours.palette.m3onSurfaceVariant
 
                 elide: Text.ElideRight

@@ -58,7 +58,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             text: root.modelData?.name ?? ""
-            font: Tokens.font.body.medium
+            font: Tokens.font.body.builders.small.weight(Font.Medium).build()
             elide: Text.ElideRight
         }
 

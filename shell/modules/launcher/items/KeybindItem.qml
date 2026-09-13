@@ -66,14 +66,14 @@ Item {
 
             StyledText {
                 text: (modelData && modelData.bind) ? modelData.bind.replace(/\b[a-z]/g, l => l.toUpperCase()) : qsTr("No keybinds")
-                font: Tokens.font.body.medium
+                font: Tokens.font.body.builders.small.weight(Font.Medium).build()
                 color: Colours.palette.m3onSurface
                 elide: Text.ElideRight
             }
 
             StyledText {
                 text: (modelData && modelData.description) ? Strings.localizeEnglishSpelling(modelData.description) : ((modelData && modelData.action) ? modelData.action : "")
-                font: Tokens.font.body.small
+                font: Tokens.font.label.small
                 color: Colours.palette.m3onSurfaceVariant
                 elide: Text.ElideRight
             }

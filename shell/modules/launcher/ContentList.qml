@@ -497,7 +497,7 @@ Item {
                     return qsTr("No results");
                 }
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.builders.large.weight(Font.Medium).build()
+                font: Tokens.font.title.small
             }
 
             StyledText {
@@ -513,7 +513,7 @@ Item {
                     return qsTr("Try searching for something else");
                 }
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.medium
+                font: Tokens.font.body.small
             }
         }
 

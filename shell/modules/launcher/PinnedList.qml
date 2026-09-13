@@ -324,7 +324,7 @@ Item {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
                             text: tile.modelData?.name ?? ""
-                            font: Tokens.font.body.builders.small.weight(Font.Medium).build()
+                            font: Tokens.font.label.builders.medium.scale(0.93).weight(Font.Medium).build()
                             color: tile.isDragging ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
                             elide: Text.ElideRight
                             renderType: Text.QtRendering

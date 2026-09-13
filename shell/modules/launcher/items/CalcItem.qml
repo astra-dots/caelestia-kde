@@ -58,6 +58,7 @@ Item {
             }
 
             text: root.math.length > 0 ? (Qalculator.result || qsTr("Calculating...")) : qsTr("Type an expression to calculate")
+            font: Tokens.font.body.builders.small.weight(Font.Medium).build()
             elide: Text.ElideLeft
 
             Layout.fillWidth: true
