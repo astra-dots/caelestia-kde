@@ -33,7 +33,8 @@ StyledRect {
             { id: "restartShell" },
             { id: "badapple" },
             { id: "pauseWallpaper" },
-            { id: "nightlight" }
+            { id: "nightlight" },
+            { id: "power" }
         ].filter(t => !disabledIds.has(t.id));
 
         const allToggles = [...configToggles.filter(t => !disabledIds.has(t.id)), ...builtIn];
@@ -101,6 +102,7 @@ StyledRect {
             case "restartShell": return "restart_alt";
             case "pauseWallpaper": return "pause";
             case "nightlight": return "bedtime";
+            case "power": return "power_settings_new";
             default: return "tune";
         }
     }
@@ -125,6 +127,7 @@ StyledRect {
             case "badapple":
             case "wallpaper":
             case "restartShell":
+            case "power":
                 return false;
             default:
                 return true;
@@ -554,6 +557,18 @@ StyledRect {
                         checked: HyprSunset.active
                         onClicked: {
                             HyprSunset.toggleNightLight();
+                        }
+                    }
+                }
+                DelegateChoice {
+                    roleValue: "power"
+                    delegate: Toggle {
+                        icon: "power_settings_new"
+                        inactiveOnColour: Colours.palette.m3error
+                        isToggle: false
+                        onClicked: {
+                            root.visibilities.utilities = false;
+                            root.visibilities.session = true;
                         }
                     }
                 }

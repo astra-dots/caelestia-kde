@@ -80,6 +80,7 @@ Row {
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredWidth: implicitWidth
                 animate: true
+                font: Tokens.font.label.builders.small.scale(0.95).weight(Font.Medium).build()
                 text: root.active?.activeText ?? root.fallbackText
                 color: root.disabled ? root.disabledTextColour : root.textColour
                 clip: true

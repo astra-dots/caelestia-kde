@@ -17,7 +17,7 @@ StyledSwitch {
 
     horizontalPadding: Tokens.padding.largeIncreased
     verticalPadding: Tokens.padding.medium
-    font: Tokens.font.body.small
+    font: Tokens.font.body.builders.small.scale(0.95).weight(Font.Medium).build()
 
     implicitWidth: implicitContentWidth + implicitIndicatorWidth + horizontalPadding * 2
     implicitHeight: Math.max(implicitContentHeight, implicitIndicatorHeight) + verticalPadding * 2
@@ -74,7 +74,7 @@ StyledSwitch {
                 visible: root.subtext
                 text: root.subtext
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.label.small
+                font: Tokens.font.label.builders.small.scale(0.9).build()
                 elide: Text.ElideRight
             }
         }

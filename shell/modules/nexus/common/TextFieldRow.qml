@@ -55,7 +55,7 @@ ConnectedRect {
                 id: label
 
                 Layout.fillWidth: true
-                font: Tokens.font.body.small
+                font: Tokens.font.body.builders.small.scale(0.95).weight(Font.Medium).build()
                 elide: Text.ElideRight
             }
 
@@ -64,7 +64,7 @@ ConnectedRect {
                 visible: root.subtext
                 text: input.isError && root.errorText ? root.errorText : root.subtext
                 color: input.isError && root.errorText ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.label.small
+                font: Tokens.font.label.builders.small.scale(0.9).build()
                 elide: Text.ElideRight
                 animate: root.errorText
             }

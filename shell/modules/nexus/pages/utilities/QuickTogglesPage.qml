@@ -26,6 +26,7 @@ PageBase {
         { id: "pauseWallpaper", label: qsTr("Pause Wallpaper") },
         { id: "nightlight", label: qsTr("Night Light") },
         { id: "restartShell", label: qsTr("Restart Shell") },
+        { id: "power", label: qsTr("Power / Session") },
     ]
 
     title: qsTr("Quick toggles")
