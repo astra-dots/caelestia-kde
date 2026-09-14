@@ -99,8 +99,11 @@ Singleton {
 
         function onBrightnessChanged(outputName: string, value: real): void {
             const monitor = root.getMonitor(outputName);
-            if (monitor && !monitor.isDdc && monitor.brightness !== value) {
-                monitor.brightness = value;
+            if (monitor) {
+                monitor.hasKdeBrightness = true;
+                if (Math.round(monitor.brightness * 100) !== Math.round(value * 100)) {
+                    monitor.brightness = value;
+                }
             }
         }
     }
@@ -182,6 +185,7 @@ Singleton {
         readonly property bool isDdc: ddcInfo !== null
         readonly property string busNum: ddcInfo?.busNum ?? ""
         readonly property bool isAppleDisplay: root.appleDisplayPresent && modelData.model.startsWith("StudioDisplay")
+        property bool hasKdeBrightness: BrightnessWatcher.brightness(modelData.name) >= 0.0
         property real brightness: 1.0
         property real queuedBrightness: NaN
         property real lastDispatchedBrightness: NaN
@@ -225,12 +229,15 @@ Singleton {
         function applyHardwareBrightness(value: real): void {
             const rounded = Math.max(1, Math.min(100, Math.round(value * 100)));
             lastDispatchedBrightness = value;
-            if (isAppleDisplay)
+            if (isAppleDisplay) {
                 Quickshell.execDetached(["asdbctl", "set", rounded]);
-            else if (isDdc)
-                Quickshell.execDetached(["ddcutil", "--noverify", "-b", busNum, "setvcp", "10", rounded]);
-            else
+            } else if (hasKdeBrightness) {
                 BrightnessWatcher.setBrightness(modelData.name, value);
+            } else if (isDdc) {
+                Quickshell.execDetached(["ddcutil", "--noverify", "-b", busNum, "setvcp", "10", rounded]);
+            } else {
+                BrightnessWatcher.setBrightness(modelData.name, value);
+            }
         }
 
         function setBrightness(value: real): void {
@@ -242,15 +249,11 @@ Singleton {
             // Immediately update visual UI so slider is buttery smooth with zero delay
             brightness = value;
 
-            if (isDdc) {
-                if (timer.running) {
-                    queuedBrightness = value;
-                } else {
-                    applyHardwareBrightness(value);
-                    timer.restart();
-                }
+            if (timer.running) {
+                queuedBrightness = value;
             } else {
                 applyHardwareBrightness(value);
+                timer.restart();
             }
         }
 
@@ -262,6 +265,10 @@ Singleton {
                 initProc.command = ["asdbctl", "get"];
                 if (!initProc.running)
                     initProc.running = true;
+            } else if (hasKdeBrightness) {
+                const val = BrightnessWatcher.brightness(modelData.name);
+                if (val >= 0.0)
+                    monitor.brightness = val;
             } else if (isDdc) {
                 initProc.command = ["ddcutil", "-b", busNum, "getvcp", "10", "--brief"];
                 if (!initProc.running)
@@ -274,19 +281,21 @@ Singleton {
         }
 
         function initBrightness(): void {
-            if (isAppleDisplay)
+            if (isAppleDisplay) {
                 initProc.command = ["asdbctl", "get"];
-            else if (isDdc) {
+                initProc.running = true;
+            } else if (hasKdeBrightness) {
+                const val = BrightnessWatcher.brightness(modelData.name);
+                if (val >= 0.0)
+                    monitor.brightness = val;
+            } else if (isDdc) {
                 initProc.command = ["ddcutil", "-b", busNum, "getvcp", "10", "--brief"];
-                BrightnessWatcher.setBrightness(modelData.name, 1.0);
+                initProc.running = true;
             } else {
                 const val = BrightnessWatcher.brightness(modelData.name);
                 if (val >= 0.0)
                     monitor.brightness = val;
-                return;
             }
-
-            initProc.running = true;
         }
 
         onBusNumChanged: {
