@@ -4,6 +4,9 @@ A technical desktop shell for KDE Plasma 6 and Quickshell.
 
 This repository is a downstream fork of [ladybug-me/caelestia-dots-kde](https://github.com/ladybug-me/caelestia-dots-kde). It contains architectural refinements, performance enhancements, and user interface improvements.
 
+- **Showcase Website & Interactive Simulator**: [https://astra-dots.github.io](https://astra-dots.github.io)
+- **Technical Documentation & Reference**: [https://astra-dots.github.io/docs/](https://astra-dots.github.io/docs/)
+
 ---
 
 ## 1. System Specifications
