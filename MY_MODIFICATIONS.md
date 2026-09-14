@@ -2234,6 +2234,81 @@ Created scripts/lockscreen_wrapper.sh exporting QML2_IMPORT_PATH, QML_IMPORT_PAT
    - Verified live in Caelestia Media Panel with both standalone background vocals (line 0 producer tag) and duet vocals (line 35) with horizontal flow, progressive syllable wipe, and clean unhighlighting.
 -->
 
+<!-- Section 234 Dynamic Spotify Theme Mode Toggle (Song Colors ↔ System Colors):
+1. Requirements & Intent:
+   - Provide instant switching between dynamic song-extracted accent palettes and the user's global system wallpaper color palette within Spotify.
+   - Integrate a toggle button directly adjacent to the media player selector pill.
+2. Changes Implemented:
+   - Added SpotifyThemeMode controller and wired IPC signal to Spicetify extension.
+   - Preserved theme mode preference across track changes and shell restarts.
+-->
 
+<!-- Section 235 WirePlumber & PipeWire Audio Device Deduplication:
+1. Requirements & Intent:
+   - Eliminate duplicated virtual and hardware audio endpoints appearing simultaneously in the Caelestia audio popout and volume drawers.
+2. Changes Implemented:
+   - Filtered speech-dispatcher, virtual loopback sinks, and internal Caelestia audio monitor streams from user-facing volume mixers.
+   - Grouped physical ALSA card profiles into unified primary sink and source handles.
+-->
 
+<!-- Section 236 Audio Visualizer Decay Curve & Headphone Click Elimination:
+1. Requirements & Intent:
+   - Prevent abrupt visualizer snapping to zero when pausing music playback.
+   - Eliminate tactile click/pop artifacts in audio output buffers upon track pause.
+2. Changes Implemented:
+   - Replaced immediate zero-clamping with a 350ms gentle logarithmic decay curve (Easing.OutCubic) over visualizer bar amplitudes.
+   - Ensured all spectrum bars smoothly descend to baseline before pausing Cava/PipeWire polling timers.
+-->
 
+<!-- Section 237 Instant Dashboard Opening & Background Animation Silencing:
+1. Requirements & Intent:
+   - Resolve opening latency spikes and frame drops when toggling the top panel media drawer.
+   - Guarantee zero CPU and timer overhead when the dashboard is closed.
+2. Changes Implemented:
+   - Implemented memory preloading of dashboard components on shell initialization.
+   - Completely silenced and paused particle bokeh visualizers and lyric auto-scroll timers when dashboard visibility is false.
+   - Restored standard non-blocking entrance animations adhering to Material 3 Emphasized curves.
+-->
+
+<!-- Section 238 DDC Hardware Monitor Polling Optimization:
+1. Requirements & Intent:
+   - Eliminate brightness slider stutter and system unresponsiveness caused by synchronous ddcutil I2C hardware bus queries.
+2. Changes Implemented:
+   - Restricted DDC hardware communication strictly to when the Quick Settings panel is actively opened by the user.
+   - Adapted detection logic for ddcutil 3.0 sysfs output, preventing redundant fallback queries.
+-->
+
+<!-- Section 239 Typography Hierarchy Harmonization:
+1. Requirements & Intent:
+   - Ensure visual consistency, baseline grid alignment, and typographic hierarchy across Nexus settings, Quick Settings, App Launcher, and popout cards.
+2. Changes Implemented:
+   - Unified font size tokens across all header labels and subtexts.
+   - Tightened inner margins and eliminated clipping in app volume mixers and Up Next track queues.
+-->
+
+<!-- Section 240 Single-Layer Show Desktop Overlay & Optical Centering:
+1. Requirements & Intent:
+   - Fix visual anomaly where hovering over the taskbar Show Desktop icon showed a squashed double pill/circle overlay.
+   - Provide clear, unambiguous visual feedback when Show Desktop mode is active.
+2. Changes Implemented:
+   - Unified Show Desktop into a single consistent circular backdrop highlight matching standard taskbar item dimensions.
+   - Optically centered vector desktop glyph and synchronized active toggle state with KWin compositing.
+-->
+
+<!-- Section 241 SDDM Login Greeter Visual & Functional Refinements:
+1. Requirements & Intent:
+   - Eliminate fake placeholder credentials and clockwork windup delays.
+   - Fix keyboard layout toggle icon being slightly offset from geometric center.
+   - Use Google Sans Flex variable typography for crystal-clear time display.
+2. Changes Implemented:
+   - Adjusted anchor margins and center alignment of keyboard vector icon within circular pill container.
+   - Disabled clockwork windup animation to allow instant login input upon display wake.
+   - Replaced bitmap session indicators with high-resolution hardware SVG vector icons.
+-->
+
+<!-- Section 242 Quick Settings Custom Power Cycle Tile:
+1. Requirements & Intent:
+   - Provide direct one-click access to system power states within the Quick Settings utilities flyout.
+2. Changes Implemented:
+   - Added a dedicated Power tile to Toggles.qml with configurable quick power action cycling.
+-->
