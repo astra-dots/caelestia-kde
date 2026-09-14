@@ -354,11 +354,13 @@ Item {
         Component.onCompleted: {
             currentIndex = Qt.binding(() => {
                 lyrics.model; // Force update when lyrics change
+                const pos = SpotifyService.isSpotify
+                    ? SpotifyService.effectivePosition
+                    : (Players.active?.position ?? 0);
                 if (root.useSpicy) {
                     if (root.isStaticLyrics) return -1;
-                    return SpotifyService.indexForTime(SpotifyService.effectivePosition);
+                    return SpotifyService.indexForTime(pos);
                 }
-                const pos = Players.active?.position ?? 0;
                 return Lyrics.indexForTime(pos);
             });
             jumpToCurrent();
@@ -399,7 +401,7 @@ Item {
             required property int index
 
             readonly property bool isCurrent: ListView.isCurrentItem
-            readonly property real currentPos: root.useSpicy
+            readonly property real currentPos: SpotifyService.isSpotify
                 ? SpotifyService.effectivePosition
                 : (Players.active?.position ?? 0)
 

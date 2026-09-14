@@ -33,7 +33,39 @@ Singleton {
     readonly property string syncType: root.spicyLyrics?.type ?? "None"
     readonly property var lyricLines: root.spicyLyrics?.lines ?? []
 
-    readonly property real effectivePosition: Players.active?.position ?? 0
+    property real driftOffset: 0.0
+    property real targetDriftOffset: 0.0
+
+    readonly property real effectivePosition: {
+        const rawPos = Players.active?.position ?? 0;
+        if (root.isSpotify) {
+            return Math.max(0, rawPos + root.driftOffset);
+        }
+        return rawPos;
+    }
+
+    function handlePositionSync(pData: var): void {
+        if (!pData || typeof pData.pos !== "number") return;
+
+        const rawPos = Players.active?.position ?? 0;
+        if (rawPos <= 0) return;
+
+        const nowSec = Date.now() / 1000;
+        const msgAge = Math.max(0, Math.min(0.5, nowSec - (pData.t || nowSec)));
+        const truePos = pData.pos + (pData.status === "Playing" ? msgAge : 0);
+
+        const delta = truePos - rawPos;
+
+        // If user seeked or major jump (> 2.0s gap), snap immediately
+        if (Math.abs(delta - root.driftOffset) > 2.0) {
+            root.driftOffset = delta;
+            root.targetDriftOffset = delta;
+        } else {
+            // Smoothly converge towards true position (nudges without stutter)
+            root.targetDriftOffset = delta;
+            root.driftOffset = root.driftOffset + (delta - root.driftOffset) * 0.4;
+        }
+    }
 
     Connections {
         target: Players.active
@@ -73,6 +105,8 @@ Singleton {
         const newUri = root.normalizeTrackUri(Players.active?.trackId ?? "");
         if (newUri && newUri !== root.currentTrackUri) {
             root.currentTrackUri = newUri;
+            root.driftOffset = 0.0;
+            root.targetDriftOffset = 0.0;
             root.spicyLyrics = null;
             root.requestLyrics();
         }
@@ -84,6 +118,8 @@ Singleton {
     }
 
     onIsSpotifyChanged: {
+        root.driftOffset = 0.0;
+        root.targetDriftOffset = 0.0;
         if (root.isSpotify) {
             root.requestLyrics();
             fetchThemeProc.running = true;
@@ -237,6 +273,11 @@ Singleton {
                             root.currentTrackUri = normStateUri;
                         }
                         root.upcomingTrack = state.upcoming || null;
+                    } catch (e) {}
+                } else if (line.startsWith("POSITION:")) {
+                    try {
+                        const posData = JSON.parse(line.substring(9));
+                        root.handlePositionSync(posData);
                     } catch (e) {}
                 }
             }

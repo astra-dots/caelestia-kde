@@ -407,6 +407,15 @@ def emit_lyrics(lyrics):
         pass
 
 
+def emit_position(pos, status="Playing"):
+    try:
+        payload = {"pos": round(pos, 3), "t": round(time.time(), 3), "status": status}
+        sys.stdout.write(f"POSITION:{json.dumps(payload)}\n")
+        sys.stdout.flush()
+    except (BrokenPipeError, IOError, Exception):
+        pass
+
+
 def queue_command(cmd):
     with lock:
         pending_commands.append(cmd)
@@ -721,6 +730,111 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 pass
 
 
+def position_sync_loop():
+    bus = None
+    last_status = None
+
+    while True:
+        try:
+            if bus is None:
+                try:
+                    from gi.repository import Gio, GLib
+                    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+                except Exception:
+                    time.sleep(2.0)
+                    continue
+
+            # 1. Discover active MPRIS player (prefer spotify, then any other)
+            target_service = None
+            try:
+                names_var = bus.call_sync(
+                    "org.freedesktop.DBus",
+                    "/org/freedesktop/DBus",
+                    "org.freedesktop.DBus",
+                    "ListNames",
+                    None,
+                    None,
+                    Gio.DBusCallFlags.NONE,
+                    500,
+                    None
+                )
+                names = names_var.unpack()[0]
+                if "org.mpris.MediaPlayer2.spotify" in names:
+                    target_service = "org.mpris.MediaPlayer2.spotify"
+                else:
+                    for n in names:
+                        if n.startswith("org.mpris.MediaPlayer2.") and not n.endswith(".instance"):
+                            target_service = n
+                            break
+            except Exception:
+                pass
+
+            if not target_service:
+                time.sleep(1.5)
+                continue
+
+            # 2. Connect proxy
+            try:
+                proxy = Gio.DBusProxy.new_sync(
+                    bus, Gio.DBusProxyFlags.NONE, None,
+                    target_service,
+                    "/org/mpris/MediaPlayer2",
+                    "org.mpris.MediaPlayer2.Player",
+                    None
+                )
+            except Exception:
+                time.sleep(1.5)
+                continue
+
+            # 3. Check status
+            status = "Playing"
+            try:
+                st_var = proxy.get_cached_property("PlaybackStatus")
+                if st_var:
+                    status = str(st_var.unpack())
+            except Exception:
+                pass
+
+            if status != "Playing":
+                if last_status == "Playing":
+                    # Transitioned from Playing to Paused/Stopped - emit one last sync
+                    try:
+                        val = proxy.call_sync(
+                            "org.freedesktop.DBus.Properties.Get",
+                            GLib.Variant("(ss)", ("org.mpris.MediaPlayer2.Player", "Position")),
+                            Gio.DBusCallFlags.NONE,
+                            300,
+                            None
+                        )
+                        pos = val.unpack()[0] / 1_000_000.0
+                        emit_position(pos, status=status)
+                    except Exception:
+                        pass
+                last_status = status
+                time.sleep(1.0)
+                continue
+
+            last_status = "Playing"
+
+            # 4. Query live position
+            try:
+                val = proxy.call_sync(
+                    "org.freedesktop.DBus.Properties.Get",
+                    GLib.Variant("(ss)", ("org.mpris.MediaPlayer2.Player", "Position")),
+                    Gio.DBusCallFlags.NONE,
+                    300,
+                    None
+                )
+                pos_sec = val.unpack()[0] / 1_000_000.0
+                emit_position(pos_sec, status="Playing")
+            except Exception:
+                pass
+
+            time.sleep(0.8)
+        except Exception:
+            time.sleep(1.5)
+
+
 def stdin_reader():
     for line in sys.stdin:
         line = line.strip()
@@ -752,6 +866,9 @@ def main():
 
     t_scheme = threading.Thread(target=scheme_watcher_loop, daemon=True)
     t_scheme.start()
+
+    t_pos = threading.Thread(target=position_sync_loop, daemon=True)
+    t_pos.start()
 
     load_cached_theme_mode()
     load_cached_lyrics()

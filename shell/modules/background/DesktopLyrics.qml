@@ -67,7 +67,8 @@ Item {
 
     function forceUpdate() {
         if (Lyrics.hasLyrics) {
-            currentLyricIndex = Lyrics.indexForTime(Players.active?.position ?? 0);
+            const pos = SpotifyService.isSpotify ? SpotifyService.effectivePosition : (Players.active?.position ?? 0);
+            currentLyricIndex = Lyrics.indexForTime(pos);
             if (currentLyricIndex >= 0) {
                 displayedLyric = (Lyrics.lyrics[currentLyricIndex] ?? "").replace(/\u00A0/g, " ");
                 previousLyricText = currentLyricIndex > 0 ? (Lyrics.lyrics[currentLyricIndex - 1] ?? "").replace(/\u00A0/g, " ") : "";
@@ -188,7 +189,8 @@ Item {
         onTriggered: {
             if (!Players.active)
                 return;
-            currentLyricIndex = Lyrics.indexForTime(Players.active.position);
+            const pos = SpotifyService.isSpotify ? SpotifyService.effectivePosition : Players.active.position;
+            currentLyricIndex = Lyrics.indexForTime(pos);
             Players.active?.positionChanged();
         }
     }
