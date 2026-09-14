@@ -175,6 +175,12 @@ This project builds upon the work of the open-source community:
 
 ---
 
-## 8. License
+## 8. AI Development Assistance
+
+The architectural modifications, C++ plugin adjustments, QML refactors, and technical documentation in this repository were developed and refined with the assistance of AI Large Language Models (LLMs).
+
+---
+
+## 9. License
 
 This repository is licensed under the **GNU General Public License v3.0 or later** ([GPL-3.0-or-later](LICENSE)).
